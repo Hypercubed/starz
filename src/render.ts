@@ -23,7 +23,7 @@ let width = WIDTH;
 let height = HEIGHT;
 let center = [width / 2, height / 2] satisfies [number, number];
 
-const selectedProjectionType = projections['Stereographic'];
+const selectedProjectionType = projections['Orthographic'];
 
 const geoProjection = selectedProjectionType.fn().translate(center).clipAngle(selectedProjectionType.clipAngle);
 const initialScale = geoProjection.scale();
@@ -50,9 +50,6 @@ export function drawMap() {
   
   // if (SYSTEM_PROJECTION_HIDING) drawOutline();
   drawGraticule();
-
-  svg.append('g').attr('id', 'lanes');
-  svg.append('g').attr('id', 'systems');
 
   drawLanes();
   drawSystems();
@@ -191,38 +188,51 @@ export const rerender = throttle(rerenderUnthrottled, 16);
 function drawSystems() {
   const visibleSystems = state.systems.filter(system => system.isRevealed);
 
-  const g = svg.select('g#systems');
-  const markers = g.selectAll('.system')
-    .data(visibleSystems, d => (d as System).id);
+  const g = svg.selectAll('g#systems').data([visibleSystems]).join(
+    enter => enter.append('g').attr('id', 'systems')
+  );
 
-  const enter = markers.enter()
-    .append('g')
-    .attr('class', 'system')
-    .attr('id', d => `system-${d.id}`)
-    .attr('title', d => `System ${d.id}`)
-    .on('click', (ev: PointerEvent, d: System) => onClickSystem(ev, d))
-    .on('contextmenu', (ev: PointerEvent, d: System) => {
-      ev.preventDefault();
-      onClickSystem(ev, d);
-    });
+  const join = g.selectAll('.system')
+    .data(visibleSystems, d => (d as System).id)
+    .join(
+      enter => {
+        const group = enter.append('g')
+          .attr('class', 'system')
+          .attr('id', d => `system-${d.id}`)
+          // .attr('title', d => `System ${d.id}`)
+          .on('click', (ev: PointerEvent, d: System) => onClickSystem(ev, d))
+          .on('contextmenu', (ev: PointerEvent, d: System) => {
+            ev.preventDefault();
+            onClickSystem(ev, d);
+          });
 
-  enter.append('circle')
-    .attr('class', 'hit-target')
-    .attr('fill', 'transparent')
-    .attr('cx', 0)
-    .attr('cy', 0)
-    .attr('r', SYSTEM_SIZE / 2);
+        group.append('circle')
+          .attr('class', 'hit-target')
+          .attr('fill', 'transparent')
+          .attr('cx', 0)
+          .attr('cy', 0)
+          .attr('r', SYSTEM_SIZE / 2);
 
-  enter
-    .append('circle')
-    .attr('class', 'system-icon');
+        group
+          .append('circle')
+          .attr('class', 'system-marker');
+          
+        group.append('text')
+          .attr('class', 'ship-count')
+          .attr('y', -10)
+          .attr('x', d => d.homeworld == null ? 0 : 10)
+          .attr('text-anchor', 'start');
 
-  enter.append('text')
-    .attr('text-anchor', 'middle');
+        group.append('text')
+          .attr('class', 'system-icon')
+          .attr('y', -10)
+          .attr('text-anchor', 'end');
 
-  const merge = enter.merge(markers as any);
-
-  merge
+        return group;
+      }
+    );
+  
+  join
     .attr('data-owner', d => d.owner != null ? d.owner.toString() : 'null')
     .classed('selected', d => d === state.selectedSystem)
     .classed('inhabited', d => d.isInhabited === true)
@@ -232,50 +242,49 @@ function drawSystems() {
     });
 
   if (SYSTEM_PROJECTION_HIDING) {
-    merge.style('display', d => {
+    join.style('display', d => {
       const gdistance = d3.geoDistance(d.location, geoProjection.invert!(center)!);
       return gdistance > 1.5 ? 'none' : null;
     });
   }
 
-  merge.select('text')
-    .attr('y', -10)
+  join.select('.system-icon')
     .text(d => {
-      const ships = d.ships ? d.ships.toString() : '';
-      const home = (d.homeworld && d.owner === d.homeworld) ? '★' : '';
-      return home + ships;
+      if (d.homeworld == null) return '';
+      if (d.homeworld == 0) return '▲';
+      if (d.homeworld && d.owner === d.homeworld) return '★';
+      return '';
     });
+
+  join.select('.ship-count')
+    .text(d => d.ships ? d.ships.toString() : '');
 }
 
 function drawLanes() {
   const visibleLanes = state.lanes.filter(lane => lane.isRevealed);
   
-  const g = d3.select('g#lanes');
-  const pathSelection = g.selectAll('.lane')
-    .data(visibleLanes, d => (d as Lane).id);
+  const g = svg.selectAll('g#lanes').data([visibleLanes]).join(
+    enter => enter.append('g').attr('id', 'lanes'),
+  );
 
-  const enter = pathSelection.enter()
-    .append('path')
-    .attr('class', 'lane')
-    .attr('fill', 'none')
-    .attr('stroke-width', 2)
-    .attr('stroke', 'orange')
-    .attr('id', (_, i) => `lane-${i}`)
-    .on('click', (ev: PointerEvent, d: Lane) => onClickLane(ev, d))
-    .on('contextmenu', (ev: PointerEvent, d: Lane) => {
-      ev.preventDefault();
-      onClickLane(ev, d);
-    });
- 
-  const merge = pathSelection.merge(enter as any);
-
-  merge
-    .attr('data-owner', d => {
-      return (d.from.owner != null && d.from.owner === d.to.owner) ? d.from.owner.toString() : null;
+  g.selectAll('.lane')
+    .data(d => d, d => (d as Lane).id)
+    .join(
+      enter => enter.append('path')
+        .attr('class', 'lane')
+        .attr('fill', 'none')
+        .attr('stroke-width', 2)
+        .attr('stroke', 'orange')
+        .attr('id', (_, i) => `lane-${i}`)
+        .on('click', (ev: PointerEvent, d: Lane) => onClickLane(ev, d))
+        .on('contextmenu', (ev: PointerEvent, d: Lane) => {
+          ev.preventDefault();
+          onClickLane(ev, d);
+        })
+    ).attr('data-owner', d => {
+      return (d.from.owner && d.from.owner === d.to.owner) ? d.from.owner.toString() : null;
     })
     .attr('d', d => geoPathGenerator({ type: "LineString", coordinates: [d.from.location, d.to.location ] }));
-
-  pathSelection.exit().remove();
 }
 
 function throttle<T extends unknown[]>(callback: (...args: T) => void, delay: number) {

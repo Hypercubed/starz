@@ -2,56 +2,52 @@ import * as d3 from 'd3';
 
 import { state } from "./state";
 
-export function createInfoBox() {
-  d3.select('#infobox').remove();
-
-  d3.select('#app')
-    .append('div')
-    .attr('id', 'infobox');
-}
-
 export function updateInfoBox() {
-  const box = d3.select('#infobox');
-  box.html(`Turn: ${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}`);
+  const div = d3.select('#app').selectAll('#infobox').data([null]).join(
+    enter => enter.append('div').attr('id', 'infobox').html('Turn: <span>0</span>')
+  );
+
+  div.select('span').text(`${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}`);
 }
-
-export function createLeaderbox() {
-  d3.select('#leaderbox').remove();
-
-  d3.select('#app')
-    .append('div')
-    .attr('id', 'leaderbox');
-}
-
 
 export function updateLeaderbox() {
-  const box = d3.select('#leaderbox');
+  const table = d3.select('#app').selectAll('#leaderbox').data([null]).join(
+    enter => {
+      const table = enter.append('table').attr('id', 'leaderbox');
+      table.html('<thead><tr><th>Player</th><th>Systems</th><th>Ships</th></tr></thead><tbody></tbody>');
+      return table;
+    }
+  );
 
   const stats = [...state.playerStats].sort((a, b) => b.systems - a.systems || b.ships - a.ships);
 
-  let html = '<tr><th>Player</th><th>Systems</th><th>Ships</th></tr>';
-  stats.forEach(stat => {
-    html += `<tr><td data-owner="${stat.player}">${stat.player}</td><td>${stat.systems}</td><td>${stat.ships}</td></tr>`;
-  });
-  html = `<table>${html}</table>`;
-  
-  box.html(html);
-}
+  const row = table.select('tbody')
+    .selectAll('tr')
+    .data(stats)
+    .join(
+      enter => enter.append('tr'),
+      update => update,
+      exit => exit.remove()
+    );
 
-export function createMessageBox() {
-  d3.select('#messagebox').remove();
-  
-  d3.select('#app')
-    .append('div')
-    .attr('id', 'messagebox');
+  row.selectAll('td').data(d => [d.player, d.systems, d.ships])
+    .join(
+      enter => enter.append('td'),
+      update => update,
+      exit => exit.remove()
+    )
+    .text(d => d);
 }
 
 export function updateMessageBox() {
-  const box = d3.select('#messagebox');
+  const box = d3.select('#app')
+    .selectAll('#messagebox')
+    .data([null])
+    .join(
+      enter => enter.append('div').attr('id', 'messagebox')
+    );
 
   box.selectAll('div').data(state.messages.slice(-5), (d: any) => d.id).join(
-    enter => enter.append('div').html(d => d.html),
-    update => update.html(d => d.html),
-    exit => exit.remove()
-  );
+    enter => enter.append('div')
+  ).html(d => d.html);
 }

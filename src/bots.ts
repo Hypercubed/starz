@@ -12,6 +12,10 @@ export function botsMove() {
 function basicBot(player: number) {
   const botSystems = state.systems.filter(system => system.owner === player);
 
+  // Smart bot should:
+  // - Rush to exterminate homeworlds
+  // - Rush to protect own homeworld
+
   // *** eXterminate ***
   const attackLanes = getExterminateMoves(botSystems, player);
   if (attackLanes.length > 0) {

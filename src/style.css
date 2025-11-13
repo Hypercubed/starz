@@ -12,15 +12,13 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --player-1: #ff0000;
-  --player-2: #0000ff;
-  --player-3: #00ff00;
-  --player-4: #ffff00;
-  --player-5: #ff00ff;
-  --player-6: #00ffff;
+  --player-1: #C0392B; /* Red */
+  --player-2: #F1C40F; /* Yellow */
+  --player-3: #9B59B6; /* Purple */
+  --player-4: #00B386; /* Green */
+  --player-5: #CC6600; /* Orange */
+  --player-6: #0A4C8C; /* Blue */
 
-  --fow: #393939;
-  --occupied: #ff0000;
   --unoccupied: #dcdcdc;
   --inhabited: #808080;
 }
@@ -103,14 +101,18 @@ svg {
       user-select: none;
       transform: translate(10px, 0);
     }
-    
+
     .system-icon {
+      fill: var(--owner-color, var(--unoccupied));
+    }
+    
+    .system-marker {
       fill: var(--owner-color, var(--unoccupied));
       stroke: white;
       r: 4;
     }
 
-    &.selected .system-icon {
+    &.selected .system-marker {
       stroke-width: 3;
     }
 
@@ -118,14 +120,14 @@ svg {
       display: inline;
     }
 
-    &.inhabited .system-icon {
+    &.inhabited .system-marker {
       r: 6;
     }
   }
 
   .lane {
     stroke: var(--owner-color, var(--unoccupied));
-    stroke-width: 3;
+    stroke-width: 2;
     stroke-opacity: 0.7;
     cursor: pointer;
     /* display: none; */
@@ -141,6 +143,7 @@ svg {
 
     &[data-owner] {
       stroke-width: 6;
+      stroke-opacity: 1;
     }
   }
 }

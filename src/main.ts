@@ -5,7 +5,7 @@ import { addMessage, resetState, state } from './state';
 import { generateMap } from './generate';
 import { PLAYER } from './constants';
 import { revealSystem } from './actions';
-import { createInfoBox, createLeaderbox, createMessageBox, updateInfoBox, updateLeaderbox, updateMessageBox } from './ui';
+import { updateInfoBox, updateLeaderbox, updateMessageBox } from './ui';
 import { startGame, stopGame } from './engine';
 import { setupControls } from './controls';
 
@@ -27,11 +27,8 @@ function startNewGame() {
 
   addMessage(`Game started. You are Player ${PLAYER}.`);
 
-  createInfoBox();
   updateInfoBox();
-  createLeaderbox();
   updateLeaderbox();
-  createMessageBox();
   updateMessageBox();
   
   startGame();
