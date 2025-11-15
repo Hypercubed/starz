@@ -22,7 +22,6 @@ export function generateMap() {
   const zN = HEIGHT / 2;
 
   console.log("Generating map...");
-  console.log({ dz });
 
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
@@ -66,7 +65,6 @@ export function generateMap() {
   console.log(
     `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`,
   );
-  console.log({ NumOfSystems, NumInhabited, NumBots });
 
   // Setup PLAYER homeworld
   const homeSystem = state.systems[0];

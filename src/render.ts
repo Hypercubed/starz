@@ -50,7 +50,6 @@ function setProjection(projectionName: string) {
 }
 
 function resize() {
-  console.log("Resize detected");
   width = parseInt(svg.style("width"));
   height = parseInt(svg.style("height"));
   center = [width / 2, height / 2] satisfies [number, number];
