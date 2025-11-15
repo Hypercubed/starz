@@ -8,7 +8,7 @@ export const state = {
   systems: [] as System[],
   lanes: [] as Lane[],
   playerStats: [] as PlayerStats[],
-  messages: [] as Messages[]
+  messages: [] as Messages[],
 };
 
 export function resetState() {
@@ -25,6 +25,11 @@ export function resetState() {
 let messageIdCounter = 0;
 
 export function addMessage(message: string) {
-  const html = `${message} <small>${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}</small>`;
-  state.messages.push({ id: messageIdCounter++, message, tick: state.tick, html });
+  const html = `${message} <small>${~~(state.tick / 2)}${state.tick % 2 === 1 ? "." : ""}</small>`;
+  state.messages.push({
+    id: messageIdCounter++,
+    message,
+    tick: state.tick,
+    html,
+  });
 }

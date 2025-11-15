@@ -1,58 +1,78 @@
-import * as d3 from 'd3';
+import * as d3 from "d3";
 
 // @ts-ignore
-import versor from 'versor';
+import versor from "versor";
 
-import { HEIGHT, WIDTH } from './constants';
-import { state } from './state';
-import type { Coordinates, Lane, System } from './types';
-import { onClickLane, onClickSystem } from './actions';
+import { HEIGHT, WIDTH } from "./constants";
+import { state } from "./state";
+import type { Coordinates, Lane, System } from "./types";
+import { onClickLane, onClickSystem } from "./actions";
 
-const ZOOM_SENSITIVITY = 0.5
+const ZOOM_SENSITIVITY = 0.5;
 const SYSTEM_SIZE = 20;
 
 const projections = {
-  'Orthographic': d3.geoOrthographic,
-  'Stereographic': d3.geoStereographic,
-  'Mercator': d3.geoMercator,
-  'TransverseMercator': d3.geoTransverseMercator
-}
+  Orthographic: d3.geoOrthographic,
+  Stereographic: d3.geoStereographic,
+  Mercator: d3.geoMercator,
+  TransverseMercator: d3.geoTransverseMercator,
+};
 
-let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
+let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, unknown>;
 
 let width = WIDTH;
 let height = HEIGHT;
 let center = [width / 2, height / 2] satisfies [number, number];
 
-const selectedProjectionType = projections['Orthographic'];
+let selectedProjectionType = projections["Orthographic"];
+let geoProjection = selectedProjectionType().translate(center);
+let initialScale = geoProjection.scale();
+let geoPathGenerator = d3.geoPath().projection(geoProjection);
 
-const geoProjection = selectedProjectionType().translate(center); // .clipAngle(selectedProjectionType.clipAngle);
-const initialScale = geoProjection.scale();
-const geoPathGenerator = d3.geoPath().projection(geoProjection);
+export function changeView() {
+  const projectionNames = Object.keys(projections);
+  const currentIndex = projectionNames.findIndex(
+    (name) =>
+      projections[name as keyof typeof projections] === selectedProjectionType,
+  );
+  const nextIndex = (currentIndex + 1) % projectionNames.length;
+  setProjection(projectionNames[nextIndex]);
+}
+
+function setProjection(projectionName: string) {
+  selectedProjectionType =
+    projections[projectionName as keyof typeof projections];
+  geoProjection = selectedProjectionType()
+    .translate(center)
+    .scale(initialScale);
+  initialScale = geoProjection.scale();
+  geoPathGenerator = d3.geoPath().projection(geoProjection);
+}
 
 export function drawMap() {
-  d3.select('#app').select('svg').remove();
+  d3.select("#app").select("svg").remove();
 
-  svg = d3.select('#app')
-    .append('svg')
-    .attr('width', '100vw')
-    .attr('height', '100vh')
-    .on('contextmenu', (ev: PointerEvent) => ev.preventDefault());
-    // .attr('width', width + 'px')
-    // .attr('height', height + 'px')
-    // .attr('viewBox', `0 0 ${width} ${height}`);
+  svg = d3
+    .select("#app")
+    .append("svg")
+    .attr("width", "100vw")
+    .attr("height", "100vh")
+    .on("contextmenu", (ev: PointerEvent) => ev.preventDefault());
+  // .attr('width', width + 'px')
+  // .attr('height', height + 'px')
+  // .attr('viewBox', `0 0 ${width} ${height}`);
 
-  width = parseInt(svg.style('width'));
-  height = parseInt(svg.style('height'));
+  width = parseInt(svg.style("width"));
+  height = parseInt(svg.style("height"));
   center = [width / 2, height / 2] satisfies [number, number];
   geoProjection.translate(center);
-  
+
   // if (SYSTEM_PROJECTION_HIDING) drawOutline();
   drawGraticule();
 
   drawLanes();
   drawSystems();
-  
+
   svg.call(createDrag() as any);
   svg.call(createZoom() as any);
 
@@ -68,38 +88,35 @@ export function drawMap() {
   // }
 
   function drawGraticule() {
-    const g = svg.append('g').attr('id', 'graticule');
+    const g = svg.append("g").attr("id", "graticule");
     const graticule = d3.geoGraticule();
 
-    g.append('path')
+    g.append("path")
       .datum(graticule)
-      .attr('class', 'graticule')
-      .attr('d', geoPathGenerator)
-      .style('fill', 'none')
-      .style('stroke', '#333');
+      .attr("class", "graticule")
+      .attr("d", geoPathGenerator)
+      .style("fill", "none")
+      .style("stroke", "#333");
   }
 
   function createDrag() {
-    return drag()
-      .on("drag.render", rerender)
-      .on("end.render", rerender);
+    return drag().on("drag.render", rerender).on("end.render", rerender);
   }
 
   function createZoom(): d3.ZoomBehavior<Element, unknown> {
-    return d3.zoom()
-      .on('zoom', (event) => {
-        if (event.transform.k > ZOOM_SENSITIVITY) {
-          let newScale = initialScale * event.transform.k;
-          geoProjection.scale(newScale);
-          svg.selectAll('path.graticule').attr('d', geoPathGenerator as any);
-          svg.selectAll('circle#globe').attr('d', geoPathGenerator as any);
-          svg.selectAll('circle#globe').attr('r', geoProjection.scale());
-          drawSystems();
-          drawLanes();
-        } else {
-          event.transform.k = ZOOM_SENSITIVITY;
-        }
-      });
+    return d3.zoom().on("zoom", (event) => {
+      if (event.transform.k > ZOOM_SENSITIVITY) {
+        const newScale = initialScale * event.transform.k;
+        geoProjection.scale(newScale);
+        svg.selectAll("path.graticule").attr("d", geoPathGenerator as any);
+        svg.selectAll("circle#globe").attr("d", geoPathGenerator as any);
+        svg.selectAll("circle#globe").attr("r", geoProjection.scale());
+        drawSystems();
+        drawLanes();
+      } else {
+        event.transform.k = ZOOM_SENSITIVITY;
+      }
+    });
   }
 
   function drag() {
@@ -120,8 +137,8 @@ export function drawMap() {
 
       // For multitouch, average positions and compute rotation.
       if (l > 1) {
-        const x = d3.mean(t, p => p[0]);
-        const y = d3.mean(t, p => p[1]);
+        const x = d3.mean(t, (p) => p[0]);
+        const y = d3.mean(t, (p) => p[1]);
         const a = Math.atan2(t[1][1] - t[0][1], t[1][0] - t[0][0]);
         return [x, y, a];
       }
@@ -131,11 +148,13 @@ export function drawMap() {
 
     function dragstarted({ x, y }: any) {
       v0 = versor.cartesian(geoProjection.invert!([x, y]));
-      q0 = versor(r0 = geoProjection.rotate());
+      q0 = versor((r0 = geoProjection.rotate()));
     }
 
     function dragged(this: any, event: any) {
-      const v1 = versor.cartesian(geoProjection.rotate(r0).invert!([event.x, event.y]));
+      const v1 = versor.cartesian(
+        geoProjection.rotate(r0).invert!([event.x, event.y]),
+      );
       const delta = versor.delta(v0, v1);
       let q1 = versor.multiply(q0, delta);
 
@@ -154,9 +173,10 @@ export function drawMap() {
       if (delta[0] < 0.7) dragstarted.apply(this, [event, this] as any);
     }
 
-    return d3.drag()
+    return d3
+      .drag()
       .filter((event) => {
-        return (event.button === 1);
+        return event.button === 1;
       })
       .on("start", dragstarted)
       .on("drag", dragged);
@@ -174,9 +194,9 @@ export function centerOnCoordinates(coords: Coordinates) {
 }
 
 function rerenderUnthrottled() {
-  svg.selectAll('path.graticule').attr('d', geoPathGenerator as any);
-  svg.selectAll('circle#globe').attr('d', geoPathGenerator as any);
-  svg.selectAll('circle#globe').attr('r', geoProjection.scale());
+  svg.selectAll("path.graticule").attr("d", geoPathGenerator as any);
+  svg.selectAll("circle#globe").attr("d", geoPathGenerator as any);
+  svg.selectAll("circle#globe").attr("r", geoProjection.scale());
 
   drawSystems();
   drawLanes();
@@ -185,71 +205,78 @@ function rerenderUnthrottled() {
 export const rerender = throttle(rerenderUnthrottled, 16);
 
 function drawSystems() {
-  const visibleSystems = state.systems.filter(system => system.isRevealed);
+  const visibleSystems = state.systems.filter((system) => system.isRevealed);
 
-  const g = svg.selectAll('g#systems').data([visibleSystems]).join(
-    enter => enter.append('g').attr('id', 'systems')
-  );
+  const g = svg
+    .selectAll("g#systems")
+    .data([visibleSystems])
+    .join((enter) => enter.append("g").attr("id", "systems"));
 
-  const join = g.selectAll('.system')
-    .data(visibleSystems, d => (d as System).id)
-    .join(
-      enter => {
-        const group = enter.append('g')
-          .attr('class', 'system')
-          .attr('id', d => `system-${d.id}`)
-          // .attr('title', d => `System ${d.id}`)
-          .on('click', (ev: PointerEvent, d: System) => onClickSystem(ev, d))
-          .on('contextmenu', (ev: PointerEvent, d: System) => {
-            ev.preventDefault();
-            onClickSystem(ev, d);
-          });
+  const join = g
+    .selectAll(".system")
+    .data(visibleSystems, (d) => (d as System).id)
+    .join((enter) => {
+      const group = enter
+        .append("g")
+        .attr("class", "system")
+        .attr("id", (d) => `system-${d.id}`)
+        // .attr('title', d => `System ${d.id}`)
+        .on("click", (ev: PointerEvent, d: System) => onClickSystem(ev, d))
+        .on("contextmenu", (ev: PointerEvent, d: System) => {
+          ev.preventDefault();
+          onClickSystem(ev, d);
+        });
 
-        group.append('circle')
-          .attr('class', 'system-outline')
-          .attr('cx', 0)
-          .attr('cy', 0)
-          .attr('r', SYSTEM_SIZE / 2);
+      group
+        .append("circle")
+        .attr("class", "system-outline")
+        .attr("cx", 0)
+        .attr("cy", 0)
+        .attr("r", SYSTEM_SIZE / 2);
 
-        group
-          .append('circle')
-          .attr('class', 'system-marker')
-          .attr('r', 4)
-          .attr('fill', 'white')
-          .attr('stroke', 'white')
-          .attr('stroke-width', 1);
+      group
+        .append("circle")
+        .attr("class", "system-marker")
+        .attr("r", 4)
+        .attr("fill", "white")
+        .attr("stroke", "white")
+        .attr("stroke-width", 1);
 
-        // group.append('path')
-        //   .attr('class', 'system-region')
-        //   // .attr('r', 40)
-        //   .attr('fill', 'var(--owner-color, gray)')
-        //   .attr('fill-opacity', 0.3)
-        //   .attr('stroke', 'none')
-        //   // .attr('cx', 0)
-        //   // .attr('cy', 0)
-        //   ;
-          
-        group.append('text')
-          .attr('class', 'ship-count')
-          .attr('y', -10)
-          .attr('x', d => d.homeworld == null ? 0 : 12)
-          .attr('text-anchor', 'start');
+      // group.append('path')
+      //   .attr('class', 'system-region')
+      //   // .attr('r', 40)
+      //   .attr('fill', 'var(--owner-color, gray)')
+      //   .attr('fill-opacity', 0.3)
+      //   .attr('stroke', 'none')
+      //   // .attr('cx', 0)
+      //   // .attr('cy', 0)
+      //   ;
 
-        group.append('text')
-          .attr('class', 'system-icon')
-          .attr('y', -10)
-          .attr('text-anchor', 'end');
+      group
+        .append("text")
+        .attr("class", "ship-count")
+        .attr("y", -10)
+        .attr("x", (d) => (d.homeworld == null ? 0 : 12))
+        .attr("text-anchor", "start");
 
-        return group;
-      }
-    );
-  
+      group
+        .append("text")
+        .attr("class", "system-icon")
+        .attr("y", -10)
+        .attr("text-anchor", "end");
+
+      return group;
+    });
+
   join
-    .attr('data-owner', d => d.owner != null ? d.owner.toString() : 'null')
-    .classed('selected', d => state.selectedSystems.includes(d))
-    .classed('inhabited', d => d.isInhabited === true)
-    .classed('hidden', d => !geoPathGenerator({ type: "Point", coordinates: d.location }))
-    .attr("transform", d => `translate(${geoProjection(d.location)})`);
+    .attr("data-owner", (d) => (d.owner != null ? d.owner.toString() : "null"))
+    .classed("selected", (d) => state.selectedSystems.includes(d))
+    .classed("inhabited", (d) => d.isInhabited === true)
+    .classed(
+      "hidden",
+      (d) => !geoPathGenerator({ type: "Point", coordinates: d.location }),
+    )
+    .attr("transform", (d) => `translate(${geoProjection(d.location)})`);
 
   // join.selectAll('.system-region').data(d => [d])
   //   .attr('d', d => {
@@ -257,56 +284,70 @@ function drawSystems() {
   //     return geoPathGenerator(circle())!;
   //   });
 
-  join.select('.system-icon')
-    .text(d => {
-      if (d.homeworld == null) return '';
-      if (d.homeworld == 0) return '▲';
-      if (d.homeworld && d.owner === d.homeworld) return '★';
-      return '';
-    });
+  join.select(".system-icon").text((d) => {
+    if (d.homeworld == null) return "";
+    if (d.homeworld == 0) return "▲";
+    if (d.homeworld && d.owner === d.homeworld) return "★";
+    return "";
+  });
 
-  join.select('.ship-count')
-    .text(d => d.ships ? d.ships.toString() : '');
+  join.select(".ship-count").text((d) => (d.ships ? d.ships.toString() : ""));
 }
 
 function drawLanes() {
-  const visibleLanes = state.lanes.filter(lane => lane.isRevealed);
-  
-  const g = svg.selectAll('g#lanes').data([visibleLanes]).join(
-    enter => enter.append('g').attr('id', 'lanes'),
-  );
+  const visibleLanes = state.lanes.filter((lane) => lane.isRevealed);
 
-  g.selectAll('.lane')
-    .data(d => d, d => (d as Lane).id)
-    .join(
-      enter => enter.append('path')
-        .attr('class', 'lane')
-        .attr('fill', 'none')
-        .attr('stroke-width', 2)
-        .attr('stroke', 'orange')
-        .attr('id', (_, i) => `lane-${i}`)
-        .on('click', (ev: PointerEvent, d: Lane) => onClickLane(ev, d))
-        .on('contextmenu', (ev: PointerEvent, d: Lane) => {
+  const g = svg
+    .selectAll("g#lanes")
+    .data([visibleLanes])
+    .join((enter) => enter.append("g").attr("id", "lanes"));
+
+  g.selectAll(".lane")
+    .data(
+      (d) => d,
+      (d) => (d as Lane).id,
+    )
+    .join((enter) =>
+      enter
+        .append("path")
+        .attr("class", "lane")
+        .attr("fill", "none")
+        .attr("stroke-width", 2)
+        .attr("stroke", "orange")
+        .attr("id", (_, i) => `lane-${i}`)
+        .on("click", (ev: PointerEvent, d: Lane) => onClickLane(ev, d))
+        .on("contextmenu", (ev: PointerEvent, d: Lane) => {
           ev.preventDefault();
           onClickLane(ev, d);
-        })
-    ).attr('data-owner', d => {
-      return (d.from.owner && d.from.owner === d.to.owner) ? d.from.owner.toString() : null;
+        }),
+    )
+    .attr("data-owner", (d) => {
+      return d.from.owner && d.from.owner === d.to.owner
+        ? d.from.owner.toString()
+        : null;
     })
-    .attr('d', d => geoPathGenerator({ type: "LineString", coordinates: [d.from.location, d.to.location ] }));
+    .attr("d", (d) =>
+      geoPathGenerator({
+        type: "LineString",
+        coordinates: [d.from.location, d.to.location],
+      }),
+    );
 }
 
-function throttle<T extends unknown[]>(callback: (...args: T) => void, delay: number) {
+function throttle<T extends unknown[]>(
+  callback: (...args: T) => void,
+  delay: number,
+) {
   let isWaiting = false;
- 
+
   return (...args: T) => {
     if (isWaiting) return;
- 
+
     callback(...args);
     isWaiting = true;
- 
+
     setTimeout(() => {
       isWaiting = false;
     }, delay);
   };
-};
+}

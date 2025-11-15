@@ -4,13 +4,23 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "start": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "eslint": "eslint ./src/",
+    "eslint:fix": "eslint ./src/ --fix",
+    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "fix": "npm run eslint:fix && npm run format"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
     "@types/d3": "^7.4.3",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jiti": "^2.6.1",
+    "prettier": "3.6.2",
     "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.4",
     "vite": "^7.1.7"
   },
   "dependencies": {

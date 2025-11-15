@@ -1,7 +1,7 @@
 import { PLAYER } from "./constants";
 import { rerender } from "./render";
 import { addMessage, state } from "./state";
-import type { BotMove, Lane, System } from "./types";
+import type { Lane, System } from "./types";
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
   switch (event.button) {
@@ -9,7 +9,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       // No action on left click for lanes
       break;
     case 2: // Right click
-      state.selectedSystems.forEach(selectedSystem => {
+      state.selectedSystems.forEach((selectedSystem) => {
         if (selectedSystem !== lane.from && selectedSystem !== lane.to) return;
 
         let from = lane.from;
@@ -28,7 +28,10 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 }
 
 function toggleSingleSystemSelect(system: System) {
-  if (state.selectedSystems.length === 1 && state.selectedSystems[0] === system) {
+  if (
+    state.selectedSystems.length === 1 &&
+    state.selectedSystems[0] === system
+  ) {
     // Deselect
     state.selectedSystems = [];
     state.lastSelectedSystem = null;
@@ -41,7 +44,7 @@ function toggleSingleSystemSelect(system: System) {
 
 function toggleSystemSelect(system: System) {
   if (state.selectedSystems.includes(system)) {
-    state.selectedSystems = state.selectedSystems.filter(s => s !== system);
+    state.selectedSystems = state.selectedSystems.filter((s) => s !== system);
     if (state.lastSelectedSystem === system) {
       state.lastSelectedSystem = null;
     }
@@ -59,7 +62,7 @@ function addSystemSelect(system: System) {
 }
 
 function removeSystemSelect(system: System) {
-  state.selectedSystems = state.selectedSystems.filter(s => s !== system);
+  state.selectedSystems = state.selectedSystems.filter((s) => s !== system);
   if (state.lastSelectedSystem === system) {
     state.lastSelectedSystem = null;
   }
@@ -76,10 +79,12 @@ function selectPath(system: System) {
   while (queue.length > 0) {
     const path = queue.shift()!;
     const current = path[path.length - 1];
-    
+
     if (current === system) {
       // Found path
-      state.selectedSystems = Array.from(new Set([...state.selectedSystems, ...path]));
+      state.selectedSystems = Array.from(
+        new Set([...state.selectedSystems, ...path]),
+      );
       state.lastSelectedSystem = system;
       return;
     }
@@ -97,7 +102,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
   switch (event.button) {
     case 0: // Left click
       if (system.owner !== PLAYER) return;
-      
+
       if (event.ctrlKey || event.metaKey) {
         toggleSystemSelect(system);
       } else if (event.shiftKey) {
@@ -107,7 +112,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
       }
       break;
     case 2: // Right click
-      state.selectedSystems.forEach(selectedSystem => {
+      state.selectedSystems.forEach((selectedSystem) => {
         orderMassMove(selectedSystem, system);
       });
       break;
@@ -118,9 +123,8 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
 function orderBalancedMove(from: System, to: System) {
   // Check if there's a lane between selectedSystem and system
-  const lane = state.lanes.find(l =>
-    (l.from === from && l.to === to) ||
-    (l.to === from && l.from === to)
+  const lane = state.lanes.find(
+    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to),
   );
 
   if (lane) {
@@ -137,9 +141,8 @@ function orderBalancedMove(from: System, to: System) {
 
 function orderMassMove(from: System, to: System) {
   // Check if there's a lane between selectedSystem and system
-  const lane = state.lanes.find(l =>
-    (l.from === from && l.to === to) ||
-    (l.to === from && l.from === to)
+  const lane = state.lanes.find(
+    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to),
   );
 
   if (lane) {
@@ -155,6 +158,7 @@ function orderMassMove(from: System, to: System) {
 
 function moveShips(from: System, to: System, ships: number) {
   if (ships < 1) return;
+  if (from.ships! < ships) return;
 
   if (to.owner === from.owner) {
     transferShips(from, to, ships);
@@ -183,7 +187,9 @@ function takeSystem(player: number, system: System) {
   if (player === PLAYER) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== player) {
-    addMessage(`Player ${player} has taken over the homeworld of Player ${system.homeworld}!`);
+    addMessage(
+      `Player ${player} has taken over the homeworld of Player ${system.homeworld}!`,
+    );
     eliminatePlayer(player, system.homeworld);
     system.homeworld = 0; // No longer a homeworld
   }
@@ -191,7 +197,7 @@ function takeSystem(player: number, system: System) {
 
 function eliminatePlayer(winner: number, loser: number) {
   // Take over homeworld, other systems and 50% of ships
-  state.systems.forEach(s => {
+  state.systems.forEach((s) => {
     if (s.owner === loser) {
       s.owner = winner;
       s.ships = Math.floor((s.ships ?? 0) / 2);
@@ -202,7 +208,7 @@ function eliminatePlayer(winner: number, loser: number) {
 
 export function revealSystem(system: System) {
   system.isRevealed = true;
-  system.lanes.forEach(lane => {
+  system.lanes.forEach((lane) => {
     lane.isRevealed = true;
     lane.from.isRevealed = true;
     lane.to.isRevealed = true;
@@ -216,22 +222,16 @@ function transferShips(from: System, to: System, ships: number) {
   if (to.owner === PLAYER) revealSystem(to);
 }
 
-export function doMove(move: BotMove) {
-  switch (move.type) {
-    case 'exterminate': {
-      const attackingShips = move.from.ships! - 1;
-      attackSystem(move.from, move.to, attackingShips);
-      break;
+export function queueMove(from: System, to: System, ships: number) {
+  if (from.ships < ships) return;
+  from.moveQueue.push({ ships, from, to });
+}
+
+export function doQueuedMoves() {
+  state.systems.forEach((system) => {
+    const move = system.moveQueue.pop();
+    if (move) {
+      moveShips(move.from, move.to, move.ships);
     }
-    case 'explore': {
-      const attackingShips = Math.floor((move.from.ships ?? 0) / 2);
-      attackSystem(move.from, move.to, attackingShips);
-      break;
-    }
-    case 'expand': {
-      const deltaShips = Math.floor(((move.from.ships ?? 0) - (move.to.ships ?? 0)) / 2);
-      transferShips(move.from, move.to, deltaShips);
-      break;
-    }
-  }
+  });
 }

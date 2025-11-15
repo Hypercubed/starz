@@ -1,6 +1,13 @@
-import * as d3 from 'd3';
+import * as d3 from "d3";
 
-import { NumInhabited, HEIGHT, NumOfSystems, NumBots, PLAYER, MinDistanceBetweenSystems } from "./constants";
+import {
+  NumInhabited,
+  HEIGHT,
+  NumOfSystems,
+  NumBots,
+  PLAYER,
+  MinDistanceBetweenSystems,
+} from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
 
@@ -14,7 +21,7 @@ export function generateMap() {
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
-  console.log('Generating map...');
+  console.log("Generating map...");
   console.log({ dz });
 
   for (let z = z0; z < zN; z += dz) {
@@ -27,7 +34,10 @@ export function generateMap() {
 
     if (closestSystem) {
       // Enforce minimum distance
-      if (d3.geoDistance(thisLocation, closestSystem.location) < MinDistanceBetweenSystems) {
+      if (
+        d3.geoDistance(thisLocation, closestSystem.location) <
+        MinDistanceBetweenSystems
+      ) {
         z -= dz;
         continue;
       }
@@ -53,7 +63,9 @@ export function generateMap() {
     s.push(system);
   }
 
-  console.log(`Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`);
+  console.log(
+    `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`,
+  );
   console.log({ NumOfSystems, NumInhabited, NumBots });
 
   // Setup PLAYER homeworld
@@ -108,14 +120,15 @@ function createSystem(location: Coordinates): System {
     isInhabited: false,
     isRevealed: false,
     ships: 0,
-    homeworld: null
-  }
+    homeworld: null,
+    moveQueue: [],
+  };
 }
 
 function addLane(from: System, to: System): Lane {
-  const id = [from.id, to.id].sort((a, b) => a - b).join('-');
+  const id = [from.id, to.id].sort((a, b) => a - b).join("-");
 
-  const existingLane = state.lanes.find(lane => lane.id === id);
+  const existingLane = state.lanes.find((lane) => lane.id === id);
   if (existingLane) {
     return existingLane;
   }
@@ -124,7 +137,7 @@ function addLane(from: System, to: System): Lane {
     id,
     from,
     to,
-    isRevealed: false
+    isRevealed: false,
   };
   state.lanes.push(newLane);
   from.lanes.push(newLane);
@@ -132,14 +145,18 @@ function addLane(from: System, to: System): Lane {
   return newLane;
 }
 
-function findClosestSystem(loc: Coordinates, systems = state.systems): System | null {
+function findClosestSystem(
+  loc: Coordinates,
+  systems = state.systems,
+): System | null {
   if (systems.length === 0) return null;
 
   let closestSystem: System | null = null;
   let minDistance = Infinity;
 
-  systems.forEach(candidate => {
-    if (candidate.location[0] === loc[0] && candidate.location[1] === loc[1]) return;
+  systems.forEach((candidate) => {
+    if (candidate.location[0] === loc[0] && candidate.location[1] === loc[1])
+      return;
 
     const distance = d3.geoDistance(loc, candidate.location);
     if (distance < minDistance) {

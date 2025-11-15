@@ -1,5 +1,11 @@
 export type Coordinates = [number, number];
 
+export interface Move {
+  ships: number;
+  from: System;
+  to: System;
+}
+
 export interface System {
   id: number;
   location: Coordinates;
@@ -9,6 +15,7 @@ export interface System {
   isRevealed: boolean;
   ships: number;
   homeworld: number | null;
+  moveQueue: Move[];
 }
 
 export interface Lane {
@@ -21,12 +28,12 @@ export interface Lane {
 export interface PlayerStats {
   player: number;
   systems: number;
-  ships: number,
-  homeworld: number
-};
+  ships: number;
+  homeworld: number;
+}
 
 export interface BotMove {
-  type: 'exterminate' | 'explore' | 'expand';
+  type: "exterminate" | "explore" | "expand";
   from: System;
   to: System;
 }
