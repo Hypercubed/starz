@@ -9,77 +9,148 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       // No action on left click for lanes
       break;
     case 2: // Right click
-      if (!state.selectedSystem) return;
-      if (state.selectedSystem !== lane.from && state.selectedSystem !== lane.to) return;
+      state.selectedSystems.forEach(selectedSystem => {
+        if (selectedSystem !== lane.from && selectedSystem !== lane.to) return;
 
-      let from = lane.from;
-      let to = lane.to;
+        let from = lane.from;
+        let to = lane.to;
 
-      if (from !== state.selectedSystem) {
-        const s = from;
-        from = to;
-        to = s;
-      }
-
-      let deltaShips = 0;
-      if (to.owner === from.owner) {
-        // Transfer ships - move half the difference
-        deltaShips = Math.floor((from.ships - to.ships) / 2);
-      } else {
-        // Attack - move half the ships
-        deltaShips = Math.floor(from.ships / 2);
-      }
-
-      moveShips(from, to, deltaShips);
-
-      // To system now belongs to player, select it
-      // if (to.owner === PLAYER) {
-      //   state.selectedSystem = to;
-      // } else {
-      //   state.selectedSystem = from;
-      // }
+        if (from !== selectedSystem) {
+          const s = from;
+          from = to;
+          to = s;
+        }
+        orderBalancedMove(from, to);
+      });
       break;
   }
   rerender();
+}
+
+function toggleSingleSystemSelect(system: System) {
+  if (state.selectedSystems.length === 1 && state.selectedSystems[0] === system) {
+    // Deselect
+    state.selectedSystems = [];
+    state.lastSelectedSystem = null;
+  } else {
+    // Select only this system
+    state.selectedSystems = [system];
+    state.lastSelectedSystem = system;
+  }
+}
+
+function toggleSystemSelect(system: System) {
+  if (state.selectedSystems.includes(system)) {
+    state.selectedSystems = state.selectedSystems.filter(s => s !== system);
+    if (state.lastSelectedSystem === system) {
+      state.lastSelectedSystem = null;
+    }
+  } else {
+    state.selectedSystems.push(system);
+    state.lastSelectedSystem = system;
+  }
+}
+
+function addSystemSelect(system: System) {
+  if (!state.selectedSystems.includes(system)) {
+    state.selectedSystems.push(system);
+    state.lastSelectedSystem = system;
+  }
+}
+
+function removeSystemSelect(system: System) {
+  state.selectedSystems = state.selectedSystems.filter(s => s !== system);
+  if (state.lastSelectedSystem === system) {
+    state.lastSelectedSystem = null;
+  }
+}
+
+function selectPath(system: System) {
+  if (state.lastSelectedSystem == null) return;
+
+  // Simple BFS to find shortest path
+  const queue: System[][] = [[state.lastSelectedSystem]];
+  const visited = new Set<System>();
+  visited.add(state.lastSelectedSystem);
+
+  while (queue.length > 0) {
+    const path = queue.shift()!;
+    const current = path[path.length - 1];
+    
+    if (current === system) {
+      // Found path
+      state.selectedSystems = Array.from(new Set([...state.selectedSystems, ...path]));
+      state.lastSelectedSystem = system;
+      return;
+    }
+    for (const lane of current.lanes) {
+      const neighbor = lane.from === current ? lane.to : lane.from;
+      if (!visited.has(neighbor) && neighbor.owner === PLAYER) {
+        visited.add(neighbor);
+        queue.push([...path, neighbor]);
+      }
+    }
+  }
 }
 
 export function onClickSystem(event: PointerEvent, system: System) {
   switch (event.button) {
     case 0: // Left click
       if (system.owner !== PLAYER) return;
-      if (state.selectedSystem === system) {
-        state.selectedSystem = null;
+      
+      if (event.ctrlKey || event.metaKey) {
+        toggleSystemSelect(system);
+      } else if (event.shiftKey) {
+        selectPath(system);
       } else {
-        state.selectedSystem = system;
+        toggleSingleSystemSelect(system);
       }
       break;
     case 2: // Right click
-      if (state.selectedSystem) {
-        // Check if there's a lane between selectedSystem and system
-        const lane = state.lanes.find(l =>
-          (l.from === state.selectedSystem && l.to === system) ||
-          (l.to === state.selectedSystem && l.from === system)
-        );
-
-        if (lane) {
-          const from = state.selectedSystem;
-          const to = system;
-          const deltaShips = from.ships - 1;
-
-          moveShips(from, to, deltaShips);
-
-          // To system now belongs to player, select it
-          if (to.owner === PLAYER) {
-            state.selectedSystem = to;
-          } else {
-            state.selectedSystem = from;
-          }
-        }
-      }
+      state.selectedSystems.forEach(selectedSystem => {
+        orderMassMove(selectedSystem, system);
+      });
       break;
   }
 
   rerender();
+}
+
+function orderBalancedMove(from: System, to: System) {
+  // Check if there's a lane between selectedSystem and system
+  const lane = state.lanes.find(l =>
+    (l.from === from && l.to === to) ||
+    (l.to === from && l.from === to)
+  );
+
+  if (lane) {
+    // TODO: This should only balance ships if both systems are owned by the player
+    // otherwise it should attack with half the ships
+    const deltaShips = Math.floor(((from.ships ?? 0) - (to.ships ?? 0)) / 2);
+    moveShips(from, to, deltaShips);
+
+    if (to.owner === PLAYER) {
+      addSystemSelect(to);
+    }
+  }
+}
+
+function orderMassMove(from: System, to: System) {
+  // Check if there's a lane between selectedSystem and system
+  const lane = state.lanes.find(l =>
+    (l.from === from && l.to === to) ||
+    (l.to === from && l.from === to)
+  );
+
+  if (lane) {
+    const deltaShips = from.ships - 1;
+    moveShips(from, to, deltaShips);
+
+    if (to.owner === PLAYER) {
+      removeSystemSelect(from);
+      addSystemSelect(to);
+    }
+  }
 }
 
 function moveShips(from: System, to: System, ships: number) {

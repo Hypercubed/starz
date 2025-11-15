@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-import { NumInhabited, HEIGHT, NumOfSystems, NumBots, PLAYER } from "./constants";
+import { NumInhabited, HEIGHT, NumOfSystems, NumBots, PLAYER, MinDistanceBetweenSystems } from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
 
@@ -14,6 +14,9 @@ export function generateMap() {
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
+  console.log('Generating map...');
+  console.log({ dz });
+
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
     const longitude = Math.random() * 360 - 180;
@@ -24,7 +27,7 @@ export function generateMap() {
 
     if (closestSystem) {
       // Enforce minimum distance
-      if (d3.geoDistance(thisLocation, closestSystem.location) < 0.1) {
+      if (d3.geoDistance(thisLocation, closestSystem.location) < MinDistanceBetweenSystems) {
         z -= dz;
         continue;
       }
@@ -59,7 +62,8 @@ export function generateMap() {
   homeSystem.owner = PLAYER;
   state.systems[0].isInhabited = true;
   state.systems[0].homeworld = 1;
-  state.selectedSystem = state.systems[0];
+  state.lastSelectedSystem = state.systems[0];
+  state.selectedSystems = [state.systems[0]];
 
   const unoccupied = state.systems.slice(1);
   const occupied = [] as System[];

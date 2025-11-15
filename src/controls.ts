@@ -17,8 +17,8 @@ export function setupControls() {
           centerOnSystem(state.systems[0]);
           break;
         case 'c':
-          if (state.selectedSystem) {
-            centerOnSystem(state.selectedSystem);
+          if (state.lastSelectedSystem) {
+            centerOnSystem(state.lastSelectedSystem);
           }
           break;
         case 'R':

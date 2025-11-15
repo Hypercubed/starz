@@ -78,6 +78,7 @@ export function stopGame() {
 }
 
 function checkVictory() {
+  if ((NumBots as number) === 0) return;
   if (!gameRunning) return;
 
   // TODO: Use stats from state

@@ -103,17 +103,38 @@ svg {
     }
 
     .system-icon {
+      fill-opacity: 0.8;
       fill: var(--owner-color, var(--unoccupied));
+      stroke-width: 0.5;
+      stroke: white;
+      stroke-opacity: 0.3;
+    }
+
+    .system-outline {
+      stroke: var(--owner-color, var(--unoccupied));
+      fill: black;
+      fill-opacity: 0.5;
+      stroke-width: 1;
+      stroke-opacity: 0.5;
+      stroke-width: 2;
     }
     
     .system-marker {
       fill: var(--owner-color, var(--unoccupied));
       stroke: white;
-      r: 4;
+      stroke-opacity: 0.5;
+      stroke-width: 0.5;
+      r: 3;
     }
 
-    &.selected .system-marker {
-      stroke-width: 3;
+    &.selected {
+      .system-outline {
+        stroke-width: 3;
+      }
+
+      .system-outline {
+        stroke-opacity: 1;
+      }
     }
 
     &.revealed {
@@ -121,7 +142,7 @@ svg {
     }
 
     &.inhabited .system-marker {
-      r: 6;
+      r: 5;
     }
   }
 
@@ -142,7 +163,7 @@ svg {
     }
 
     &[data-owner] {
-      stroke-width: 6;
+      stroke-width: 3;
       stroke-opacity: 1;
     }
   }
@@ -174,4 +195,8 @@ svg {
 
 *[data-owner='6'] {
     --owner-color: var(--player-6);
-  }
+}
+
+.hidden {
+  display: none;
+}

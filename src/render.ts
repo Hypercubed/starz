@@ -12,9 +12,10 @@ const ZOOM_SENSITIVITY = 0.5
 const SYSTEM_SIZE = 20;
 
 const projections = {
-  'Orthographic': { fn: d3.geoOrthographic, clipAngle: 90, projectionHiding: true },
-  'Stereographic': { fn: d3.geoStereographic, clipAngle: 180.1, projectionHiding: false },
-  'Mercator': { fn: d3.geoMercator, clipAngle: 270, projectionHiding: false }
+  'Orthographic': d3.geoOrthographic,
+  'Stereographic': d3.geoStereographic,
+  'Mercator': d3.geoMercator,
+  'TransverseMercator': d3.geoTransverseMercator
 }
 
 let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, any>;
@@ -25,11 +26,9 @@ let center = [width / 2, height / 2] satisfies [number, number];
 
 const selectedProjectionType = projections['Orthographic'];
 
-const geoProjection = selectedProjectionType.fn().translate(center).clipAngle(selectedProjectionType.clipAngle);
+const geoProjection = selectedProjectionType().translate(center); // .clipAngle(selectedProjectionType.clipAngle);
 const initialScale = geoProjection.scale();
 const geoPathGenerator = d3.geoPath().projection(geoProjection);
-
-const SYSTEM_PROJECTION_HIDING = selectedProjectionType.projectionHiding;
 
 export function drawMap() {
   d3.select('#app').select('svg').remove();
@@ -207,20 +206,33 @@ function drawSystems() {
           });
 
         group.append('circle')
-          .attr('class', 'hit-target')
-          .attr('fill', 'transparent')
+          .attr('class', 'system-outline')
           .attr('cx', 0)
           .attr('cy', 0)
           .attr('r', SYSTEM_SIZE / 2);
 
         group
           .append('circle')
-          .attr('class', 'system-marker');
+          .attr('class', 'system-marker')
+          .attr('r', 4)
+          .attr('fill', 'white')
+          .attr('stroke', 'white')
+          .attr('stroke-width', 1);
+
+        // group.append('path')
+        //   .attr('class', 'system-region')
+        //   // .attr('r', 40)
+        //   .attr('fill', 'var(--owner-color, gray)')
+        //   .attr('fill-opacity', 0.3)
+        //   .attr('stroke', 'none')
+        //   // .attr('cx', 0)
+        //   // .attr('cy', 0)
+        //   ;
           
         group.append('text')
           .attr('class', 'ship-count')
           .attr('y', -10)
-          .attr('x', d => d.homeworld == null ? 0 : 10)
+          .attr('x', d => d.homeworld == null ? 0 : 12)
           .attr('text-anchor', 'start');
 
         group.append('text')
@@ -234,19 +246,16 @@ function drawSystems() {
   
   join
     .attr('data-owner', d => d.owner != null ? d.owner.toString() : 'null')
-    .classed('selected', d => d === state.selectedSystem)
+    .classed('selected', d => state.selectedSystems.includes(d))
     .classed('inhabited', d => d.isInhabited === true)
-    .attr("transform", d => {
-      const p = geoProjection(d.location);
-      return `translate(${p![0]},${p![1]})`;
-    });
+    .classed('hidden', d => !geoPathGenerator({ type: "Point", coordinates: d.location }))
+    .attr("transform", d => `translate(${geoProjection(d.location)})`);
 
-  if (SYSTEM_PROJECTION_HIDING) {
-    join.style('display', d => {
-      const gdistance = d3.geoDistance(d.location, geoProjection.invert!(center)!);
-      return gdistance > 1.5 ? 'none' : null;
-    });
-  }
+  // join.selectAll('.system-region').data(d => [d])
+  //   .attr('d', d => {
+  //     const circle = d3.geoCircle().center([0,0]).radius(5);
+  //     return geoPathGenerator(circle())!;
+  //   });
 
   join.select('.system-icon')
     .text(d => {
