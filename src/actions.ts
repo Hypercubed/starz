@@ -229,7 +229,7 @@ export function queueMove(from: System, to: System, ships: number) {
 
 export function doQueuedMoves() {
   state.systems.forEach((system) => {
-    const move = system.moveQueue.pop();
+    const move = system.moveQueue.shift();
     if (move) {
       moveShips(move.from, move.to, move.ships);
     }

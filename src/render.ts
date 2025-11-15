@@ -49,6 +49,15 @@ function setProjection(projectionName: string) {
   geoPathGenerator = d3.geoPath().projection(geoProjection);
 }
 
+function resize() {
+  console.log("Resize detected");
+  width = parseInt(svg.style("width"));
+  height = parseInt(svg.style("height"));
+  center = [width / 2, height / 2] satisfies [number, number];
+  geoProjection.translate(center);
+  rerender();
+}
+
 export function drawMap() {
   d3.select("#app").select("svg").remove();
 
@@ -75,6 +84,9 @@ export function drawMap() {
 
   svg.call(createDrag() as any);
   svg.call(createZoom() as any);
+
+  window.removeEventListener('resize', resize);
+  window.addEventListener('resize', resize);
 
   // function drawOutline() {
   //   const g = svg.append('g').attr('id', 'outline');

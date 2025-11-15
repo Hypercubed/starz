@@ -1,0 +1,24 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="200" height="200" fill="#0a0e27"/>
+  
+  <!-- Starbase Icon -->
+  <g transform="translate(100, 100)">
+    <circle cx="0" cy="0" r="45" fill="#1a2847" stroke="#4a9eff" stroke-width="3"/>
+    <circle cx="0" cy="0" r="25" fill="#2d4a7c" stroke="#4a9eff" stroke-width="2"/>
+    <line x1="-45" y1="0" x2="-60" y2="0" stroke="#4a9eff" stroke-width="3"/>
+    <line x1="45" y1="0" x2="60" y2="0" stroke="#4a9eff" stroke-width="3"/>
+    <line x1="0" y1="-45" x2="0" y2="-60" stroke="#4a9eff" stroke-width="3"/>
+    <line x1="0" y1="45" x2="0" y2="60" stroke="#4a9eff" stroke-width="3"/>
+    <circle cx="-60" cy="0" r="8" fill="#4a9eff"/>
+    <circle cx="60" cy="0" r="8" fill="#4a9eff"/>
+    <circle cx="0" cy="-60" r="8" fill="#4a9eff"/>
+    <circle cx="0" cy="60" r="8" fill="#4a9eff"/>
+  </g>
+  
+  <!-- Decorative stars -->
+  <circle cx="20" cy="20" r="1.5" fill="#ffffff" opacity="0.6"/>
+  <circle cx="180" cy="30" r="1.5" fill="#ffffff" opacity="0.6"/>
+  <circle cx="30" cy="170" r="1" fill="#ffffff" opacity="0.6"/>
+  <circle cx="170" cy="175" r="1" fill="#ffffff" opacity="0.6"/>
+</svg>
