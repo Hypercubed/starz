@@ -223,4 +223,8 @@ dialog {
   margin: 10vh auto;
   width: 70vw;
   text-align: center;
+
+  ul {
+    list-style-type: none;
+  }
 }
