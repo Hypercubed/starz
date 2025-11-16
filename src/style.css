@@ -118,7 +118,7 @@ svg {
       fill: black;
       fill-opacity: 0.5;
       stroke-width: 1;
-      stroke-opacity: 0.3;
+      stroke-opacity: 0.1;
       stroke-width: 2;
     }
 
@@ -152,7 +152,7 @@ svg {
   .lane {
     stroke: var(--owner-color, var(--unoccupied));
     stroke-width: 2;
-    stroke-opacity: 0.7;
+    stroke-opacity: 0.3;
     cursor: pointer;
     /* display: none; */
 
@@ -166,8 +166,8 @@ svg {
     }
 
     &[data-owner] {
-      stroke-width: 3;
-      stroke-opacity: 1;
+      stroke-width: 5;
+      stroke-opacity: 0.7;
     }
   }
 }

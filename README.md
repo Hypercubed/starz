@@ -1,6 +1,10 @@
 # STARZ!
 
-starz.io is a simple strategy game where you control a number of star systems and try to conquer the the Bubble. The Bubble is a cluster of star systems connected by hyperspace lanes. You start with one system and must expand your control by sending ships to capture other systems.
+starz.io is a simple strategy game where you control a number of star systems and try to conquer The Bubble. The Bubble is a cluster of star systems connected by hyperspace lanes. You start with one system and must expand your control by sending ships to capture other systems.
+
+## Lore
+
+You are the commander of a fledgling interstellar empire.  Your species recently dicovered "The Bubble", a cluster of star systems connected by hyperspace lanes.  Your homeworld (★) is the starting point of your expansion, and you must strategically capture other star systems to grow your influence and power.  Along the way, you will encounter habbitatable systems teeming with resources (▲) and rival empires vying for control of the same systems.  Outmaneuver and outthink them to become the dominant force in The Bubble!
 
 ## Gameplay
 

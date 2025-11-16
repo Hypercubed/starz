@@ -20,12 +20,8 @@ const projections = {
 
 let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, unknown>;
 
-let width = WIDTH;
-let height = HEIGHT;
-let center = [width / 2, height / 2] satisfies [number, number];
-
 let selectedProjectionType = projections["Orthographic"];
-let geoProjection = selectedProjectionType().translate(center);
+let geoProjection = selectedProjectionType().translate([0, 0]);
 let initialScale = geoProjection.scale();
 let geoPathGenerator = d3.geoPath().projection(geoProjection);
 
@@ -43,18 +39,10 @@ function setProjection(projectionName: string) {
   selectedProjectionType =
     projections[projectionName as keyof typeof projections];
   geoProjection = selectedProjectionType()
-    .translate(center)
+    // .translate(center)
     .scale(initialScale);
   initialScale = geoProjection.scale();
   geoPathGenerator = d3.geoPath().projection(geoProjection);
-}
-
-function resize() {
-  width = parseInt(svg.style("width"));
-  height = parseInt(svg.style("height"));
-  center = [width / 2, height / 2] satisfies [number, number];
-  geoProjection.translate(center);
-  rerender();
 }
 
 export function drawMap() {
@@ -65,17 +53,9 @@ export function drawMap() {
     .append("svg")
     .attr("width", "100vw")
     .attr("height", "100vh")
+    .attr("viewBox", `-${WIDTH / 2} -${HEIGHT / 2} ${WIDTH} ${HEIGHT}`)
     .on("contextmenu", (ev: PointerEvent) => ev.preventDefault());
-  // .attr('width', width + 'px')
-  // .attr('height', height + 'px')
-  // .attr('viewBox', `0 0 ${width} ${height}`);
 
-  width = parseInt(svg.style("width"));
-  height = parseInt(svg.style("height"));
-  center = [width / 2, height / 2] satisfies [number, number];
-  geoProjection.translate(center);
-
-  // if (SYSTEM_PROJECTION_HIDING) drawOutline();
   drawGraticule();
 
   drawLanes();
@@ -83,20 +63,6 @@ export function drawMap() {
 
   svg.call(createDrag() as any);
   svg.call(createZoom() as any);
-
-  window.removeEventListener('resize', resize);
-  window.addEventListener('resize', resize);
-
-  // function drawOutline() {
-  //   const g = svg.append('g').attr('id', 'outline');
-
-  //   // Set outline of the globe
-  //   g.append('circle')
-  //     .attr('id', 'globe')
-  //     .attr('cx', width / 2)
-  //     .attr('cy', height / 2)
-  //     .attr('r', geoProjection.scale());
-  // }
 
   function drawGraticule() {
     const g = svg.append("g").attr("id", "graticule");
@@ -158,14 +124,15 @@ export function drawMap() {
     }
 
     function dragstarted({ x, y }: any) {
-      v0 = versor.cartesian(geoProjection.invert!([x, y]));
-      q0 = versor((r0 = geoProjection.rotate()));
+      const ep = transform([x, y]);
+      v0 = versor.cartesian(geoProjection.invert!(ep));
+      r0 = geoProjection.rotate();
+      q0 = versor(r0);
     }
 
     function dragged(this: any, event: any) {
-      const v1 = versor.cartesian(
-        geoProjection.rotate(r0).invert!([event.x, event.y]),
-      );
+      const ep = transform([event.x, event.y]);
+      const v1 = versor.cartesian(geoProjection.rotate(r0).invert!(ep));
       const delta = versor.delta(v0, v1);
       let q1 = versor.multiply(q0, delta);
 
@@ -182,6 +149,12 @@ export function drawMap() {
 
       // In vicinity of the antipode (unstable) of q0, restart.
       if (delta[0] < 0.7) dragstarted.apply(this, [event, this] as any);
+    }
+
+    function transform(point: [number, number]): [number, number] {
+      const width = parseInt(svg.style("width"));
+      const height = parseInt(svg.style("height"));
+      return [point[0] - width / 2, point[1] - height / 2];
     }
 
     return d3
