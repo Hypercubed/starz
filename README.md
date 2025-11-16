@@ -21,6 +21,30 @@ You are the commander of a fledgling interstellar empire.  Your species recently
 - If the target system is controlled by another player, a battle will ensue.
 - The player with the most ships on the target system after all ships have arrived will take control of the system.
 
+## Mouse Controls
+
+- Middle Mouse Button: Pan/Rotate View
+- Scroll Wheel: Zoom In/Out
+- Left Click on Owned System: Select Source System
+- Ctrl + Left Click on Owned System: Add sytem to Selection
+- Shift + Left Click on Owned System: Select Range of Systems
+- Right Click on Target System: Send Ships to Target System
+- Right Click on Hyperspace Lane: Send Half of Available Ships
+
+## Keyboard Controls
+
+- Spacebar: Pause/Resume Game
+- r: Center View on Homeworld
+- c: Center View on Selected System
+- p: Change View Mode (e.g., toggle between normal and strategic view)
+- ?: Show Help Menu
+
+Cheats:
+
+- R: Reveal All Systems
+- +/-: Increase/Decrease Game Speed
+- C: Double Ships in all Owned Systems
+
 ## License
 
 Licensed under the MIT License.
