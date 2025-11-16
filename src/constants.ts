@@ -23,3 +23,5 @@ export const MinDistanceBetweenSystems = Math.min(
   0.08,
   Math.sqrt(Math.PI / NumOfSystems),
 ); // Minimum distance between systems
+
+export const EVENT_TRACKING_ENABLED = true;

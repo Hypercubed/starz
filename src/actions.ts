@@ -1,4 +1,6 @@
 import { PLAYER } from "./constants";
+import { stopGame } from "./engine";
+import { trackEvent } from "./logging";
 import { rerender } from "./render";
 import { addMessage, state } from "./state";
 import type { Lane, System } from "./types";
@@ -191,6 +193,11 @@ function takeSystem(player: number, system: System) {
       `Player ${player} has taken over the homeworld of Player ${system.homeworld}!`,
     );
     eliminatePlayer(player, system.homeworld);
+    if (system.homeworld === PLAYER) {
+      addMessage(`You have lost your homeworld! Game Over.`);
+      trackEvent("starz_gamesLost");
+      stopGame();
+    }
     system.homeworld = 0; // No longer a homeworld
   }
 }

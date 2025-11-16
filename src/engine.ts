@@ -3,12 +3,14 @@ import { botQueue } from "./bots";
 import {
   MAX_SHIPS_PER_SYSTEM,
   NumBots,
+  PLAYER,
   SHIPS_PER_ROUND,
   SHIPS_PER_TURN,
   TICK_DURATION_MS,
   TICKS_PER_ROUND,
   TICKS_PER_TURN,
 } from "./constants";
+import { trackEvent } from "./logging";
 import { rerender } from "./render";
 import { addMessage, state } from "./state";
 import { updateInfoBox, updateLeaderbox, updateMessageBox } from "./ui";
@@ -57,6 +59,7 @@ function roundUpdate() {
 
 export function startGame() {
   gameRunning = true;
+  trackEvent("starz_gamesStarted");
   runGameLoop();
 }
 
@@ -110,6 +113,9 @@ function checkVictory() {
     const winner = homeworlds[0].owner;
     addMessage(`Player ${winner} has won the game!`);
     stopGame();
+    if (winner === PLAYER) {
+      trackEvent("starz_gamesWon");
+    }
   }
 }
 
