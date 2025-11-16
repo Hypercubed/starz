@@ -1,10 +1,18 @@
 import * as d3 from "d3";
 import { pauseToggle } from "./engine";
-import { centerOnSystem, changeView, rerender } from "./render";
+import {
+  centerOnHome,
+  centerOnSystem,
+  changeView,
+  rerender,
+  rotateProjection,
+} from "./render";
 import { addMessage, state } from "./state";
 import { revealSystem } from "./actions";
 import { PLAYER } from "./constants";
 import { showHelp } from "./ui";
+
+const ROTATION_STEP = 5;
 
 export function setupControls() {
   d3.select("body").on("keypress", null);
@@ -14,12 +22,14 @@ export function setupControls() {
       case " ":
         pauseToggle();
         break;
-      case "r":
-        centerOnSystem(state.systems[0]);
+      case "h":
+        centerOnHome();
+        rerender();
         break;
       case "c":
         if (state.lastSelectedSystem) {
           centerOnSystem(state.lastSelectedSystem);
+          rerender();
         }
         break;
       case "R":
@@ -48,7 +58,31 @@ export function setupControls() {
         break;
       case "p":
         changeView();
-        centerOnSystem(state.systems[0]);
+        centerOnHome();
+        rerender();
+        break;
+      case "w":
+        rotateProjection([0, ROTATION_STEP]);
+        rerender();
+        break;
+      case "a":
+        rotateProjection([-ROTATION_STEP, 0]);
+        rerender();
+        break;
+      case "s":
+        rotateProjection([0, -ROTATION_STEP]);
+        rerender();
+        break;
+      case "d":
+        rotateProjection([ROTATION_STEP, 0]);
+        rerender();
+        break;
+      case "q":
+        rotateProjection([0, 0, ROTATION_STEP]);
+        rerender();
+        break;
+      case "e":
+        rotateProjection([0, 0, -ROTATION_STEP]);
         rerender();
         break;
       // case 's':

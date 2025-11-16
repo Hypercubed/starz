@@ -3,14 +3,17 @@ export const PLAYER = 1;
 export const WIDTH = 750;
 export const HEIGHT = 750;
 
-export const PROJECTION = "Mercator"; // 'Orthographic' | 'Stereographic' | 'Mercator'
+export const PROJECTION = "Orthographic" as
+  | "Orthographic"
+  | "Stereographic"
+  | "Mercator";
 
 export const TICK_DURATION_MS = 500;
 export const TICKS_PER_TURN = 2;
 export const TICKS_PER_ROUND = 25;
 
-export const SHIPS_PER_TURN = 1;  // Ships produced per inhabited system per turn
-export const SHIPS_PER_ROUND = 1;  // Ships produced per system per round
+export const SHIPS_PER_TURN = 1; // Ships produced per inhabited system per turn
+export const SHIPS_PER_ROUND = 1; // Ships produced per system per round
 export const MAX_SHIPS_PER_SYSTEM = 40; // Max ships for pre-spaceflight systems
 
 export const NumOfSystems = 400; // Number of systems

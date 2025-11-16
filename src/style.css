@@ -170,6 +170,10 @@ svg {
       stroke-opacity: 0.7;
     }
   }
+
+  #graticule path {
+    stroke-opacity: 0.5;
+  }
 }
 
 *[data-owner="0"] {

@@ -1,6 +1,6 @@
 import "./style.css";
 
-import { centerOnSystem, drawMap } from "./render";
+import { centerOnHome, drawMap, rerender } from "./render";
 import { addMessage, resetState, state } from "./state";
 import { generateMap } from "./generate";
 import { PLAYER } from "./constants";
@@ -31,7 +31,8 @@ function startNewGame() {
   drawMap();
 
   revealSystem(state.systems[0]);
-  centerOnSystem(state.systems[0]);
+  centerOnHome();
+  rerender();
 
   setupControls();
 

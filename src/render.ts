@@ -3,7 +3,7 @@ import * as d3 from "d3";
 // @ts-ignore
 import versor from "versor";
 
-import { HEIGHT, WIDTH } from "./constants";
+import { HEIGHT, PROJECTION, WIDTH } from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
 import { onClickLane, onClickSystem } from "./actions";
@@ -20,7 +20,7 @@ const projections = {
 
 let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, unknown>;
 
-let selectedProjectionType = projections["Orthographic"];
+let selectedProjectionType = projections[PROJECTION];
 let geoProjection = selectedProjectionType().translate([0, 0]);
 let initialScale = geoProjection.scale();
 let geoPathGenerator = d3.geoPath().projection(geoProjection);
@@ -32,17 +32,29 @@ export function changeView() {
       projections[name as keyof typeof projections] === selectedProjectionType,
   );
   const nextIndex = (currentIndex + 1) % projectionNames.length;
+  console.log(`Changing projection to ${projectionNames[nextIndex]}`);
   setProjection(projectionNames[nextIndex]);
 }
 
 function setProjection(projectionName: string) {
   selectedProjectionType =
     projections[projectionName as keyof typeof projections];
-  geoProjection = selectedProjectionType()
-    // .translate(center)
-    .scale(initialScale);
+  geoProjection = selectedProjectionType();
+  geoProjection.translate([0, 0]).rotate([0, 0, 0]).scale(initialScale);
   initialScale = geoProjection.scale();
   geoPathGenerator = d3.geoPath().projection(geoProjection);
+}
+
+export function rotateProjection(
+  deltaRotation: [number, number] | [number, number, number],
+) {
+  const rotation = geoProjection.rotate();
+  rotation[0] += deltaRotation[0];
+  rotation[1] += deltaRotation[1];
+  if (deltaRotation.length === 3) {
+    rotation[2] += deltaRotation[2];
+  }
+  geoProjection.rotate(rotation);
 }
 
 export function drawMap() {
@@ -85,11 +97,7 @@ export function drawMap() {
       if (event.transform.k > ZOOM_SENSITIVITY) {
         const newScale = initialScale * event.transform.k;
         geoProjection.scale(newScale);
-        svg.selectAll("path.graticule").attr("d", geoPathGenerator as any);
-        svg.selectAll("circle#globe").attr("d", geoPathGenerator as any);
-        svg.selectAll("circle#globe").attr("r", geoProjection.scale());
-        drawSystems();
-        drawLanes();
+        rerenderUnthrottled();
       } else {
         event.transform.k = ZOOM_SENSITIVITY;
       }
@@ -165,6 +173,22 @@ export function drawMap() {
       .on("start", dragstarted)
       .on("drag", dragged);
   }
+}
+
+export function scaleZoom(scale: number) {
+  const s = geoProjection.scale();
+  scale = s + (scale - s) * ZOOM_SENSITIVITY;
+  geoProjection.scale(scale);
+  rerender();
+}
+
+export function centerOnHome() {
+  if (selectedProjectionType === projections["Orthographic"]) {
+    geoProjection.rotate([0, 135]);
+  } else {
+    centerOnCoordinates(state.systems[0].location);
+  }
+  geoProjection.scale(initialScale);
 }
 
 export function centerOnSystem(system: System) {
