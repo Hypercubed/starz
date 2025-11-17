@@ -189,16 +189,11 @@ function takeSystem(player: number, system: System) {
   if (player === PLAYER) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== player) {
+    const loser = system.homeworld;
     addMessage(
-      `Player ${player} has taken over the homeworld of Player ${system.homeworld}!`,
+      `Player ${player} has taken over the homeworld of Player ${loser}!`,
     );
-    eliminatePlayer(player, system.homeworld);
-    if (system.homeworld === PLAYER) {
-      addMessage(`You have lost your homeworld! Game Over.`);
-      trackEvent("starz_gamesLost");
-      stopGame();
-    }
-    system.homeworld = 0; // No longer a homeworld
+    eliminatePlayer(player, loser);
   }
 }
 
@@ -207,10 +202,19 @@ function eliminatePlayer(winner: number, loser: number) {
   state.systems.forEach((s) => {
     if (s.owner === loser) {
       s.owner = winner;
-      s.ships = Math.floor((s.ships ?? 0) / 2);
+      s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
+      s.homeworld = 0; // No longer a homeworld
       if (winner === PLAYER) revealSystem(s);
     }
   });
+
+  if (loser === PLAYER) {
+    addMessage(`You have lost your homeworld! Game Over.`);
+    state.lastSelectedSystem = null;
+    state.selectedSystems = [];
+    trackEvent("starz_gamesLost");
+    stopGame();
+  }
 }
 
 export function revealSystem(system: System) {

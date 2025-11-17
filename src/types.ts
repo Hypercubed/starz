@@ -1,21 +1,23 @@
 export type Coordinates = [number, number];
 
-export interface Move {
-  ships: number;
-  from: System;
-  to: System;
-}
+export type SystemType = "inhabited" | "uninhabited";
 
 export interface System {
   id: number;
+  type: SystemType;
   location: Coordinates;
   lanes: Lane[];
   owner: number | null;
-  isInhabited: boolean;
   isRevealed: boolean;
   ships: number;
   homeworld: number | null;
   moveQueue: Move[];
+}
+
+export interface Move {
+  ships: number;
+  from: System;
+  to: System;
 }
 
 export interface Lane {

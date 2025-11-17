@@ -41,7 +41,7 @@ function updateStats() {
 
 function turnUpdate() {
   state.systems.forEach((system) => {
-    if (system.isInhabited && system.owner != null && system.owner > 0) {
+    if (system.type === "inhabited" && system.owner != null && system.owner > 0) {
       if (system.owner > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
       }

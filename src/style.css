@@ -166,7 +166,7 @@ svg {
     }
 
     &[data-owner] {
-      stroke-width: 5;
+      stroke-width: 2;
       stroke-opacity: 0.7;
     }
   }

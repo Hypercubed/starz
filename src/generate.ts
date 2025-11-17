@@ -70,7 +70,7 @@ export function generateMap() {
   const homeSystem = state.systems[0];
   homeSystem.ships = 1;
   homeSystem.owner = PLAYER;
-  state.systems[0].isInhabited = true;
+  state.systems[0].type = "inhabited";
   state.systems[0].homeworld = 1;
   state.lastSelectedSystem = state.systems[0];
   state.selectedSystems = [state.systems[0]];
@@ -86,7 +86,7 @@ export function generateMap() {
     // TODO: Enforce minimum distance between inhabited systems
 
     system.owner = 0;
-    system.isInhabited = true;
+    system.type = "inhabited";
     system.ships = 40 + Math.floor(Math.random() * 10);
     system.homeworld = 0;
 
@@ -112,10 +112,10 @@ export function generateMap() {
 function createSystem(location: Coordinates): System {
   return {
     id: systemIdCounter++,
+    type: "uninhabited",
     location,
     lanes: [],
     owner: null,
-    isInhabited: false,
     isRevealed: false,
     ships: 0,
     homeworld: null,

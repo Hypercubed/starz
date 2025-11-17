@@ -1,9 +1,10 @@
 import * as d3 from "d3";
+import { geoVoronoi } from "d3-geo-voronoi";
 
 // @ts-ignore
 import versor from "versor";
 
-import { HEIGHT, PROJECTION, WIDTH } from "./constants";
+import { ENABLE_FOG_OF_WAR, HEIGHT, PROJECTION, WIDTH } from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
 import { onClickLane, onClickSystem } from "./actions";
@@ -24,6 +25,10 @@ let selectedProjectionType = projections[PROJECTION];
 let geoProjection = selectedProjectionType().translate([0, 0]);
 let initialScale = geoProjection.scale();
 let geoPathGenerator = d3.geoPath().projection(geoProjection);
+
+const mesh = geoVoronoi()
+  .x((d: System) => d.location[0])
+  .y((d: System) => d.location[1]);
 
 export function changeView() {
   const projectionNames = Object.keys(projections);
@@ -69,7 +74,7 @@ export function drawMap() {
     .on("contextmenu", (ev: PointerEvent) => ev.preventDefault());
 
   drawGraticule();
-
+  // drawMesh();
   drawLanes();
   drawSystems();
 
@@ -168,7 +173,7 @@ export function drawMap() {
     return d3
       .drag()
       .filter((event) => {
-        return event.button === 1;
+        return event.button === 0 || event.button === 1 || event.touches;
       })
       .on("start", dragstarted)
       .on("drag", dragged);
@@ -206,6 +211,7 @@ function rerenderUnthrottled() {
   svg.selectAll("circle#globe").attr("d", geoPathGenerator as any);
   svg.selectAll("circle#globe").attr("r", geoProjection.scale());
 
+  // drawMesh();
   drawSystems();
   drawLanes();
 }
@@ -213,7 +219,11 @@ function rerenderUnthrottled() {
 export const rerender = throttle(rerenderUnthrottled, 16);
 
 function drawSystems() {
-  const visibleSystems = state.systems.filter((system) => system.isRevealed);
+  let visibleSystems = state.systems;
+
+  if (ENABLE_FOG_OF_WAR) {
+    visibleSystems = visibleSystems.filter(system => system.isRevealed);
+  }
 
   const g = svg
     .selectAll("g#systems")
@@ -279,7 +289,7 @@ function drawSystems() {
   join
     .attr("data-owner", (d) => (d.owner != null ? d.owner.toString() : "null"))
     .classed("selected", (d) => state.selectedSystems.includes(d))
-    .classed("inhabited", (d) => d.isInhabited === true)
+    .classed("inhabited", (d) => d.type === "inhabited")
     .classed(
       "hidden",
       (d) => !geoPathGenerator({ type: "Point", coordinates: d.location }),
@@ -302,8 +312,47 @@ function drawSystems() {
   join.select(".ship-count").text((d) => (d.ships ? d.ships.toString() : ""));
 }
 
+function drawMesh() {
+  const systems = state.systems;
+
+  // if (ENABLE_FOG_OF_WAR) {
+  //   points = points.filter(system => system.isRevealed);
+  // }
+
+  const g = svg
+    .selectAll("g#mesh")
+    .data([null])
+    .join((enter) => enter.append("g").attr("id", "mesh"));
+
+  const join = g
+    .selectAll("path")
+    .data(mesh.polygons(systems).features)
+    .join((enter: any) => {
+      return enter
+        .append("path")
+        .attr("class", "mesh")
+        .style("fill", "var(--owner-color, transparent)")
+        .style("fill-opacity", 0.3)
+        .style("stroke", "black")
+        .style("stroke-opacity", 0.8);
+    });
+
+  join
+    .attr("d", geoPathGenerator as any)
+    .datum((_, i) => systems[i])
+    .classed("hidden", d => {
+      if (!ENABLE_FOG_OF_WAR) return false;
+      return !d.isRevealed;
+    })
+    .attr("data-owner", d => d.owner ? d.owner.toString() : "null");
+}
+
 function drawLanes() {
-  const visibleLanes = state.lanes.filter((lane) => lane.isRevealed);
+  let visibleLanes = state.lanes;
+
+  if (ENABLE_FOG_OF_WAR) {
+    visibleLanes = visibleLanes.filter(lane => lane.isRevealed);
+  }
 
   const g = svg
     .selectAll("g#lanes")
