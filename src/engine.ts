@@ -16,6 +16,7 @@ import { addMessage, state } from "./state";
 import { updateInfoBox, updateLeaderbox, updateMessageBox } from "./ui";
 
 let gameRunning = false;
+let gameOver = false;
 let runningInterval: number | null = null;
 
 function updateStats() {
@@ -87,6 +88,8 @@ export function runGameLoop() {
   checkVictory();
   updateMessageBox();
 
+  gameOver = false;
+
   runningInterval = setTimeout(() => {
     runGameLoop();
   }, TICK_DURATION_MS / state.timeScale);
@@ -109,13 +112,15 @@ function checkVictory() {
     (system) => system.homeworld && system.owner === system.homeworld,
   );
 
-  if (homeworlds.length === 1) {
+  if (!gameOver && homeworlds.length === 1) {
     const winner = homeworlds[0].owner;
     addMessage(`Player ${winner} has won the game!`);
+    rerender();
     stopGame();
     if (winner === PLAYER) {
       trackEvent("starz_gamesWon");
     }
+    gameOver = true;
   }
 }
 

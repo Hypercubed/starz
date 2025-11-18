@@ -12,6 +12,9 @@ import { onClickLane, onClickSystem } from "./actions";
 const ZOOM_SENSITIVITY = 0.5;
 const SYSTEM_SIZE = 20;
 
+const ENABLE_MESH = true;
+const ENABLE_GRATICULE = true;
+
 const projections = {
   Orthographic: d3.geoOrthographic,
   Stereographic: d3.geoStereographic,
@@ -73,8 +76,8 @@ export function drawMap() {
     .attr("viewBox", `-${WIDTH / 2} -${HEIGHT / 2} ${WIDTH} ${HEIGHT}`)
     .on("contextmenu", (ev: PointerEvent) => ev.preventDefault());
 
-  drawGraticule();
-  // drawMesh();
+  if (ENABLE_GRATICULE) drawGraticule();
+  if (ENABLE_MESH) drawMesh();
   drawLanes();
   drawSystems();
 
@@ -211,7 +214,7 @@ function rerenderUnthrottled() {
   svg.selectAll("circle#globe").attr("d", geoPathGenerator as any);
   svg.selectAll("circle#globe").attr("r", geoProjection.scale());
 
-  // drawMesh();
+  if (ENABLE_MESH) drawMesh();
   drawSystems();
   drawLanes();
 }

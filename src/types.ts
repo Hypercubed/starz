@@ -35,9 +35,10 @@ export interface PlayerStats {
 }
 
 export interface BotMove {
-  type: "exterminate" | "explore" | "expand";
+  type: "exterminate" | "explore" | "expand" | "defend";
   from: System;
   to: System;
+  score: number;
 }
 
 export interface Messages {

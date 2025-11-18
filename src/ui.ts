@@ -37,20 +37,12 @@ export function updateLeaderbox() {
     .select("tbody")
     .selectAll("tr")
     .data(stats)
-    .join(
-      (enter) => enter.append("tr"),
-      (update) => update,
-      (exit) => exit.remove(),
-    );
+    .join("tr").attr("data-owner", (d) => d.player);
 
   row
     .selectAll("td")
     .data((d) => [d.player, d.systems, d.ships])
-    .join(
-      (enter) => enter.append("td"),
-      (update) => update,
-      (exit) => exit.remove(),
-    )
+    .join("td")
     .text((d) => d);
 }
 
@@ -64,7 +56,7 @@ export function updateMessageBox() {
   box
     .selectAll("div")
     .data(state.messages.slice(-5), (d: any) => d.id)
-    .join((enter) => enter.append("div"))
+    .join("div")
     .html((d) => d.html);
 }
 
