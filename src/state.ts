@@ -3,6 +3,7 @@ import type { Lane, Messages, PlayerStats, System } from "./types";
 export const state = {
   tick: 0,
   timeScale: 1,
+  running: false,
   selectedSystems: [] as System[],
   lastSelectedSystem: null as System | null,
   systems: [] as System[],

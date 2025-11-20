@@ -6,6 +6,7 @@ import {
   PLAYER,
   SHIPS_PER_ROUND,
   SHIPS_PER_TURN,
+  START_PAUSED,
   TICK_DURATION_MS,
   TICKS_PER_ROUND,
   TICKS_PER_TURN,
@@ -15,7 +16,6 @@ import { rerender } from "./render";
 import { addMessage, state } from "./state";
 import { updateInfoBox, updateLeaderbox, updateMessageBox } from "./ui";
 
-let gameRunning = false;
 let gameOver = false;
 let runningInterval: number | null = null;
 
@@ -42,7 +42,11 @@ function updateStats() {
 
 function turnUpdate() {
   state.systems.forEach((system) => {
-    if (system.type === "inhabited" && system.owner != null && system.owner > 0) {
+    if (
+      system.type === "inhabited" &&
+      system.owner != null &&
+      system.owner > 0
+    ) {
       if (system.owner > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
       }
@@ -59,13 +63,17 @@ function roundUpdate() {
 }
 
 export function startGame() {
-  gameRunning = true;
+  state.running = true;
+  gameOver = false;
   trackEvent("starz_gamesStarted");
-  runGameLoop();
+
+  if (!START_PAUSED) {
+    runGameLoop();
+  }
 }
 
 export function runGameLoop() {
-  if (!gameRunning) {
+  if (!state.running) {
     stopGame();
     return;
   }
@@ -88,15 +96,13 @@ export function runGameLoop() {
   checkVictory();
   updateMessageBox();
 
-  gameOver = false;
-
   runningInterval = setTimeout(() => {
     runGameLoop();
   }, TICK_DURATION_MS / state.timeScale);
 }
 
 export function stopGame() {
-  gameRunning = false;
+  state.running = false;
   if (runningInterval) {
     clearTimeout(runningInterval);
     runningInterval = null;
@@ -105,7 +111,7 @@ export function stopGame() {
 
 function checkVictory() {
   if ((NumBots as number) === 0) return;
-  if (!gameRunning) return;
+  if (!state.running) return;
 
   // TODO: Use stats from state
   const homeworlds = state.systems.filter(
@@ -125,10 +131,10 @@ function checkVictory() {
 }
 
 export function pauseToggle() {
-  if (gameRunning) {
+  if (state.running) {
     stopGame();
   } else {
-    gameRunning = true;
+    state.running = true;
     runGameLoop();
   }
 }

@@ -1,4 +1,4 @@
-import { EVENT_TRACKING_ENABLED } from "./constants";
+import { DEBUG_LOGGING_ENABLED, EVENT_TRACKING_ENABLED } from "./constants";
 import { state } from "./state";
 
 declare global {
@@ -7,7 +7,16 @@ declare global {
   }
 }
 
-export function trackEvent(eventName: string) {
+export function debugLog(message: string, ...optionalParams: any[]) {
+  if (DEBUG_LOGGING_ENABLED) {
+    console.log(
+      `[DEBUG][Tick ${state.tick}, ${new Date().toLocaleTimeString()}] ${message}`,
+      ...optionalParams,
+    );
+  }
+}
+
+export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
   if (!EVENT_TRACKING_ENABLED) return;
 
   let count = 1;
@@ -20,7 +29,11 @@ export function trackEvent(eventName: string) {
 
   if (window && window.sa_event) {
     try {
-      window.sa_event(eventName, { [eventName]: count, tick: state.tick });
+      window.sa_event(eventName, {
+        [eventName]: count,
+        tick: state.tick,
+        ...meta,
+      });
     } catch (e) {
       console.error("Error tracking event:", e);
     }

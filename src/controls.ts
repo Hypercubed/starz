@@ -7,10 +7,11 @@ import {
   rerender,
   rotateProjection,
 } from "./render";
-import { addMessage, state } from "./state";
+import { state } from "./state";
 import { revealSystem } from "./actions";
 import { PLAYER } from "./constants";
 import { showHelp } from "./ui";
+import { debugLog } from "./logging";
 
 const ROTATION_STEP = 5;
 
@@ -38,9 +39,11 @@ export function setupControls() {
         break;
       case "+":
         state.timeScale = Math.min(16, state.timeScale * 2);
+        debugLog(`Time scale increased to ${state.timeScale}x`);
         break;
       case "-":
         state.timeScale = Math.max(0.25, state.timeScale / 2);
+        debugLog(`Time scale decreased to ${state.timeScale}x`);
         break;
       case "C":
         state.systems.forEach((system) => {
@@ -49,9 +52,6 @@ export function setupControls() {
           }
         });
         rerender();
-        break;
-      case "t":
-        addMessage(`Current Tick: ${state.tick}`);
         break;
       case "?":
         showHelp();

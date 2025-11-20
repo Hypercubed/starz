@@ -1,20 +1,41 @@
 import { queueMove } from "./actions";
 import { NumBots, NumHumanPlayers } from "./constants";
+import { debugLog } from "./logging";
 import { state } from "./state";
 import type { BotMove, System } from "./types";
 
 interface BotPersonality {
-  aggression: number;      // 0.0 - 1.0: tendency to attack
-  expansion: number;       // 0.0 - 1.0: priority on claiming unclaimed systems
-  defensiveness: number;   // 0.0 - 1.0: tendency to defend vs. attack
-  riskTolerance: number;   // 0.0 - 1.0: willingness to attack with marginal advantage
+  aggression: number; // 0.0 - 1.0: tendency to attack
+  expansion: number; // 0.0 - 1.0: priority on claiming unclaimed systems
+  defensiveness: number; // 0.0 - 1.0: tendency to defend vs. attack
+  riskTolerance: number; // 0.0 - 1.0: willingness to attack with marginal advantage
 }
 
 const PERSONALITIES = {
-  turtle: { aggression: 0.2, expansion: 0.3, defensiveness: 0.9, riskTolerance: 0.2 }, // 2
-  rusher: { aggression: 0.9, expansion: 0.4, defensiveness: 0.2, riskTolerance: 0.7 }, // 3
-  territory: { aggression: 0.3, expansion: 0.9, defensiveness: 0.5, riskTolerance: 0.4 }, // 4
-  balanced: { aggression: 0.5, expansion: 0.5, defensiveness: 0.5, riskTolerance: 0.5 } // 5
+  turtle: {
+    aggression: 0.2,
+    expansion: 0.3,
+    defensiveness: 0.9,
+    riskTolerance: 0.2,
+  }, // 2
+  rusher: {
+    aggression: 0.9,
+    expansion: 0.4,
+    defensiveness: 0.2,
+    riskTolerance: 0.7,
+  }, // 3
+  territory: {
+    aggression: 0.3,
+    expansion: 0.9,
+    defensiveness: 0.5,
+    riskTolerance: 0.4,
+  }, // 4
+  balanced: {
+    aggression: 0.5,
+    expansion: 0.5,
+    defensiveness: 0.5,
+    riskTolerance: 0.5,
+  }, // 5
 } as const satisfies Record<string, BotPersonality>;
 
 const BOT_PERSONALITIES: Record<number, BotPersonality> = {};
@@ -22,16 +43,17 @@ for (let i = 0; i < NumBots; i++) {
   const botId = NumHumanPlayers + 1 + i;
   const personalityKeys = Object.keys(PERSONALITIES);
   const chosenPersonality = personalityKeys[i % personalityKeys.length];
-  BOT_PERSONALITIES[botId] = PERSONALITIES[chosenPersonality as keyof typeof PERSONALITIES];
+  BOT_PERSONALITIES[botId] =
+    PERSONALITIES[chosenPersonality as keyof typeof PERSONALITIES];
 }
 
-console.log("Bot personalities:", BOT_PERSONALITIES);
+debugLog("Bot personalities:", BOT_PERSONALITIES);
 
 export function botQueue() {
   const totalPlayers = NumHumanPlayers + NumBots;
 
   for (let player = NumHumanPlayers + 1; player < totalPlayers + 1; player++) {
-    // console.log(`Bot ${player} is making moves...`);
+    // debugLog(`Bot ${player} is making moves...`);
     basicBot(player);
   }
 }
@@ -39,124 +61,186 @@ export function botQueue() {
 function basicBot(player: number) {
   const personality = BOT_PERSONALITIES[player];
 
-  let botSystems = state.systems.filter((system) => system.owner === player);
+  const botSystems = state.systems.filter((system) => system.owner === player);
 
   botSystems.forEach((system) => {
     system.moveQueue = []; // Clear previous moves
   });
 
+  const threatLevels = botSystems.reduce((acc, system) => {
+    const adjacentEnemies = getAdjacentSystems(system).filter(
+      (s) => s.owner && s.owner !== player,
+    );
+    const threatLevel = adjacentEnemies.reduce(
+      (sum, enemy) => sum + enemy.ships,
+      0,
+    );
+    acc.set(system.id, threatLevel);
+    return acc;
+  }, new Map<number, number>());
+
+  const defenseMoves = getDefenseMoves(botSystems, player);
+  chooseMoves(defenseMoves, 1.0 - personality.defensiveness);
+
   const eXterminate = getExterminateMoves(botSystems, player);
   chooseMoves(eXterminate, personality.defensiveness);
-
-  botSystems = botSystems.filter((system) => system.moveQueue.length === 0);
 
   const eXplore = getExploreMoves(botSystems, player);
   chooseMoves(eXplore, personality.expansion);
 
-  botSystems = botSystems.filter((system) => system.moveQueue.length === 0);
-
   const eXpand = getExpandMoves(botSystems, player);
   chooseMoves(eXpand, 1.0 - personality.defensiveness);
-}
 
-function getExterminateMoves(systems: System[], player: number) {
-  const personality = BOT_PERSONALITIES[player];
+  function getDefenseMoves(systems: System[], player: number) {
+    return systems.map((from) => {
+      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      if (from.ships <= 1) return [];
 
-  return systems.map((from) => {
-    if (from.moveQueue.length > 0) return []; // Already has a move queued
+      const fromThreatLevel = threatLevels.get(from.id) || 0;
 
-    if (from.ships < 3) return [];
-    // if (from.homeworld === player) return []; // Don't attack from homeworlds
+      return from.lanes.flatMap((lane) => {
+        const to = lane.from === from ? lane.to : lane.from;
+        if (to.owner !== player) return [];
 
-    return from.lanes.flatMap((lane) => {
-      const to = lane.from === from ? lane.to : lane.from;
-      if (to.owner === player || to.owner === null) return [];
+        const toThreatLevel = threatLevels.get(to.id) || 0;
 
-      const unitsToSend = Math.floor(from.ships * (1 - personality.defensiveness));
-      const advantage = unitsToSend - to.ships;
+        const unitsToSend = Math.floor(
+          from.ships * (1 - personality.defensiveness),
+        );
+        const minUnits =
+          (1 - personality.riskTolerance) * (from.homeworld ? 50 : 1);
 
-      const minAdvantage = (1 - personality.riskTolerance) * 5;
-      
-      if (advantage > minAdvantage || (advantage > -3 && personality.riskTolerance > 0.6)) {
-        let score = advantage * 5;
-
-        // Bonus if taking system would isolate enemy systems
-        const adjacentToTarget = to.lanes.map(l => (l.from === to ? l.to : l.from));
-        const enemyNeighbors = adjacentToTarget.filter(s => s.owner === to.owner).length;
-        if (enemyNeighbors === 0) {
-          score += 30; // Isolation bonus
+        if (unitsToSend > minUnits && toThreatLevel > fromThreatLevel) {
+          return [
+            {
+              from,
+              to,
+              type: "defend",
+              score: toThreatLevel - fromThreatLevel,
+            } satisfies BotMove,
+          ];
         }
 
-        return [{ to, from, type: "exterminate", score } satisfies BotMove];
-      }
-
-      return [];
+        return [];
+      });
     });
-  });
-}
+  }
 
-function getExploreMoves(systems: System[], player: number) {
-  const personality = BOT_PERSONALITIES[player];
+  function getExterminateMoves(systems: System[], player: number) {
+    return systems.map((from) => {
+      if (from.moveQueue.length > 0) return []; // Already has a move queued
 
-  return systems.map((from) => {
-    if (from.moveQueue.length > 0) return []; // Already has a move queued
-    if (from.ships < 2) return [];
-    if (from.homeworld !== null && from.ships < 5) return []; // Keep more ships on homeworlds
+      if (from.ships < 3) return [];
+      // if (from.homeworld === player) return []; // Don't attack from homeworlds
 
-    return from.lanes.flatMap((lane) => {
-      const to = lane.from === from ? lane.to : lane.from;
-      if (to.owner !== null) return [];
+      return from.lanes.flatMap((lane) => {
+        const to = lane.from === from ? lane.to : lane.from;
+        if (to.owner === player || to.owner === null) return [];
 
-      const unitsToSend = Math.floor(from.ships * (1 - personality.defensiveness * 0.5));
+        const unitsToSend = Math.floor(
+          from.ships * (1 - personality.defensiveness),
+        );
+        const advantage = unitsToSend - to.ships;
 
-      if (unitsToSend > 0) {
-        let score = 50;
+        const minAdvantage = (1 - personality.riskTolerance) * 5;
 
-        // Bonus for connecting to more unclaimed systems
-        const adjacentToTarget = to.lanes.map(l => (l.from === to ? l.to : l.from));
-        const unclaimedNeighbors = adjacentToTarget.filter(s => s.owner === null).length;
-        score += unclaimedNeighbors * 20;
+        if (
+          advantage > minAdvantage ||
+          (advantage > -3 && personality.riskTolerance > 0.6)
+        ) {
+          let score = advantage * 5;
 
-        // Bonus for connecting our territories
-        const friendlyNeighbors = adjacentToTarget.filter(s => s.owner === player).length;
-        score += friendlyNeighbors * 10;
+          // Bonus if taking system would isolate enemy systems
+          const adjacentToTarget = to.lanes.map((l) =>
+            l.from === to ? l.to : l.from,
+          );
+          const enemyNeighbors = adjacentToTarget.filter(
+            (s) => s.owner === to.owner,
+          ).length;
+          if (enemyNeighbors === 0) {
+            score += 30; // Isolation bonus
+          }
 
-        return [{ to, from, type: "explore", score } satisfies BotMove];
-      }
+          return [{ to, from, type: "exterminate", score } satisfies BotMove];
+        }
 
-      return [];
+        return [];
+      });
     });
-  });
-}
+  }
 
-function getExpandMoves(systems: System[], player: number) {
-  const personality = BOT_PERSONALITIES[player];
+  function getExploreMoves(systems: System[], player: number) {
+    return systems.map((from) => {
+      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      if (from.ships < 2) return [];
+      if (from.homeworld !== null && from.ships < 5) return []; // Keep more ships on homeworlds
 
-  return systems.map((from) => {
-    if (from.moveQueue.length > 0) return []; // Already has a move queued
-    if (from.ships <= 1) return [];
+      return from.lanes.flatMap((lane) => {
+        const to = lane.from === from ? lane.to : lane.from;
+        if (to.owner !== null) return [];
 
-    return from.lanes.flatMap((lane) => {
-      const to = lane.from === from ? lane.to : lane.from;
-      if (to.owner !== player) return [];
+        const unitsToSend = Math.floor(
+          from.ships * (1 - personality.defensiveness * 0.5),
+        );
 
-      const unitsToSend = Math.floor(from.ships * (1 - personality.defensiveness));
-      const minUnits = (1 - personality.riskTolerance) * (from.homeworld ? 50 : 1);
+        if (unitsToSend > 0) {
+          let score = 50;
 
-      if (unitsToSend > minUnits) {
-        let score = (to.ships - from.ships) * -10 + 20; // Prefer weaker friendly systems
-        
-        // Prefer systems that border unclaimed or enemy systems
-        const adjacentToTarget = to.lanes.map(l => (l.from === to ? l.to : l.from));
-        const valuableNeighbors = adjacentToTarget.filter(s => s.owner !== player).length;
-        score += valuableNeighbors * 15;
+          // Bonus for connecting to more unclaimed systems
+          const adjacentToTarget = to.lanes.map((l) =>
+            l.from === to ? l.to : l.from,
+          );
+          const unclaimedNeighbors = adjacentToTarget.filter(
+            (s) => s.owner === null,
+          ).length;
+          score += unclaimedNeighbors * 20;
 
-        return [{ from, to, type: score > 0 ? "defend" : "expand", score } satisfies BotMove];
-      }
+          // Bonus for connecting our territories
+          const friendlyNeighbors = adjacentToTarget.filter(
+            (s) => s.owner === player,
+          ).length;
+          score += friendlyNeighbors * 10;
 
-      return [];
+          return [{ to, from, type: "explore", score } satisfies BotMove];
+        }
+
+        return [];
+      });
     });
-  });
+  }
+
+  function getExpandMoves(systems: System[], player: number) {
+    return systems.map((from) => {
+      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      if (from.ships <= 1) return [];
+
+      const adjacentSystems = from.lanes.map((l) =>
+        l.from === from ? l.to : l.from,
+      );
+      const atRisk = adjacentSystems.filter(
+        (s) => s.owner && s.owner !== player,
+      ).length;
+      if (atRisk > 0) return []; // Prioritize defense over expansion
+
+      return from.lanes.flatMap((lane) => {
+        const to = lane.from === from ? lane.to : lane.from;
+        if (to.owner !== player) return [];
+
+        const unitsToSend = Math.floor(
+          from.ships * (1 - personality.defensiveness),
+        );
+        const minUnits =
+          (1 - personality.riskTolerance) * (from.homeworld ? 50 : 1);
+
+        if (unitsToSend > minUnits) {
+          const score = (to.ships - from.ships) * -10 + 20; // Prefer weaker friendly systems
+          return [{ from, to, type: "expand", score } satisfies BotMove];
+        }
+
+        return [];
+      });
+    });
+  }
 }
 
 function scoreSort(a: BotMove, b: BotMove) {
@@ -193,7 +277,8 @@ function chooseMoves(moves: BotMove[][], weight = 1) {
         break;
       }
       case "expand": {
-        const deltaShips = Math.floor((move.from.ships - move.to.ships) / 2) - 1;
+        const deltaShips =
+          Math.floor((move.from.ships - move.to.ships) / 2) - 1;
         queueMove(move.from, move.to, deltaShips);
         break;
       }
@@ -204,4 +289,10 @@ function chooseMoves(moves: BotMove[][], weight = 1) {
       }
     }
   });
+}
+
+function getAdjacentSystems(system: System): System[] {
+  return system.lanes.map((lane) =>
+    lane.from === system ? lane.to : lane.from,
+  );
 }

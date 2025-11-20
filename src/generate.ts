@@ -7,9 +7,11 @@ import {
   NumBots,
   PLAYER,
   MinDistanceBetweenSystems,
+  MAX_SHIPS_PER_SYSTEM,
 } from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
+import { debugLog } from "./logging";
 
 let systemIdCounter = 0;
 
@@ -21,7 +23,7 @@ export function generateMap() {
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
-  console.log("Generating map...");
+  debugLog("Generating map...");
 
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
@@ -62,7 +64,7 @@ export function generateMap() {
     s.push(system);
   }
 
-  console.log(
+  debugLog(
     `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`,
   );
 
@@ -87,7 +89,7 @@ export function generateMap() {
 
     system.owner = 0;
     system.type = "inhabited";
-    system.ships = 40 + Math.floor(Math.random() * 10);
+    system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
     system.homeworld = 0;
 
     occupied.push(system);
@@ -117,6 +119,7 @@ function createSystem(location: Coordinates): System {
     lanes: [],
     owner: null,
     isRevealed: false,
+    isVisited: false,
     ships: 0,
     homeworld: null,
     moveQueue: [],

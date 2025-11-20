@@ -6,6 +6,8 @@ import { addMessage, state } from "./state";
 import type { Lane, System } from "./types";
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
+  if (!state.running) return;
+
   switch (event.button) {
     case 0: // Left click
       // No action on left click for lanes
@@ -101,6 +103,8 @@ function selectPath(system: System) {
 }
 
 export function onClickSystem(event: PointerEvent, system: System) {
+  if (!state.running) return;
+
   switch (event.button) {
     case 0: // Left click
       if (system.owner !== PLAYER) return;
@@ -193,6 +197,7 @@ function takeSystem(player: number, system: System) {
     addMessage(
       `Player ${player} has taken over the homeworld of Player ${loser}!`,
     );
+    system.homeworld = 0; // No longer a homeworld
     eliminatePlayer(player, loser);
   }
 }
@@ -212,13 +217,14 @@ function eliminatePlayer(winner: number, loser: number) {
     addMessage(`You have lost your homeworld! Game Over.`);
     state.lastSelectedSystem = null;
     state.selectedSystems = [];
-    trackEvent("starz_gamesLost");
+    trackEvent("starz_gamesLost", { winner });
     stopGame();
   }
 }
 
 export function revealSystem(system: System) {
   system.isRevealed = true;
+  system.isVisited = true;
   system.lanes.forEach((lane) => {
     lane.isRevealed = true;
     lane.from.isRevealed = true;

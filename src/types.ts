@@ -8,6 +8,7 @@ export interface System {
   location: Coordinates;
   lanes: Lane[];
   owner: number | null;
+  isVisited: boolean;
   isRevealed: boolean;
   ships: number;
   homeworld: number | null;

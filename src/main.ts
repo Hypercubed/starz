@@ -3,7 +3,7 @@ import "./style.css";
 import { centerOnHome, drawMap, rerender } from "./render";
 import { addMessage, resetState, state } from "./state";
 import { generateMap } from "./generate";
-import { PLAYER } from "./constants";
+import { PLAYER, START_PAUSED } from "./constants";
 import { revealSystem } from "./actions";
 import {
   showHelp,
@@ -36,7 +36,11 @@ function startNewGame() {
 
   setupControls();
 
-  addMessage(`Game started. You are Player ${PLAYER}.`);
+  if (START_PAUSED) {
+    addMessage(`You are Player ${PLAYER}. Press 'Space' to begin.`);
+  } else {
+    addMessage(`Game started. You are Player ${PLAYER}.`);
+  }
 
   updateInfoBox();
   updateLeaderbox();

@@ -37,7 +37,8 @@ export function updateLeaderbox() {
     .select("tbody")
     .selectAll("tr")
     .data(stats)
-    .join("tr").attr("data-owner", (d) => d.player);
+    .join("tr")
+    .attr("data-owner", (d) => d.player);
 
   row
     .selectAll("td")

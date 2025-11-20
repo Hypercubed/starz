@@ -19,7 +19,7 @@
   --player-5: #cc6600; /* Orange */
   --player-6: #0a4c8c; /* Blue */
 
-  --unoccupied: #dcdcdc;
+  --unoccupied: #808080;
   --inhabited: #808080;
 }
 
@@ -116,9 +116,9 @@ svg {
     .system-outline {
       stroke: var(--owner-color, var(--unoccupied));
       fill: black;
-      fill-opacity: 0.5;
+      fill-opacity: 0;
       stroke-width: 1;
-      stroke-opacity: 0.1;
+      stroke-opacity: 0;
       stroke-width: 2;
     }
 
@@ -128,6 +128,11 @@ svg {
       stroke-opacity: 0.5;
       stroke-width: 0.5;
       r: 3;
+    }
+
+    &.visited .system-outline {
+      fill-opacity: 0.8;
+      stroke-opacity: 0.3;
     }
 
     &.selected {
@@ -147,6 +152,14 @@ svg {
     &.inhabited .system-marker {
       r: 5;
     }
+
+    &[data-owner="1"]:hover {
+      .system-outline {
+        stroke: var(--player-1);
+        stroke-width: 3;
+        stroke-opacity: 0.8;
+      }
+    }
   }
 
   .lane {
@@ -160,19 +173,32 @@ svg {
       display: inline;
     }
 
-    &:hover {
-      stroke: var(--player-1);
-      stroke-width: 6;
-    }
-
     &[data-owner] {
       stroke-width: 2;
       stroke-opacity: 0.7;
+    }
+
+    &[data-owner="1"]:hover {
+      stroke: var(--player-1);
+      stroke-width: 6;
     }
   }
 
   #graticule path {
     stroke-opacity: 0.5;
+  }
+
+  .region {
+    fill: var(--owner-color, transparent);
+    fill-opacity: 0.3;
+    stroke: black;
+    stroke-width: 1;
+    stroke-opacity: 0.8;
+
+    &[data-owner="null"] {
+      fill: transparent;
+      stroke: transparent;
+    }
   }
 }
 
