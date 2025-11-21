@@ -123,6 +123,7 @@ function createSystem(location: Coordinates): System {
     ships: 0,
     homeworld: null,
     moveQueue: [],
+    lastMove: null,
   };
 }
 

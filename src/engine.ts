@@ -66,6 +66,7 @@ export function startGame() {
   state.running = true;
   gameOver = false;
   trackEvent("starz_gamesStarted");
+  addMessage(`Game started. You are Player ${PLAYER}.`);
 
   if (!START_PAUSED) {
     runGameLoop();

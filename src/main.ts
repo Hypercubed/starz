@@ -1,9 +1,8 @@
 import "./style.css";
 
 import { centerOnHome, drawMap, rerender } from "./render";
-import { addMessage, resetState, state } from "./state";
+import { resetState, state } from "./state";
 import { generateMap } from "./generate";
-import { PLAYER, START_PAUSED } from "./constants";
 import { revealSystem } from "./actions";
 import {
   showHelp,
@@ -11,14 +10,27 @@ import {
   updateLeaderbox,
   updateMessageBox,
 } from "./ui";
-import { startGame, stopGame } from "./engine";
+import { runGameLoop, startGame, stopGame } from "./engine";
 import { setupControls } from "./controls";
 
 window.onload = () => {
   const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
-  helpButton.onclick = () => {
+  helpButton.addEventListener("click", () => {
     showHelp();
-  };
+  });
+
+  const startDialog = document.getElementById(
+    "startDialog",
+  ) as HTMLDialogElement;
+  // startDialog.showModal();
+
+  const startButton = document.getElementById(
+    "startButton",
+  ) as HTMLButtonElement;
+  startButton.addEventListener("click", () => {
+    startDialog.close();
+    runGameLoop();
+  });
 
   startNewGame();
 };
@@ -35,12 +47,6 @@ function startNewGame() {
   rerender();
 
   setupControls();
-
-  if (START_PAUSED) {
-    addMessage(`You are Player ${PLAYER}. Press 'Space' to begin.`);
-  } else {
-    addMessage(`Game started. You are Player ${PLAYER}.`);
-  }
 
   updateInfoBox();
   updateLeaderbox();

@@ -11,8 +11,10 @@ export function debugLog(message: string, ...optionalParams: any[]) {
   if (DEBUG_LOGGING_ENABLED) {
     console.log(
       `[DEBUG][Tick ${state.tick}, ${new Date().toLocaleTimeString()}] ${message}`,
-      ...optionalParams,
     );
+    for (const param of optionalParams) {
+      console.dir(param);
+    }
   }
 }
 

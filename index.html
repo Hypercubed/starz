@@ -55,8 +55,23 @@
       <button>Exit</button>
     </form>
   </dialog>
-  <button id="helpButton">?</button>
+  <dialog id="startDialog" open>
+    <p>
+      Nobody knows why The Bubble exists, or who built the hyperspace lanes that connect the star systems within it.
+      What is known, is that control of The Bubble means control of immense resources and power.
+      As a commander, it is your duty to expand your influence and conquer The Bubble for your faction.
+    </p>
+
+    <p>
+      Good luck, Commander.
+    </p>
+
+    <form method="dialog">
+      <button id="startButton">Start</button>
+    </form>
+  </dialog>
   <div id="app"></div>
+  <button id="helpButton">?</button>
   <script type="module" src="/src/main.ts"></script>
   <!-- 100% privacy-first analytics -->
   <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>

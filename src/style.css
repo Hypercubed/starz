@@ -32,6 +32,16 @@ body {
   overflow: hidden;
 }
 
+button {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
 #app {
   height: 100vh;
   width: 100vw;
@@ -178,14 +188,14 @@ svg {
       stroke-opacity: 0.7;
     }
 
-    &[data-owner="1"]:hover {
+    &:hover { /* TODO: only if one side is selected? */
       stroke: var(--player-1);
       stroke-width: 6;
     }
   }
 
   #graticule path {
-    stroke-opacity: 0.5;
+    stroke-opacity: 0.2;
   }
 
   .region {

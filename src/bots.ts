@@ -2,7 +2,15 @@ import { queueMove } from "./actions";
 import { NumBots, NumHumanPlayers } from "./constants";
 import { debugLog } from "./logging";
 import { state } from "./state";
-import type { BotMove, System } from "./types";
+import type { System } from "./types";
+
+interface BotMove {
+  message: string;
+  units: number;
+  from: System;
+  to: System;
+  score: number;
+}
 
 interface BotPersonality {
   aggression: number; // 0.0 - 1.0: tendency to attack
@@ -79,8 +87,11 @@ function basicBot(player: number) {
     return acc;
   }, new Map<number, number>());
 
-  const defenseMoves = getDefenseMoves(botSystems, player);
-  chooseMoves(defenseMoves, 1.0 - personality.defensiveness);
+  const defendMoves = getDefendMoves(botSystems);
+  chooseMoves(defendMoves, 1.0 - personality.defensiveness);
+
+  const reenforceMoves = getReenforceMoves(botSystems, player);
+  chooseMoves(reenforceMoves, 1.0 - personality.defensiveness);
 
   const eXterminate = getExterminateMoves(botSystems, player);
   chooseMoves(eXterminate, personality.defensiveness);
@@ -91,7 +102,38 @@ function basicBot(player: number) {
   const eXpand = getExpandMoves(botSystems, player);
   chooseMoves(eXpand, 1.0 - personality.defensiveness);
 
-  function getDefenseMoves(systems: System[], player: number) {
+  function getDefendMoves(systems: System[]) {
+    return systems.map((from) => {
+      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      const fromThreatLevel = threatLevels.get(from.id) || 0;
+      if (fromThreatLevel === 0) return []; // No threat detected
+
+      // TODO: Increase defensiveness based on inhabited
+      const defense = from.ships * personality.defensiveness;
+
+      let s = 1;
+      if (from.homeworld) s *= 1.5;
+      if (!from.homeworld && from.type === "inhabited") s *= 1.2;
+
+      const risk = fromThreatLevel * (1 - personality.riskTolerance) * s;
+
+      if (risk > defense) {
+        return [
+          {
+            message: `Defending system ${from.id} with threat level ${fromThreatLevel}`,
+            from,
+            to: from,
+            units: 0,
+            score: fromThreatLevel,
+          } satisfies BotMove,
+        ];
+      }
+
+      return [];
+    });
+  }
+
+  function getReenforceMoves(systems: System[], player: number) {
     return systems.map((from) => {
       if (from.moveQueue.length > 0) return []; // Already has a move queued
       if (from.ships <= 1) return [];
@@ -103,20 +145,31 @@ function basicBot(player: number) {
         if (to.owner !== player) return [];
 
         const toThreatLevel = threatLevels.get(to.id) || 0;
+        if (toThreatLevel === 0) return []; // No threat to reenforce against
 
-        const unitsToSend = Math.floor(
-          from.ships * (1 - personality.defensiveness),
+        const dfrom = fromThreatLevel - to.ships;
+        const dto = toThreatLevel - to.ships;
+
+        if (dfrom < dto) return []; // Don't reenforce less threatened systems
+
+        const units = Math.floor(
+          (from.ships - to.ships) * (1 - personality.defensiveness),
         );
-        const minUnits =
-          (1 - personality.riskTolerance) * (from.homeworld ? 50 : 1);
 
-        if (unitsToSend > minUnits && toThreatLevel > fromThreatLevel) {
+        let s = 1;
+        if (to.homeworld) s *= 1.5;
+        if (!to.homeworld && to.type === "inhabited") s *= 1.2;
+
+        const min = from.ships * (1 - personality.riskTolerance) * s;
+
+        if (units > min) {
           return [
             {
+              message: `Reenforcing system ${to.id} from ${from.id}`,
               from,
               to,
-              type: "defend",
-              score: toThreatLevel - fromThreatLevel,
+              units,
+              score: dto - dfrom,
             } satisfies BotMove,
           ];
         }
@@ -131,24 +184,16 @@ function basicBot(player: number) {
       if (from.moveQueue.length > 0) return []; // Already has a move queued
 
       if (from.ships < 3) return [];
-      // if (from.homeworld === player) return []; // Don't attack from homeworlds
 
       return from.lanes.flatMap((lane) => {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner === player || to.owner === null) return [];
 
-        const unitsToSend = Math.floor(
-          from.ships * (1 - personality.defensiveness),
-        );
-        const advantage = unitsToSend - to.ships;
+        const units = Math.floor(from.ships * (1 - personality.defensiveness));
+        const min = (to.ships + 1) * (1 - personality.riskTolerance);
 
-        const minAdvantage = (1 - personality.riskTolerance) * 5;
-
-        if (
-          advantage > minAdvantage ||
-          (advantage > -3 && personality.riskTolerance > 0.6)
-        ) {
-          let score = advantage * 5;
+        if (units > min) {
+          let score = (units - min) * 5;
 
           // Bonus if taking system would isolate enemy systems
           const adjacentToTarget = to.lanes.map((l) =>
@@ -161,7 +206,15 @@ function basicBot(player: number) {
             score += 30; // Isolation bonus
           }
 
-          return [{ to, from, type: "exterminate", score } satisfies BotMove];
+          return [
+            {
+              message: `Exterminating from system ${from.id} to ${to.id}`,
+              from,
+              to,
+              units,
+              score,
+            } satisfies BotMove,
+          ];
         }
 
         return [];
@@ -179,6 +232,7 @@ function basicBot(player: number) {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner !== null) return [];
 
+        // TODO: Keep more ships on homeworlds
         const unitsToSend = Math.floor(
           from.ships * (1 - personality.defensiveness * 0.5),
         );
@@ -201,7 +255,15 @@ function basicBot(player: number) {
           ).length;
           score += friendlyNeighbors * 10;
 
-          return [{ to, from, type: "explore", score } satisfies BotMove];
+          return [
+            {
+              message: `Exploring from system ${from.id} to ${to.id}`,
+              from,
+              to,
+              units: unitsToSend,
+              score,
+            } satisfies BotMove,
+          ];
         }
 
         return [];
@@ -214,27 +276,29 @@ function basicBot(player: number) {
       if (from.moveQueue.length > 0) return []; // Already has a move queued
       if (from.ships <= 1) return [];
 
-      const adjacentSystems = from.lanes.map((l) =>
-        l.from === from ? l.to : l.from,
-      );
-      const atRisk = adjacentSystems.filter(
-        (s) => s.owner && s.owner !== player,
-      ).length;
-      if (atRisk > 0) return []; // Prioritize defense over expansion
+      const fromThreatLevel = threatLevels.get(from.id) || 0;
+      if (fromThreatLevel > 0) return []; // Prioritize defense over expansion
 
       return from.lanes.flatMap((lane) => {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner !== player) return [];
 
-        const unitsToSend = Math.floor(
-          from.ships * (1 - personality.defensiveness),
+        const units = Math.floor(
+          (from.ships - to.ships) * (1 - personality.defensiveness),
         );
-        const minUnits =
-          (1 - personality.riskTolerance) * (from.homeworld ? 50 : 1);
+        const min = (1 - personality.riskTolerance) * (from.homeworld ? 10 : 1);
 
-        if (unitsToSend > minUnits) {
-          const score = (to.ships - from.ships) * -10 + 20; // Prefer weaker friendly systems
-          return [{ from, to, type: "expand", score } satisfies BotMove];
+        if (units > min && to.ships + 2 < from.ships) {
+          const score = -to.ships; // Prefer weaker friendly systems
+          return [
+            {
+              message: `Expanding from system ${from.id} to ${to.id}`,
+              from,
+              to,
+              units,
+              score,
+            } satisfies BotMove,
+          ];
         }
 
         return [];
@@ -264,30 +328,7 @@ function chooseMoves(moves: BotMove[][], weight = 1) {
     if (systemMoves.length === 0) return;
     const moves = [...systemMoves].sort(scoreSort);
     const move = moves[0];
-
-    switch (move.type) {
-      case "exterminate": {
-        const attackingShips = move.from.ships! - 1;
-        queueMove(move.from, move.to, attackingShips);
-        break;
-      }
-      case "explore": {
-        const attackingShips = Math.floor(move.from.ships / 2) - 1;
-        queueMove(move.from, move.to, attackingShips);
-        break;
-      }
-      case "expand": {
-        const deltaShips =
-          Math.floor((move.from.ships - move.to.ships) / 2) - 1;
-        queueMove(move.from, move.to, deltaShips);
-        break;
-      }
-      case "defend": {
-        const deltaShips = move.from.ships! - 1;
-        queueMove(move.from, move.to, deltaShips);
-        break;
-      }
-    }
+    queueMove(move.from, move.to, move.units, move.message);
   });
 }
 

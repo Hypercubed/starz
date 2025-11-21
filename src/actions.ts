@@ -1,6 +1,6 @@
 import { PLAYER } from "./constants";
 import { stopGame } from "./engine";
-import { trackEvent } from "./logging";
+import { debugLog, trackEvent } from "./logging";
 import { rerender } from "./render";
 import { addMessage, state } from "./state";
 import type { Lane, System } from "./types";
@@ -28,6 +28,42 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       });
       break;
   }
+  rerender();
+}
+
+export function onClickSystem(event: PointerEvent, system: System) {
+  console.log("onClickSystem", event.clientX, event.clientY);
+
+  if (!state.running) return;
+
+  switch (event.button) {
+    case 0: // Left click
+      if (event.altKey) {
+        debugLog(`System Info for ${system.id}:`, system.lastMove?.message);
+        break;
+      }
+
+      if (!state.running) return;
+      if (system.owner !== PLAYER) return;
+
+      if (event.ctrlKey || event.metaKey) {
+        toggleSystemSelect(system);
+      } else if (event.shiftKey) {
+        selectPath(system);
+      } else {
+        toggleSingleSystemSelect(system);
+      }
+      break;
+    case -1: // Long press (touch)
+    case 2: // Right click
+      if (!state.running) return;
+
+      state.selectedSystems.forEach((selectedSystem) => {
+        orderMassMove(selectedSystem, system);
+      });
+      break;
+  }
+
   rerender();
 }
 
@@ -100,31 +136,6 @@ function selectPath(system: System) {
       }
     }
   }
-}
-
-export function onClickSystem(event: PointerEvent, system: System) {
-  if (!state.running) return;
-
-  switch (event.button) {
-    case 0: // Left click
-      if (system.owner !== PLAYER) return;
-
-      if (event.ctrlKey || event.metaKey) {
-        toggleSystemSelect(system);
-      } else if (event.shiftKey) {
-        selectPath(system);
-      } else {
-        toggleSingleSystemSelect(system);
-      }
-      break;
-    case 2: // Right click
-      state.selectedSystems.forEach((selectedSystem) => {
-        orderMassMove(selectedSystem, system);
-      });
-      break;
-  }
-
-  rerender();
 }
 
 function orderBalancedMove(from: System, to: System) {
@@ -239,16 +250,21 @@ function transferShips(from: System, to: System, ships: number) {
   if (to.owner === PLAYER) revealSystem(to);
 }
 
-export function queueMove(from: System, to: System, ships: number) {
-  if (from.ships < ships) return;
-  from.moveQueue.push({ ships, from, to });
+export function queueMove(
+  from: System,
+  to: System,
+  ships: number,
+  message?: string,
+) {
+  from.moveQueue.push({ ships, to, message });
 }
 
 export function doQueuedMoves() {
   state.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      moveShips(move.from, move.to, move.ships);
+      moveShips(system, move.to, move.ships);
+      system.lastMove = move;
     }
   });
 }

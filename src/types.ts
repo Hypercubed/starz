@@ -13,11 +13,12 @@ export interface System {
   ships: number;
   homeworld: number | null;
   moveQueue: Move[];
+  lastMove: Move | null;
 }
 
 export interface Move {
+  message?: string;
   ships: number;
-  from: System;
   to: System;
 }
 
@@ -33,13 +34,6 @@ export interface PlayerStats {
   systems: number;
   ships: number;
   homeworld: number;
-}
-
-export interface BotMove {
-  type: "exterminate" | "explore" | "expand" | "defend";
-  from: System;
-  to: System;
-  score: number;
 }
 
 export interface Messages {

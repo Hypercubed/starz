@@ -102,15 +102,20 @@ export function drawMap() {
   }
 
   function createZoom(): d3.ZoomBehavior<Element, unknown> {
-    return d3.zoom().on("zoom", (event) => {
-      if (event.transform.k > ZOOM_SENSITIVITY) {
-        const newScale = initialScale * event.transform.k;
-        geoProjection.scale(newScale);
-        rerenderUnthrottled();
-      } else {
-        event.transform.k = ZOOM_SENSITIVITY;
-      }
-    });
+    return d3
+      .zoom()
+      .filter((e) => {
+        return e.type === "wheel";
+      })
+      .on("zoom", (event) => {
+        if (event.transform.k > ZOOM_SENSITIVITY) {
+          const newScale = initialScale * event.transform.k;
+          geoProjection.scale(newScale);
+          rerenderUnthrottled();
+        } else {
+          event.transform.k = ZOOM_SENSITIVITY;
+        }
+      });
   }
 
   function drag() {
@@ -242,8 +247,9 @@ function drawSystems() {
         .append("g")
         .attr("class", "system")
         .attr("id", (d) => `system-${d.id}`)
-        // .attr('title', d => `System ${d.id}`)
-        .on("click", (ev: PointerEvent, d: System) => onClickSystem(ev, d))
+        .on("click", (ev: PointerEvent, d: System) => {
+          onClickSystem(ev, d);
+        })
         .on("contextmenu", (ev: PointerEvent, d: System) => {
           ev.preventDefault();
           onClickSystem(ev, d);
