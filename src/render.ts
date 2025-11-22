@@ -9,7 +9,7 @@ import versor from "versor";
 import { ENABLE_FOG_OF_WAR, HEIGHT, PROJECTION, WIDTH } from "./constants";
 import { state } from "./state";
 import type { Coordinates, Lane, System } from "./types";
-import { onClickLane, onClickSystem } from "./actions";
+import { onClickLane, onClickSystem } from "./controls";
 
 const ZOOM_SENSITIVITY = 0.5;
 const SYSTEM_SIZE = 20;
@@ -262,13 +262,13 @@ function drawSystems() {
         .attr("cy", 0)
         .attr("r", SYSTEM_SIZE / 2);
 
-      group
-        .append("circle")
-        .attr("class", "system-marker")
-        .attr("r", 4)
-        .attr("fill", "white")
-        .attr("stroke", "white")
-        .attr("stroke-width", 1);
+      // group
+      //   .append("circle")
+      //   .attr("class", "system-marker")
+      //   .attr("r", 4)
+      //   .attr("fill", "white")
+      //   .attr("stroke", "white")
+      //   .attr("stroke-width", 1);
 
       // group.append('path')
       //   .attr('class', 'system-region')
@@ -284,13 +284,14 @@ function drawSystems() {
         .append("text")
         .attr("class", "ship-count")
         .attr("y", -10)
-        .attr("x", (d) => (d.homeworld == null ? 0 : 12))
+        .attr("x", 0)
         .attr("text-anchor", "start");
 
       group
         .append("text")
         .attr("class", "system-icon")
-        .attr("y", -10)
+        .attr("y", 0)
+        .attr("x", 0)
         .attr("text-anchor", "end");
 
       return group;
@@ -308,10 +309,9 @@ function drawSystems() {
     .attr("transform", (d) => `translate(${geoProjection(d.location)})`);
 
   join.select(".system-icon").text((d) => {
-    if (d.homeworld == null) return "";
-    if (d.homeworld == 0) return "▲";
-    if (d.homeworld && d.owner === d.homeworld) return "★";
-    return "";
+    if (d.homeworld == 0) return "✦";
+    if (d.homeworld && d.owner === d.homeworld) return "✶";
+    return "●"; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
   join.select(".ship-count").text((d) => (d.ships ? d.ships.toString() : ""));
@@ -327,13 +327,13 @@ function drawRegions() {
 
   const join = g
     .selectAll("path")
-    .data(mesh.polygons(systems).features)
+    .data(mesh.polygons(systems).features as d3.GeoPermissibleObjects[])
     .join((enter: any) => {
       return enter.append("path").classed("region", true);
     });
 
   join
-    .attr("d", geoPathGenerator as any)
+    .attr("d", (d) => geoPathGenerator(d))
     .datum((_, i) => systems[i])
     .classed("hidden", (d) => {
       if (!ENABLE_FOG_OF_WAR) return false;

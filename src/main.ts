@@ -11,7 +11,7 @@ import {
   updateMessageBox,
 } from "./ui";
 import { runGameLoop, startGame, stopGame } from "./engine";
-import { setupControls } from "./controls";
+import { setupKeboardControls } from "./controls";
 
 window.onload = () => {
   const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
@@ -46,7 +46,7 @@ function startNewGame() {
   centerOnHome();
   rerender();
 
-  setupControls();
+  setupKeboardControls();
 
   updateInfoBox();
   updateLeaderbox();

@@ -108,8 +108,10 @@ svg {
     text {
       fill: white;
       font-size: 12px;
+    }
+
+    .ship-count {
       text-anchor: start;
-      dominant-baseline: middle;
       pointer-events: none;
       user-select: none;
       transform: translate(10px, 0);
@@ -121,6 +123,9 @@ svg {
       stroke-width: 0.5;
       stroke: white;
       stroke-opacity: 0.3;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      transform: translate(0px, 0.3px);
     }
 
     .system-outline {
@@ -142,7 +147,7 @@ svg {
 
     &.visited .system-outline {
       fill-opacity: 0.8;
-      stroke-opacity: 0.3;
+      stroke-opacity: 0.0;
     }
 
     &.selected {
@@ -151,7 +156,7 @@ svg {
       }
 
       .system-outline {
-        stroke-opacity: 1;
+        stroke-opacity: 1 !important;
       }
     }
 
@@ -167,7 +172,7 @@ svg {
       .system-outline {
         stroke: var(--player-1);
         stroke-width: 3;
-        stroke-opacity: 0.8;
+        stroke-opacity: 0.6;
       }
     }
   }

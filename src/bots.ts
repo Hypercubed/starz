@@ -317,14 +317,15 @@ function scoreSort(a: BotMove, b: BotMove) {
   return Math.random() - 0.5;
 }
 
-function chooseMoves(moves: BotMove[][], weight = 1) {
+// @eslint-disable-next-line @typescript-eslint/no-unused-vars
+function chooseMoves(moves: BotMove[][], _weight = 1) {
   if (moves.length === 0) return;
   // moves = moves.slice(0, moves.length * weight);
 
   moves.forEach((systemMoves) => {
-    if (Math.random() > weight) return;
+    // if (Math.random() > weight) return;
 
-    // For each system's possible moves, pick one at random
+    // For each system's possible moves, pick one
     if (systemMoves.length === 0) return;
     const moves = [...systemMoves].sort(scoreSort);
     const move = moves[0];
