@@ -1,6 +1,11 @@
 export type Coordinates = [number, number];
 
-export type SystemType = "inhabited" | "uninhabited";
+export const SystemTypes = {
+  INHABITED: 'inhabited',
+  UNINHABITED: 'uninhabited'
+} as const;
+
+export type SystemType = (typeof SystemTypes)[keyof typeof SystemTypes];
 
 export interface System {
   id: number;
@@ -41,4 +46,16 @@ export interface Messages {
   message: string;
   tick: number;
   html: string;
+}
+
+export interface BotInterface {
+  name: string;
+  makeMoves(): void;
+}
+
+export interface Player {
+  id: number;
+  isHuman: boolean;
+  bot?: BotInterface;
+  stats: PlayerStats;
 }

@@ -1,5 +1,8 @@
-import { DEBUG_LOGGING_ENABLED, EVENT_TRACKING_ENABLED } from "./constants";
-import { state } from "./state";
+import {
+  DEBUG_LOGGING_ENABLED,
+  EVENT_TRACKING_ENABLED
+} from '../core/constants';
+import { state } from '../game/state';
 
 declare global {
   interface Window {
@@ -11,10 +14,8 @@ export function debugLog(message: string, ...optionalParams: any[]) {
   if (DEBUG_LOGGING_ENABLED) {
     console.log(
       `[DEBUG][Tick ${state.tick}, ${new Date().toLocaleTimeString()}] ${message}`,
+      ...optionalParams
     );
-    for (const param of optionalParams) {
-      console.dir(param);
-    }
   }
 }
 
@@ -23,21 +24,21 @@ export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
 
   let count = 1;
   try {
-    count = parseInt(localStorage.getItem(eventName) ?? "0", 10) + 1;
+    count = parseInt(localStorage.getItem(eventName) ?? '0', 10) + 1;
   } catch (e) {
-    console.error("Error reading event count from localStorage:", e);
+    console.error('Error reading event count from localStorage:', e);
   }
-  localStorage.setItem(eventName, count + "");
+  localStorage.setItem(eventName, count + '');
 
   if (window && window.sa_event) {
     try {
       window.sa_event(eventName, {
         [eventName]: count,
         tick: state.tick,
-        ...meta,
+        ...meta
       });
     } catch (e) {
-      console.error("Error tracking event:", e);
+      console.error('Error tracking event:', e);
     }
   }
 }

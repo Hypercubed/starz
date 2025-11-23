@@ -3,10 +3,10 @@ export const PLAYER = 1;
 export const WIDTH = 750;
 export const HEIGHT = 750;
 
-export const PROJECTION = "Orthographic" as
-  | "Orthographic"
-  | "Stereographic"
-  | "Mercator";
+export const PROJECTION = 'Orthographic' as
+  | 'Orthographic'
+  | 'Stereographic'
+  | 'Mercator';
 
 export const TICK_DURATION_MS = 500;
 export const TICKS_PER_TURN = 2;
@@ -26,9 +26,11 @@ export const NumInhabited = Math.max(Math.floor(0.1 * NumOfSystems), NumBots); /
 // Should be < SQRT(PI/NumOfSystems) to ensure spacing
 export const MinDistanceBetweenSystems = Math.min(
   0.08,
-  Math.sqrt(Math.PI / NumOfSystems),
+  Math.sqrt(Math.PI / NumOfSystems)
 ); // Minimum distance between systems
 
 export const EVENT_TRACKING_ENABLED = import.meta.env.PROD;
 export const DEBUG_LOGGING_ENABLED = import.meta.env.DEV;
 export const START_PAUSED = true;
+export const ENABLE_CHEATS = import.meta.env.DEV;
+export const ENABLE_BOT_CONTROL = false;
