@@ -31,7 +31,7 @@ export async function waitForMapGeneration(page: Page) {
 }
 
 /**
- * Get all systems on the map
+ * Get all visible systems on the map
  */
 export async function getAllSystems(page: Page): Promise<Locator[]> {
   const systems = await page.locator('#app svg g.system').all();
@@ -39,7 +39,7 @@ export async function getAllSystems(page: Page): Promise<Locator[]> {
 }
 
 /**
- * Get systems owned by a specific player
+ * Get all visible systems owned by a specific player
  */
 export async function getSystemsByOwner(page: Page, owner: number): Promise<Locator[]> {
   const systems = await page.locator(`#app svg g.system[data-owner="${owner}"]`).all();
@@ -102,24 +102,6 @@ export async function getCurrentTick(page: Page): Promise<number> {
 export async function pauseGame(page: Page) {
   await page.keyboard.press('Space');
   await page.waitForTimeout(100);
-}
-
-/**
- * Get ship count from a system
- */
-export async function getShipCount(page: Page, system: Locator): Promise<number> {
-  const systemId = await system.getAttribute('data-id');
-  const label = page.locator(`svg text.system-label[data-id="${systemId}"]`);
-  const text = await label.textContent();
-  return parseInt(text || '0', 10);
-}
-
-/**
- * Check if a system is revealed (visible to player)
- */
-export async function isSystemRevealed(system: Locator): Promise<boolean> {
-  const isRevealed = await system.getAttribute('data-revealed');
-  return isRevealed === 'true';
 }
 
 /**

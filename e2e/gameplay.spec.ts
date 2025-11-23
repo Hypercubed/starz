@@ -160,5 +160,8 @@ test.describe('Gameplay Mechanics', () => {
     // We just verify the message box exists and is functional
     const messageBox = page.locator('#messagebox');
     await expect(messageBox).toBeVisible();
+
+    // Check for the initial game start message which is always present
+    await expect(messageBox).toContainText('Game started');
   });
 });

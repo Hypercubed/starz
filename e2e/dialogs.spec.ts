@@ -80,24 +80,6 @@ test.describe('Dialog Interactions', () => {
     await expect(helpDialog).toBeVisible();
   });
 
-  test('escape key clears system selection', async ({ page }) => {
-    await page.goto('/');
-    await startGame(page);
-
-    // Select a system (homeworld)
-    const homeworld = page.locator('svg g.system[data-owner="1"]').first();
-    await homeworld.click();
-
-    // Press Escape
-    await page.keyboard.press('Escape');
-
-    // Selection should be cleared (no selected systems)
-    // We can verify this by checking if the selection effect is gone
-    await page.waitForTimeout(200);
-
-    // The test passes if no error is thrown
-  });
-
   test('start dialog has correct button text', async ({ page }) => {
     await page.goto('/');
 

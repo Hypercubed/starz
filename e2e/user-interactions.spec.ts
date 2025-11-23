@@ -75,6 +75,16 @@ test.describe('User Interactions', () => {
     // Map should still be visible after rotations
     const svg = page.locator('#app svg');
     await expect(svg).toBeVisible();
+
+    // Verify transform has changed (rotation affects projection)
+    // We can check a system's position to see if it moved relative to the viewport
+    const homeworld = await getHomeworld(page);
+    const transformAfter = await homeworld.getAttribute('transform');
+
+    // It's hard to predict exact transform, but it should be different from initial if we rotated enough
+    // However, since we don't have the initial transform here easily without refactoring, 
+    // we can at least assert that the system is still part of the DOM and visible
+    await expect(homeworld).toBeVisible();
   });
 
   test('+ and - keys zoom in and out', async ({ page }) => {
@@ -89,6 +99,12 @@ test.describe('User Interactions', () => {
     // Map should still be visible after zooming
     const svg = page.locator('#app svg');
     await expect(svg).toBeVisible();
+
+    // Verify scale changed by checking a system's transform or similar
+    // For now, just ensuring no crash and map visibility is a basic check, 
+    // but let's check if the system is still there
+    const homeworld = await getHomeworld(page);
+    await expect(homeworld).toBeVisible();
   });
 
   test('Q and E keys rotate around Z axis', async ({ page }) => {
@@ -101,6 +117,9 @@ test.describe('User Interactions', () => {
     // Map should still be visible
     const svg = page.locator('#app svg');
     await expect(svg).toBeVisible();
+
+    const homeworld = await getHomeworld(page);
+    await expect(homeworld).toBeVisible();
   });
 
   test('C key centers on selected system', async ({ page }) => {
@@ -126,28 +145,28 @@ test.describe('User Interactions', () => {
 
     const systems = page.locator('#app svg g.system');
     await expect(systems.first()).toBeVisible();
+
+    // Verify lane path data changed (projection change affects paths)
+    const lane = page.locator('svg path.lane').first();
+    const d1 = await lane.getAttribute('d');
+
+    // Change view again
+    await page.keyboard.press('p');
+    await page.waitForTimeout(300);
+
+    const d2 = await lane.getAttribute('d');
+    expect(d1).not.toBe(d2);
   });
 
   test('ESC key clears selection', async ({ page }) => {
     const homeworld = await getHomeworld(page);
-    await homeworld.click();
+    await expect(homeworld).toHaveClass(/selected/);
 
     // Clear selection with ESC
     await page.keyboard.press('Escape');
     await page.waitForTimeout(100);
 
-    // No error should occur
-  });
-
-  test('middle mouse button interactions work', async ({ page }) => {
-    // This is harder to test with Playwright, but we can verify the map is still functional
-    const svg = page.locator('#app svg');
-
-    // Verify the map is visible and interactive
-    await expect(svg).toBeVisible();
-
-    const systems = await page.locator('#app svg g.system').count();
-    expect(systems).toBeGreaterThan(0);
+    await expect(homeworld).not.toHaveClass(/selected/);
   });
 
   test('ctrl+click adds system to selection', async ({ page }) => {
@@ -162,7 +181,9 @@ test.describe('User Interactions', () => {
       await systems[1].click({ modifiers: ['Control'] });
       await page.waitForTimeout(100);
 
-      // Both should be selectable (no errors)
+      // Both should be selected
+      await expect(systems[0]).toHaveClass(/selected/);
+      await expect(systems[1]).toHaveClass(/selected/);
     }
   });
 });
