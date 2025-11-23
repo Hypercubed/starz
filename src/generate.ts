@@ -1,17 +1,17 @@
-import * as d3 from "d3";
+import * as d3 from 'd3';
 
 import {
   NumInhabited,
   HEIGHT,
   NumOfSystems,
   NumBots,
-  PLAYER,
+  NumHumanPlayers,
   MinDistanceBetweenSystems,
-  MAX_SHIPS_PER_SYSTEM,
-} from "./constants";
-import { state } from "./state";
-import type { Coordinates, Lane, System } from "./types";
-import { debugLog } from "./logging";
+  MAX_SHIPS_PER_SYSTEM
+} from './constants';
+import { state } from './state';
+import { SystemTypes, type Coordinates, type Lane, type System } from './types';
+import { debugLog } from './logging';
 
 let systemIdCounter = 0;
 
@@ -23,7 +23,7 @@ export function generateMap() {
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
-  debugLog("Generating map...");
+  debugLog('Generating map...');
 
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
@@ -65,30 +65,30 @@ export function generateMap() {
   }
 
   debugLog(
-    `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`,
+    `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`
   );
 
-  // Setup PLAYER homeworld
-  const homeSystem = state.systems[0];
-  homeSystem.ships = 1;
-  homeSystem.owner = PLAYER;
-  state.systems[0].type = "inhabited";
-  state.systems[0].homeworld = 1;
-  state.lastSelectedSystem = state.systems[0];
-  state.selectedSystems = [state.systems[0]];
-
-  const unoccupied = state.systems.slice(1);
+  const unoccupied = state.systems.slice(0); // Copy all systems
   const occupied = [] as System[];
 
-  // Setup other inhabited systems
-  for (let i = 0; i < NumInhabited - 1; i++) {
+  // Setup inhabited systems (neutral + potential homeworlds)
+  // We need enough for all players plus some neutrals
+  const totalInhabited = Math.max(NumInhabited, NumHumanPlayers + NumBots);
+
+  for (let i = 0; i < totalInhabited; i++) {
+    if (unoccupied.length === 0) break;
     const randomIndex = Math.floor(Math.random() * unoccupied.length);
+    if (randomIndex === 0) {
+      i--;
+      continue;
+    }
+
     const system = unoccupied[randomIndex];
 
     // TODO: Enforce minimum distance between inhabited systems
 
     system.owner = 0;
-    system.type = "inhabited";
+    system.type = SystemTypes.INHABITED;
     system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
     system.homeworld = 0;
 
@@ -96,25 +96,47 @@ export function generateMap() {
     unoccupied.splice(randomIndex, 1);
   }
 
-  // Setup bot homeworlds
-  for (let i = 2; i <= NumBots + 1; i++) {
-    const idx = Math.floor(Math.random() * occupied.length);
-    const system = occupied[idx];
+  // Setup homeworlds for all players (Human + Bots)
+  const totalPlayers = NumHumanPlayers + NumBots;
 
-    // TODO: Enforce minimum distance between "players"
+  for (let i = 1; i <= totalPlayers; i++) {
+    // Ensure we have enough occupied systems, otherwise take from unoccupied
+    let system: System;
+    if (i <= NumHumanPlayers) {
+      system = state.systems[0];
+    } else if (occupied.length > 0) {
+      const idx = Math.floor(Math.random() * occupied.length);
+      system = occupied[idx];
+      occupied.splice(idx, 1);
+    } else if (unoccupied.length > 0) {
+      const idx = Math.floor(Math.random() * unoccupied.length);
+      system = unoccupied[idx];
+      unoccupied.splice(idx, 1);
+      // Initialize it as inhabited since we pulled from unoccupied
+      system.type = SystemTypes.INHABITED;
+      system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
+    } else {
+      console.error('Not enough systems for players!');
+      break;
+    }
 
     system.ships = 1;
     system.owner = i;
     system.homeworld = i;
+    system.type = SystemTypes.INHABITED;
 
-    occupied.splice(idx, 1);
+    // If this is a human player, set initial selection
+    if (i <= NumHumanPlayers) {
+      state.lastSelectedSystem = system;
+      state.selectedSystems = [system];
+    }
   }
 }
 
 function createSystem(location: Coordinates): System {
   return {
     id: systemIdCounter++,
-    type: "uninhabited",
+    type: 'uninhabited',
     location,
     lanes: [],
     owner: null,
@@ -123,12 +145,12 @@ function createSystem(location: Coordinates): System {
     ships: 0,
     homeworld: null,
     moveQueue: [],
-    lastMove: null,
+    lastMove: null
   };
 }
 
 function addLane(from: System, to: System): Lane {
-  const id = [from.id, to.id].sort((a, b) => a - b).join("-");
+  const id = [from.id, to.id].sort((a, b) => a - b).join('-');
 
   const existingLane = state.lanes.find((lane) => lane.id === id);
   if (existingLane) {
@@ -139,7 +161,7 @@ function addLane(from: System, to: System): Lane {
     id,
     from,
     to,
-    isRevealed: false,
+    isRevealed: false
   };
   state.lanes.push(newLane);
   from.lanes.push(newLane);
@@ -147,9 +169,9 @@ function addLane(from: System, to: System): Lane {
   return newLane;
 }
 
-function findClosestSystem(
+export function findClosestSystem(
   loc: Coordinates,
-  systems = state.systems,
+  systems = state.systems
 ): System | null {
   if (systems.length === 0) return null;
 

@@ -1,14 +1,15 @@
-import { PLAYER } from "./constants";
-import { removeSystemSelect } from "./controls";
-import { stopGame } from "./engine";
-import { trackEvent } from "./logging";
-import { addMessage, state } from "./state";
-import type { System } from "./types";
+import { PLAYER } from './constants';
+import { removeSystemSelect } from './controls';
+
+import { trackEvent } from './logging';
+import { rerender } from './render';
+import { addMessage, state } from './state';
+import type { System } from './types';
 
 export function orderBalancedMove(from: System, to: System) {
   // Check if there's a lane between selectedSystem and system
   const lane = state.lanes.find(
-    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to),
+    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to)
   );
 
   if (lane) {
@@ -17,12 +18,6 @@ export function orderBalancedMove(from: System, to: System) {
         ? Math.floor((from.ships - to.ships) / 2)
         : Math.floor(from.ships / 2);
 
-    console.log("Balanced move:", {
-      from: from.ships,
-      to: to.ships,
-      deltaShips,
-    });
-
     moveShips(from, to, deltaShips);
   }
 }
@@ -30,7 +25,7 @@ export function orderBalancedMove(from: System, to: System) {
 export function orderMassMove(from: System, to: System) {
   // Check if there's a lane between selectedSystem and system
   const lane = state.lanes.find(
-    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to),
+    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to)
   );
 
   if (lane) {
@@ -42,6 +37,7 @@ export function orderMassMove(from: System, to: System) {
 function moveShips(from: System, to: System, ships: number) {
   if (ships === 0) return;
   if (ships < 0) {
+    if (from.owner !== to.owner) return;
     const s = from;
     from = to;
     to = s;
@@ -79,7 +75,7 @@ function takeSystem(player: number, system: System) {
   if (system.homeworld && system.homeworld !== player) {
     const loser = system.homeworld;
     addMessage(
-      `Player ${player} has taken over the homeworld of Player ${loser}!`,
+      `Player ${player} has taken over the homeworld of Player ${loser}!`
     );
     system.homeworld = null; // No longer a homeworld
     eliminatePlayer(player, loser);
@@ -103,8 +99,9 @@ function eliminatePlayer(winner: number, loser: number) {
     addMessage(`You have lost your homeworld! Game Over.`);
     state.lastSelectedSystem = null;
     state.selectedSystems = [];
-    trackEvent("starz_gamesLost", { winner });
-    stopGame();
+    trackEvent('starz_gamesLost', { winner });
+    state.running = false;
+    rerender();
   }
 }
 
@@ -129,7 +126,7 @@ export function queueMove(
   from: System,
   to: System,
   ships: number,
-  message?: string,
+  message?: string
 ) {
   from.moveQueue.push({ ships, to, message });
 }

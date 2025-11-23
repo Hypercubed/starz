@@ -1,33 +1,33 @@
-import "./style.css";
+import './style.css';
 
-import { centerOnHome, drawMap, rerender } from "./render";
-import { resetState, state } from "./state";
-import { generateMap } from "./generate";
-import { revealSystem } from "./actions";
+import { centerOnHome, drawMap, rerender } from './render';
+import { resetState, state } from './state';
+import { generateMap } from './generate';
+import { revealSystem } from './actions';
 import {
   showHelp,
   updateInfoBox,
   updateLeaderbox,
-  updateMessageBox,
-} from "./ui";
-import { runGameLoop, startGame, stopGame } from "./engine";
-import { setupKeboardControls } from "./controls";
+  updateMessageBox
+} from './ui';
+import { runGameLoop, startGame, stopGame } from './engine';
+import { setupKeboardControls } from './controls';
 
 window.onload = () => {
-  const helpButton = document.getElementById("helpButton") as HTMLButtonElement;
-  helpButton.addEventListener("click", () => {
+  const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
+  helpButton.addEventListener('click', () => {
     showHelp();
   });
 
   const startDialog = document.getElementById(
-    "startDialog",
+    'startDialog'
   ) as HTMLDialogElement;
   // startDialog.showModal();
 
   const startButton = document.getElementById(
-    "startButton",
+    'startButton'
   ) as HTMLButtonElement;
-  startButton.addEventListener("click", () => {
+  startButton.addEventListener('click', () => {
     startDialog.close();
     runGameLoop();
   });

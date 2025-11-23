@@ -1,35 +1,35 @@
-import * as d3 from "d3";
-import { pauseToggle } from "./engine";
+import * as d3 from 'd3';
+import { pauseToggle } from './engine';
 import {
   centerOnHome,
   centerOnSystem,
   changeView,
   rerender,
   rotateProjection,
-  scaleZoom,
-} from "./render";
-import { state } from "./state";
-import { orderBalancedMove, orderMassMove, revealSystem } from "./actions";
-import { ENABLE_CHEATS, PLAYER } from "./constants";
-import { showHelp } from "./ui";
-import { debugLog } from "./logging";
-import type { Lane, System } from "./types";
+  scaleZoom
+} from './render';
+import { state } from './state';
+import { orderBalancedMove, orderMassMove, revealSystem } from './actions';
+import { ENABLE_BOT_CONTROL, ENABLE_CHEATS, PLAYER } from './constants';
+import { showHelp } from './ui';
+import { debugLog } from './logging';
+import type { Lane, System } from './types';
 
 const ROTATION_STEP = 5;
 
 export function setupKeboardControls() {
-  d3.select("body").on("keypress.controls", null);
-  d3.select("body").on("keyup.controls", null);
-  d3.select("body").on("keyup.cheats", null);
+  d3.select('body').on('keypress.controls', null);
+  d3.select('body').on('keyup.controls', null);
+  d3.select('body').on('keyup.cheats', null);
 
   if (ENABLE_CHEATS) {
-    d3.select("body").on("keyup.cheats", (event) => {
+    d3.select('body').on('keyup.cheats', (event) => {
       if (!event.altKey) return;
       event.preventDefault();
       // debugLog("keyup:", event);
 
       switch (event.code) {
-        case "KeyC":
+        case 'KeyC':
           state.systems.forEach((system) => {
             if (system.owner === PLAYER) {
               system.ships *= 2;
@@ -37,90 +37,90 @@ export function setupKeboardControls() {
           });
           rerender();
           return;
-      case "KeyR":
-        state.systems.forEach(revealSystem);
-        rerender();
-        return;
-      case "NumpadAdd":
-      case "Equal":
-        state.timeScale = Math.min(16, state.timeScale * 2);
-        debugLog(`Time scale increased to ${state.timeScale}x`);
-        return;
-      case "NumpadSubtract":
-      case "Minus":
-        state.timeScale = Math.max(0.25, state.timeScale / 2);
-        debugLog(`Time scale decreased to ${state.timeScale}x`);
-        return;
+        case 'KeyR':
+          state.systems.forEach(revealSystem);
+          rerender();
+          return;
+        case 'NumpadAdd':
+        case 'Equal':
+          state.timeScale = Math.min(16, state.timeScale * 2);
+          debugLog(`Time scale increased to ${state.timeScale}x`);
+          return;
+        case 'NumpadSubtract':
+        case 'Minus':
+          state.timeScale = Math.max(0.25, state.timeScale / 2);
+          debugLog(`Time scale decreased to ${state.timeScale}x`);
+          return;
       }
     });
   }
 
-  d3.select("body").on("keyup.controls", (event) => {
+  d3.select('body').on('keyup.controls', (event) => {
     // debugLog("keyup:", event);
 
     switch (event.key) {
-      case "Escape":
+      case 'Escape':
         clearSelection();
         rerender();
         return;
-      case "?":
+      case '?':
         showHelp();
         return;
     }
   });
 
-  d3.select("body").on("keypress.controls", (event) => {
+  d3.select('body').on('keypress.controls', (event) => {
     // debugLog("Key pressed:", event);
 
     switch (event.code) {
-      case "Space":
+      case 'Space':
         pauseToggle();
         return;
-      case "Equal":
-      case "NumpadAdd":
+      case 'Equal':
+      case 'NumpadAdd':
         scaleZoom(1.2);
         rerender();
         return;
-      case "Minus":
-      case "NumpadSubtract":
+      case 'Minus':
+      case 'NumpadSubtract':
         scaleZoom(0.8);
         rerender();
         return;
-      case "KeyW":
+      case 'KeyW':
         rotateProjection([0, ROTATION_STEP]);
         rerender();
         return;
-      case "KeyA":
+      case 'KeyA':
         rotateProjection([-ROTATION_STEP, 0]);
         rerender();
         return;
-      case "KeyS":
+      case 'KeyS':
         rotateProjection([0, -ROTATION_STEP]);
         rerender();
         return;
-      case "KeyD":
+      case 'KeyD':
         rotateProjection([ROTATION_STEP, 0]);
         rerender();
         return;
-      case "KeyQ":
+      case 'KeyQ':
         rotateProjection([0, 0, ROTATION_STEP]);
         rerender();
         break;
-      case "KeyE":
+      case 'KeyE':
         rotateProjection([0, 0, -ROTATION_STEP]);
         rerender();
-        break; 
-      case "KeyH":
+        break;
+      case 'KeyH':
         centerOnHome();
         rerender();
         return;
-      case "KeyC":
+      case 'KeyC':
         if (state.lastSelectedSystem) {
           centerOnSystem(state.lastSelectedSystem);
           rerender();
         }
         return;
-      case "KeyP":
+      case 'KeyP':
         changeView();
         centerOnHome();
         rerender();
@@ -184,7 +184,7 @@ function selectPath(system: System) {
     if (current === system) {
       // Found path
       state.selectedSystems = Array.from(
-        new Set([...state.selectedSystems, ...path]),
+        new Set([...state.selectedSystems, ...path])
       );
       state.lastSelectedSystem = system;
       return;
@@ -211,7 +211,8 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       let from = lane.from;
       let to = lane.to;
 
-      if (from.owner !== PLAYER && to.owner !== PLAYER) return; // Can't move if neither side is owned by player
+      if (from.owner !== PLAYER && to.owner !== PLAYER && !ENABLE_BOT_CONTROL)
+        return; // Can't move if neither side is owned by player
       if (from.owner !== PLAYER) {
         // Make sure 'from' is owned by player
         const s = from;
@@ -240,9 +241,17 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 export function onClickSystem(event: PointerEvent, system: System) {
   if (!state.running) return;
 
+  if (ENABLE_CHEATS && event.altKey) {
+    debugLog(
+      '' + system.id,
+      system.lastMove?.message ?? 'none',
+      system.lastMove?.ships ?? 0
+    );
+  }
+
   switch (event.button) {
     case 0: // Left click
-      if (system.owner !== PLAYER) return;
+      if (system.owner !== PLAYER && !ENABLE_BOT_CONTROL) return;
 
       if (event.ctrlKey || event.metaKey) {
         toggleSystemSelect(system);
@@ -256,7 +265,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
     case 2: // Right click
       state.selectedSystems.forEach((selectedSystem) => {
         orderMassMove(selectedSystem, system);
-        if (system.owner !== PLAYER) return;
+        if (system.owner !== PLAYER && !ENABLE_BOT_CONTROL) return;
 
         if (!event.altKey) {
           if (!event.ctrlKey && !event.shiftKey) {

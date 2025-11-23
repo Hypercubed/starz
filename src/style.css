@@ -12,12 +12,18 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --player-1: #c0392b; /* Red */
-  --player-2: #f1c40f; /* Yellow */
-  --player-3: #9b59b6; /* Purple */
-  --player-4: #00b386; /* Green */
-  --player-5: #cc6600; /* Orange */
-  --player-6: #0a4c8c; /* Blue */
+  --player-1: #c0392b;
+  /* Red */
+  --player-2: #f1c40f;
+  /* Yellow */
+  --player-3: #9b59b6;
+  /* Purple */
+  --player-4: #00b386;
+  /* Green */
+  --player-5: #cc6600;
+  /* Orange */
+  --player-6: #0a4c8c;
+  /* Blue */
 
   --unoccupied: #808080;
   --inhabited: #808080;
@@ -96,6 +102,7 @@ button {
 }
 
 svg {
+
   svg #graticule,
   svg #outline {
     pointer-events: none;
@@ -211,7 +218,8 @@ svg {
       stroke-opacity: 0.7;
     }
 
-    &:hover { /* TODO: only if one side is selected? */
+    &:hover {
+      /* TODO: only if one side is selected? */
       stroke: var(--player-1);
       stroke-width: 6;
     }
@@ -285,6 +293,8 @@ dialog {
   z-index: 100;
   margin: 10vh auto;
   width: 70vw;
+  max-height: 80vh;
+  overflow-y: auto;
   text-align: center;
 
   ul {

@@ -4,7 +4,7 @@ starz.io is a simple strategy game where you control a number of star systems an
 
 ## Lore
 
-You are the commander of a fledgling interstellar empire.  Your species recently dicovered "The Bubble", a cluster of star systems connected by hyperspace lanes.  Your homeworld (★) is the starting point of your expansion, and you must strategically capture other star systems to grow your influence and power.  Along the way, you will encounter habbitatable systems teeming with resources (▲) and rival empires vying for control of the same systems.  Outmaneuver and outthink them to become the dominant force in The Bubble!
+You are the commander of a fledgling interstellar empire.  Your species recently dicovered "The Bubble", a cluster of star systems connected by hyperspace lanes.  Your homeworld (✶) is the starting point of your expansion, and you must strategically capture other star systems to grow your influence and power.  Along the way, you will encounter habitable systems teeming with resources (✦) and rival empires vying for control of the same systems.  Outmaneuver and outthink them to become the dominant force in The Bubble!
 
 ## Gameplay
 
@@ -16,10 +16,10 @@ You are the commander of a fledgling interstellar empire.  Your species recently
 - Each controlled system receives an additional ship each 25 turns.
 - To transfer ships, left click on a system you control and then right click on a target system.
 - This will send all available ships, less one, from the source system to the target system.
-- Right click on the hyperspace lane between the systems to send half of the available ships.
+- Right click on the hyperspace lane between the systems to equalize ships between the systems, or attack the target system with half of the available ships.
 - If the target system is uninhabited, you will capture it automatically.
-- If the target system is controlled by another player, a battle will ensue.
-- The player with the most ships on the target system after all ships have arrived will take control of the system.
+- If the target system is inhabitable or controlled by another player, a battle will ensue.
+- The player with the most ships on the target system after all ships have arrived will take control of the system.  Only the difference in ships remains.
 
 ## Mouse Controls
 
@@ -29,21 +29,22 @@ You are the commander of a fledgling interstellar empire.  Your species recently
 - Ctrl + Left Click on Owned System: Add sytem to Selection
 - Shift + Left Click on Owned System: Select Range of Systems
 - Right Click on Target System: Send Ships to Target System
-- Right Click on Hyperspace Lane: Send Half of Available Ships
+- Right Click on Hyperspace Lane: Equalize ships between systems or attack target system with half of available ships.
 
 ## Keyboard Controls
 
 - Spacebar: Pause/Resume Game
-- r: Center View on Homeworld
+- h: Center View on Homeworld
 - c: Center View on Selected System
 - p: Change View Mode (e.g., toggle between normal and strategic view)
 - ?: Show Help Menu
 
 Cheats:
 
-- R: Reveal All Systems
-- +/-: Increase/Decrease Game Speed
-- C: Double Ships in all Owned Systems
+- alt-r: Reveal All Systems
+- alt--: Decrease Game Speed
+- alt-=: Increase Game Speed
+- alt-c: Double Ships in all Owned Systems
 
 ## License
 
