@@ -118,6 +118,8 @@ export function runGameLoop() {
 
 export function stopGame() {
   state.running = false;
+  state.selectedSystems = [];
+  state.lastSelectedSystem = null;
   if (runningInterval) {
     clearTimeout(runningInterval);
     runningInterval = null;
