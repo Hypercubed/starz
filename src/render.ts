@@ -12,6 +12,8 @@ import type { Coordinates, Lane, System } from "./types";
 import { onClickLane, onClickSystem } from "./controls";
 
 const ZOOM_SENSITIVITY = 0.5;
+const MIN_ZOOM_SCALE = 0.25;
+const MAX_ZOOM_SCALE = 100;
 const SYSTEM_SIZE = 20;
 
 const ENABLE_MESH = true;
@@ -190,9 +192,10 @@ export function drawMap() {
 }
 
 export function scaleZoom(scale: number) {
-  const s = geoProjection.scale();
-  scale = s + (scale - s) * ZOOM_SENSITIVITY;
-  geoProjection.scale(scale);
+  const newScale = geoProjection.scale() * scale;
+  if (newScale < initialScale * MIN_ZOOM_SCALE) return;
+  if (newScale > initialScale * MAX_ZOOM_SCALE) return;
+  geoProjection.scale(newScale);
   rerender();
 }
 
@@ -228,6 +231,10 @@ function rerenderUnthrottled() {
 export const rerender = throttle(rerenderUnthrottled, 16);
 
 function drawSystems() {
+  const currentScale = geoProjection.scale();
+  // console.log("Current scale:", currentScale / initialScale);
+  const reducedSize = currentScale / initialScale < 1;
+
   let visibleSystems = state.systems;
 
   if (ENABLE_FOG_OF_WAR) {
@@ -237,7 +244,8 @@ function drawSystems() {
   const g = svg
     .selectAll("g#systems")
     .data([visibleSystems])
-    .join((enter) => enter.append("g").attr("id", "systems"));
+    .join((enter) => enter.append("g").attr("id", "systems"))
+    .classed("reduced-size", reducedSize);
 
   const join = g
     .selectAll(".system")
@@ -314,31 +322,50 @@ function drawSystems() {
     return "●"; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
-  join.select(".ship-count").text((d) => (d.ships ? d.ships.toString() : ""));
+  join.select(".ship-count").text((d) => {
+    if (reducedSize) return "";
+    const icon = d.type === "inhabited" ? "▴" : "";
+    return icon + (d.ships ? d.ships.toString() : "");
+  });
 }
 
+// Memoized features for regions
+const getFeatures = (() => {
+  let features: d3.ExtendedFeature[] = [];
+  let systems: System[] = [];
+
+  return () => {
+    if (!features || systems !== state.systems) {
+      systems = state.systems;
+      features = mesh.polygons(systems).features;
+    }
+    return features!;
+  }
+})();
+
 function drawRegions() {
-  const systems = state.systems;
+  let features = getFeatures();
+
+  if (ENABLE_FOG_OF_WAR) {
+    features = features.filter((feature) => {
+      const system = feature.properties?.site as System;
+      return system.isVisited;
+    });
+  }
 
   const g = svg
     .selectAll("g#mesh")
-    .data([null])
+    .data([features])
     .join((enter) => enter.append("g").attr("id", "mesh"));
 
   const join = g
     .selectAll("path")
-    .data(mesh.polygons(systems).features as d3.GeoPermissibleObjects[])
-    .join((enter: any) => {
-      return enter.append("path").classed("region", true);
-    });
+    .data(features, (d: any) => d.properties?.site.id)
+    .join((enter: any) => (enter.append("path").classed("region", true)));
 
   join
-    .attr("d", (d) => geoPathGenerator(d))
-    .datum((_, i) => systems[i])
-    .classed("hidden", (d) => {
-      if (!ENABLE_FOG_OF_WAR) return false;
-      return !d.isVisited;
-    })
+    .attr("d", geoPathGenerator)
+    .datum((d: any) => d.properties.site as System)
     .attr("data-owner", (d) => (d.owner ? d.owner.toString() : "null"));
 }
 

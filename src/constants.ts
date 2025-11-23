@@ -32,3 +32,4 @@ export const MinDistanceBetweenSystems = Math.min(
 export const EVENT_TRACKING_ENABLED = import.meta.env.PROD;
 export const DEBUG_LOGGING_ENABLED = import.meta.env.DEV;
 export const START_PAUSED = true;
+export const ENABLE_CHEATS = import.meta.env.DEV;

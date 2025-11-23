@@ -6,10 +6,11 @@ import {
   changeView,
   rerender,
   rotateProjection,
+  scaleZoom,
 } from "./render";
 import { state } from "./state";
 import { orderBalancedMove, orderMassMove, revealSystem } from "./actions";
-import { PLAYER } from "./constants";
+import { ENABLE_CHEATS, PLAYER } from "./constants";
 import { showHelp } from "./ui";
 import { debugLog } from "./logging";
 import type { Lane, System } from "./types";
@@ -17,78 +18,113 @@ import type { Lane, System } from "./types";
 const ROTATION_STEP = 5;
 
 export function setupKeboardControls() {
-  d3.select("body").on("keypress", null);
+  d3.select("body").on("keypress.controls", null);
+  d3.select("body").on("keyup.controls", null);
+  d3.select("body").on("keyup.cheats", null);
 
-  d3.select("body").on("keypress", (event) => {
+  if (ENABLE_CHEATS) {
+    d3.select("body").on("keyup.cheats", (event) => {
+      if (!event.altKey) return;
+      event.preventDefault();
+      // debugLog("keyup:", event);
+
+      switch (event.code) {
+        case "KeyC":
+          state.systems.forEach((system) => {
+            if (system.owner === PLAYER) {
+              system.ships *= 2;
+            }
+          });
+          rerender();
+          return;
+      case "KeyR":
+        state.systems.forEach(revealSystem);
+        rerender();
+        return;
+      case "NumpadAdd":
+      case "Equal":
+        state.timeScale = Math.min(16, state.timeScale * 2);
+        debugLog(`Time scale increased to ${state.timeScale}x`);
+        return;
+      case "NumpadSubtract":
+      case "Minus":
+        state.timeScale = Math.max(0.25, state.timeScale / 2);
+        debugLog(`Time scale decreased to ${state.timeScale}x`);
+        return;
+      }
+    });
+  }
+
+  d3.select("body").on("keyup.controls", (event) => {
+    // debugLog("keyup:", event);
+
     switch (event.key) {
-      case " ":
+      case "Escape":
+        clearSelection();
+        rerender();
+        return;
+      case "?":
+        showHelp();
+        return;
+    }
+  });
+
+  d3.select("body").on("keypress.controls", (event) => {
+    // debugLog("Key pressed:", event);
+
+    switch (event.code) {
+      case "Space":
         pauseToggle();
-        break;
-      case "h":
-        centerOnHome();
+        return;
+      case "Equal":
+      case "NumpadAdd":
+        scaleZoom(1.2);
+        rerender();
+        return;
+      case "Minus":
+      case "NumpadSubtract":
+        scaleZoom(0.8);
+        rerender();
+        return;
+      case "KeyW":
+        rotateProjection([0, ROTATION_STEP]);
+        rerender();
+        return;
+      case "KeyA":
+        rotateProjection([-ROTATION_STEP, 0]);
+        rerender();
+        return;
+      case "KeyS":
+        rotateProjection([0, -ROTATION_STEP]);
+        rerender();
+        return;
+      case "KeyD":
+        rotateProjection([ROTATION_STEP, 0]);
+        rerender();
+        return;
+      case "KeyQ":
+        rotateProjection([0, 0, ROTATION_STEP]);
         rerender();
         break;
-      case "c":
+      case "KeyE":
+        rotateProjection([0, 0, -ROTATION_STEP]);
+        rerender();
+        break; 
+      case "KeyH":
+        centerOnHome();
+        rerender();
+        return;
+      case "KeyC":
         if (state.lastSelectedSystem) {
           centerOnSystem(state.lastSelectedSystem);
           rerender();
         }
-        break;
-      case "R":
-        state.systems.forEach(revealSystem);
-        rerender();
-        break;
-      case "+":
-        state.timeScale = Math.min(16, state.timeScale * 2);
-        debugLog(`Time scale increased to ${state.timeScale}x`);
-        break;
-      case "-":
-        state.timeScale = Math.max(0.25, state.timeScale / 2);
-        debugLog(`Time scale decreased to ${state.timeScale}x`);
-        break;
-      case "C":
-        state.systems.forEach((system) => {
-          if (system.owner === PLAYER) {
-            system.ships *= 2;
-          }
-        });
-        rerender();
-        break;
-      case "?":
-        showHelp();
-        break;
-      case "p":
+        return;
+      case "KeyP":
         changeView();
         centerOnHome();
         rerender();
-        break;
-      case "w":
-        rotateProjection([0, ROTATION_STEP]);
-        rerender();
-        break;
-      case "a":
-        rotateProjection([-ROTATION_STEP, 0]);
-        rerender();
-        break;
-      case "s":
-        rotateProjection([0, -ROTATION_STEP]);
-        rerender();
-        break;
-      case "d":
-        rotateProjection([ROTATION_STEP, 0]);
-        rerender();
-        break;
-      case "q":
-        rotateProjection([0, 0, ROTATION_STEP]);
-        rerender();
-        break;
-      case "e":
-        rotateProjection([0, 0, -ROTATION_STEP]);
-        rerender();
-        break;
-      // case 's':
-      //   startNewGame();
-      //   break;
+        return;
     }
   });
 }
@@ -126,7 +162,7 @@ function addSystemSelect(system: System) {
   }
 }
 
-function removeSystemSelect(system: System) {
+export function removeSystemSelect(system: System) {
   state.selectedSystems = state.selectedSystems.filter((s) => s !== system);
   if (state.lastSelectedSystem === system) {
     state.lastSelectedSystem = null;

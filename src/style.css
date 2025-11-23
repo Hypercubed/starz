@@ -101,9 +101,28 @@ svg {
     pointer-events: none;
   }
 
+  #systems {
+    &.reduced-size {
+      .system-icon {
+        font-size: 8px;
+      }
+
+      .ship-count {
+        display: none;
+      }
+
+      .system-outline {
+        /* opacity: 0; */
+        fill-opacity: 0;
+        r: 6;
+        stroke-width: 1;
+      }
+    }
+  }
+
   .system {
     cursor: pointer;
-    /* display: none; */
+    user-select: none;
 
     text {
       fill: white;
@@ -132,7 +151,6 @@ svg {
       stroke: var(--owner-color, var(--unoccupied));
       fill: black;
       fill-opacity: 0;
-      stroke-width: 1;
       stroke-opacity: 0;
       stroke-width: 2;
     }

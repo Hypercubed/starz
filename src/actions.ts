@@ -1,4 +1,5 @@
 import { PLAYER } from "./constants";
+import { removeSystemSelect } from "./controls";
 import { stopGame } from "./engine";
 import { trackEvent } from "./logging";
 import { addMessage, state } from "./state";
@@ -35,11 +36,6 @@ export function orderMassMove(from: System, to: System) {
   if (lane) {
     const deltaShips = from.ships - 1;
     moveShips(from, to, deltaShips);
-
-    // if (to.owner === PLAYER) {
-    //   removeSystemSelect(from);
-    //   addSystemSelect(to);
-    // }
   }
 }
 
@@ -77,6 +73,7 @@ function attackSystem(from: System, to: System, attackingShips: number) {
 
 function takeSystem(player: number, system: System) {
   system.owner = player;
+  system.moveQueue = [];
   if (player === PLAYER) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== player) {
@@ -84,8 +81,9 @@ function takeSystem(player: number, system: System) {
     addMessage(
       `Player ${player} has taken over the homeworld of Player ${loser}!`,
     );
-    system.homeworld = 0; // No longer a homeworld
+    system.homeworld = null; // No longer a homeworld
     eliminatePlayer(player, loser);
+    removeSystemSelect(system);
   }
 }
 
@@ -95,7 +93,8 @@ function eliminatePlayer(winner: number, loser: number) {
     if (s.owner === loser) {
       s.owner = winner;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
-      s.homeworld = 0; // No longer a homeworld
+      s.homeworld = null; // No longer a homeworld
+      s.moveQueue = [];
       if (winner === PLAYER) revealSystem(s);
     }
   });
