@@ -309,12 +309,15 @@ function drawSystems() {
     .attr("transform", (d) => `translate(${geoProjection(d.location)})`);
 
   join.select(".system-icon").text((d) => {
-    if (d.homeworld == 0) return "✦";
     if (d.homeworld && d.owner === d.homeworld) return "✶";
+    if (d.type === "inhabited") return "✦";
     return "●"; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
-  join.select(".ship-count").text((d) => (d.ships ? d.ships.toString() : ""));
+  join.select(".ship-count").text((d) => {
+    const icon = d.type === "inhabited" ? "▴" : "";
+    return icon + (d.ships ? d.ships.toString() : "");
+  });
 }
 
 function drawRegions() {
