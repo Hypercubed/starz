@@ -1,5 +1,5 @@
 import * as d3 from 'd3';
-import { pauseToggle } from './engine';
+import { pauseToggle } from '../core/engine';
 import {
   centerOnHome,
   centerOnSystem,
@@ -7,13 +7,17 @@ import {
   rerender,
   rotateProjection,
   scaleZoom
-} from './render';
-import { state } from './state';
-import { orderBalancedMove, orderMassMove, revealSystem } from './actions';
-import { ENABLE_BOT_CONTROL, ENABLE_CHEATS, PLAYER } from './constants';
-import { showHelp } from './ui';
-import { debugLog } from './logging';
-import type { Lane, System } from './types';
+} from '../render/render';
+import { state } from '../game/state';
+import {
+  orderBalancedMove,
+  orderMassMove,
+  revealSystem
+} from '../game/actions';
+import { ENABLE_BOT_CONTROL, ENABLE_CHEATS, PLAYER } from '../core/constants';
+import { showHelp } from '../render/ui';
+import { debugLog } from '../utils/logging';
+import type { Lane, System } from '../types';
 
 const ROTATION_STEP = 5;
 

@@ -8,10 +8,15 @@ import {
   NumHumanPlayers,
   MinDistanceBetweenSystems,
   MAX_SHIPS_PER_SYSTEM
-} from './constants';
+} from '../core/constants';
 import { state } from './state';
-import { SystemTypes, type Coordinates, type Lane, type System } from './types';
-import { debugLog } from './logging';
+import {
+  SystemTypes,
+  type Coordinates,
+  type Lane,
+  type System
+} from '../types';
+import { debugLog } from '../utils/logging';
 
 let systemIdCounter = 0;
 

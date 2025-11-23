@@ -1,5 +1,8 @@
-import { DEBUG_LOGGING_ENABLED, EVENT_TRACKING_ENABLED } from './constants';
-import { state } from './state';
+import {
+  DEBUG_LOGGING_ENABLED,
+  EVENT_TRACKING_ENABLED
+} from '../core/constants';
+import { state } from '../game/state';
 
 declare global {
   interface Window {

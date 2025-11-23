@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { findClosestSystem } from '../generate';
-import { state } from '../state';
+import { findClosestSystem } from '../game/generate';
+import { state } from '../game/state';
 import { createMockSystem, createMockCoordinates } from './setup';
 
 // Mock the state module
-vi.mock('../state', () => ({
+vi.mock('../game/state', () => ({
   state: {
     systems: [],
     lanes: []

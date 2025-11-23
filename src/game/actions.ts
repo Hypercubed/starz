@@ -1,10 +1,10 @@
-import { PLAYER } from './constants';
-import { removeSystemSelect } from './controls';
+import { PLAYER } from '../core/constants';
+import { removeSystemSelect } from '../input/controls';
 
-import { trackEvent } from './logging';
-import { rerender } from './render';
+import { trackEvent } from '../utils/logging';
+import { rerender } from '../render/render';
 import { addMessage, state } from './state';
-import type { System } from './types';
+import type { System } from '../types';
 
 export function orderBalancedMove(from: System, to: System) {
   // Check if there's a lane between selectedSystem and system

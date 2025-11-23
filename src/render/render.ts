@@ -6,10 +6,20 @@ import { geoVoronoi } from 'd3-geo-voronoi';
 // @ts-ignore
 import versor from 'versor';
 
-import { ENABLE_FOG_OF_WAR, HEIGHT, PROJECTION, WIDTH } from './constants';
-import { state } from './state';
-import { SystemTypes, type Coordinates, type Lane, type System } from './types';
-import { onClickLane, onClickSystem } from './controls';
+import {
+  ENABLE_FOG_OF_WAR,
+  HEIGHT,
+  PROJECTION,
+  WIDTH
+} from '../core/constants';
+import { state } from '../game/state';
+import {
+  SystemTypes,
+  type Coordinates,
+  type Lane,
+  type System
+} from '../types';
+import { onClickLane, onClickSystem } from '../input/controls';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;

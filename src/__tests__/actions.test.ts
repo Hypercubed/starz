@@ -5,22 +5,22 @@ import {
   revealSystem,
   queueMove,
   doQueuedMoves
-} from '../actions';
-import { state, resetState } from '../state';
+} from '../game/actions';
+import { state, resetState } from '../game/state';
 import { createMockSystem, createMockLane } from './setup';
 
 // Mock the render module
-vi.mock('../render', () => ({
+vi.mock('../render/render', () => ({
   rerender: vi.fn()
 }));
 
 // Mock the logging module
-vi.mock('../logging', () => ({
+vi.mock('../utils/logging', () => ({
   trackEvent: vi.fn()
 }));
 
 // Mock the controls module
-vi.mock('../controls', () => ({
+vi.mock('../input/controls', () => ({
   removeSystemSelect: vi.fn()
 }));
 

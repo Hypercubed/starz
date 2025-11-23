@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Bot, PERSONALITIES } from '../bots';
-import { state, resetState } from '../state';
+import { Bot, PERSONALITIES } from '../game/bots';
+import { state, resetState } from '../game/state';
 import { createMockSystem, createConnectedSystems } from './setup';
 import { SystemTypes } from '../types';
 

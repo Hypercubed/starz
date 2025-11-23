@@ -1,7 +1,7 @@
 import { queueMove } from './actions';
-import { NumHumanPlayers } from './constants';
+import { NumHumanPlayers } from '../core/constants';
 import { state } from './state';
-import { SystemTypes, type System } from './types';
+import { SystemTypes, type System } from '../types';
 
 interface BotMove {
   message: string;

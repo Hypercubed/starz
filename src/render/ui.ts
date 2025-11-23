@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-import { state } from './state';
+import { state } from '../game/state';
 
 export function updateInfoBox() {
   const div = d3

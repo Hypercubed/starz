@@ -1,5 +1,5 @@
-import { doQueuedMoves } from './actions';
-import { Bot, botQueue } from './bots';
+import { doQueuedMoves } from '../game/actions';
+import { Bot, botQueue } from '../game/bots';
 import {
   MAX_SHIPS_PER_SYSTEM,
   NumBots,
@@ -12,10 +12,10 @@ import {
   TICKS_PER_ROUND,
   TICKS_PER_TURN
 } from './constants';
-import { trackEvent } from './logging';
-import { rerender } from './render';
-import { addMessage, state } from './state';
-import { updateInfoBox, updateLeaderbox, updateMessageBox } from './ui';
+import { trackEvent } from '../utils/logging';
+import { rerender } from '../render/render';
+import { addMessage, state } from '../game/state';
+import { updateInfoBox, updateLeaderbox, updateMessageBox } from '../render/ui';
 
 let gameOver = false;
 let runningInterval: number | null = null;

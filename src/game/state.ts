@@ -1,4 +1,4 @@
-import type { Lane, Messages, Player, System } from './types';
+import type { Lane, Messages, Player, System } from '../types';
 
 export const state = {
   tick: 0,

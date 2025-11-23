@@ -1,17 +1,17 @@
-import './style.css';
+import '../render/style.css';
 
-import { centerOnHome, drawMap, rerender } from './render';
-import { resetState, state } from './state';
-import { generateMap } from './generate';
-import { revealSystem } from './actions';
+import { centerOnHome, drawMap, rerender } from '../render/render';
+import { resetState, state } from '../game/state';
+import { generateMap } from '../game/generate';
+import { revealSystem } from '../game/actions';
 import {
   showHelp,
   updateInfoBox,
   updateLeaderbox,
   updateMessageBox
-} from './ui';
+} from '../render/ui';
 import { runGameLoop, startGame, stopGame } from './engine';
-import { setupKeboardControls } from './controls';
+import { setupKeboardControls } from '../input/controls';
 
 window.onload = () => {
   const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
