@@ -116,7 +116,7 @@ export class Bot {
       const enemyNeighbors = neighbors.filter(
         (s) => s.owner && s.owner !== this.player
       );
-      const neutralNeighbors = neighbors.filter((s) => s.owner === null);
+      const neutralNeighbors = neighbors.filter((s) => !s.owner);
 
       // Threat Level Calculation
       const threatLevel = enemyNeighbors.reduce(
@@ -146,10 +146,8 @@ export class Bot {
         const defenseNeeded = fromThreatLevel * 1.1; // 10% safety margin
 
         if (from.ships < defenseNeeded) {
-          // We are overwhelmed. Try to pull from neighbors.
-          // (Logic for pulling from neighbors omitted for brevity, relying on Logistics/Reinforce)
+          // We are overwhelmed. Flee if hopeless
 
-          // Flee if hopeless
           if (from.ships < fromThreatLevel * 0.5) {
             // Find safest neighbor
             const bestRetreat = this.getAdjacentSystems(from)
@@ -183,7 +181,6 @@ export class Bot {
           // We are safe-ish, but should be careful.
           // If we have overwhelming advantage (ships > 1.5 * defenseNeeded), we don't need to explicitly "Hold".
           // But if we are just "okay", we might want to hold to be safe unless we find a good attack.
-          // Actually, let's only "Hold" if we are close to the margin.
           moves.push({
             message: `Defending ${from.id} from threat level ${fromThreatLevel}`,
             from,
@@ -439,6 +436,7 @@ export class Bot {
     });
   }
 
+  // TODO: Move this to state.ts
   getAdjacentSystems(system: System): System[] {
     return system.lanes
       .map((lane) => {

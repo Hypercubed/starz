@@ -48,10 +48,8 @@ export function generateMap() {
         continue;
       }
 
-      addLane(thisSystem, closestSystem);
+      createLane(thisSystem, closestSystem);
     }
-
-    // TODO: Add secondary connections
 
     state.systems.push(thisSystem);
   }
@@ -64,7 +62,7 @@ export function generateMap() {
     // Add a lane to the closest system that is not itself
     const closestSystem = findClosestSystem(system.location, s);
     if (closestSystem) {
-      addLane(system, closestSystem);
+      createLane(system, closestSystem);
     }
     s.push(system);
   }
@@ -109,6 +107,10 @@ export function generateMap() {
     let system: System;
     if (i <= NumHumanPlayers) {
       system = state.systems[0];
+      const occupiedIdx = occupied.findIndex((s) => s.id === system.id);
+      const unoccupiedIdx = unoccupied.findIndex((s) => s.id === system.id);
+      occupied.splice(occupiedIdx, 1);
+      unoccupied.splice(unoccupiedIdx, 1);
     } else if (occupied.length > 0) {
       const idx = Math.floor(Math.random() * occupied.length);
       system = occupied[idx];
@@ -154,7 +156,7 @@ function createSystem(location: Coordinates): System {
   };
 }
 
-function addLane(from: System, to: System): Lane {
+function createLane(from: System, to: System): Lane {
   const id = [from.id, to.id].sort((a, b) => a - b).join('-');
 
   const existingLane = state.lanes.find((lane) => lane.id === id);
@@ -174,6 +176,7 @@ function addLane(from: System, to: System): Lane {
   return newLane;
 }
 
+// Move to state.ts
 export function findClosestSystem(
   loc: Coordinates,
   systems = state.systems
