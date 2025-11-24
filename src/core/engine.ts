@@ -1,5 +1,5 @@
-import { doQueuedMoves } from '../game/actions';
-import { Bot, botQueue } from '../game/bots';
+import { doQueuedMoves } from '../game/actions.ts';
+import { Bot, botQueue } from '../game/bots.ts';
 import {
   MAX_SHIPS_PER_SYSTEM,
   NumBots,
@@ -11,16 +11,20 @@ import {
   TICK_DURATION_MS,
   TICKS_PER_ROUND,
   TICKS_PER_TURN
-} from './constants';
-import { trackEvent } from '../utils/logging';
-import { rerender } from '../render/render';
-import { addMessage, state } from '../game/state';
-import { updateInfoBox, updateLeaderbox, updateMessageBox } from '../render/ui';
+} from './constants.ts';
+import { trackEvent } from '../utils/logging.ts';
+import { rerender } from '../render/render.ts';
+import { addMessage, state } from '../game/state.ts';
+import {
+  updateInfoBox,
+  updateLeaderbox,
+  updateMessageBox
+} from '../render/ui.ts';
 
 let gameOver = false;
 let runningInterval: number | null = null;
 
-function updateStats() {
+export function updateStats() {
   state.players.forEach((player) => {
     const systems = state.systems.filter(
       (system) => system.owner === player.id
@@ -45,7 +49,7 @@ function updateStats() {
   // }
 }
 
-function turnUpdate() {
+export function turnUpdate() {
   state.systems.forEach((system) => {
     if (system.type === 'inhabited' && system.owner != null) {
       if (system.owner > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
@@ -55,7 +59,7 @@ function turnUpdate() {
   });
 }
 
-function roundUpdate() {
+export function roundUpdate() {
   state.systems.forEach((system) => {
     if (system.owner != null && system.owner > 0) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;

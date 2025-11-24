@@ -1,8 +1,8 @@
 import {
   DEBUG_LOGGING_ENABLED,
   EVENT_TRACKING_ENABLED
-} from '../core/constants';
-import { state } from '../game/state';
+} from '../core/constants.ts';
+import { state } from '../game/state.ts';
 
 declare global {
   interface Window {
@@ -12,10 +12,7 @@ declare global {
 
 export function debugLog(message: string, ...optionalParams: any[]) {
   if (DEBUG_LOGGING_ENABLED) {
-    console.log(
-      `[DEBUG][Tick ${state.tick}, ${new Date().toLocaleTimeString()}] ${message}`,
-      ...optionalParams
-    );
+    console.log(`[DEBUG][Tick ${state.tick}] ${message}`, ...optionalParams);
   }
 }
 

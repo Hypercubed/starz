@@ -1,7 +1,7 @@
-import { queueMove } from './actions';
-import { NumHumanPlayers } from '../core/constants';
-import { state } from './state';
-import { SystemTypes, type System } from '../types';
+import { queueMove } from './actions.ts';
+import { NumHumanPlayers } from '../core/constants.ts';
+import { state } from './state.ts';
+import { type System } from '../types.ts';
 
 interface BotMove {
   message: string;
@@ -61,6 +61,8 @@ export class Bot {
   personality: BotPersonality;
   botSystems: System[];
   threatLevels: Map<number, number>;
+  frontline: Set<number>;
+  backline: Set<number>;
 
   constructor(player: number, personality?: BotPersonalities) {
     if (!personality) {
@@ -74,6 +76,8 @@ export class Bot {
     this.personality = PERSONALITIES[personality];
     this.botSystems = state.systems.filter((system) => system.owner === player);
     this.threatLevels = new Map();
+    this.frontline = new Set();
+    this.backline = new Set();
   }
 
   makeMoves() {
@@ -84,7 +88,7 @@ export class Bot {
       system.moveQueue = []; // Clear previous moves
     });
 
-    this.calculateThreatLevels();
+    this.analyzeMap();
 
     const defensiveMoves = this.getDefensiveMoves();
     this.chooseMoves(defensiveMoves, 1.0 - this.personality.defensiveness);
@@ -98,133 +102,96 @@ export class Bot {
     const eXplore = this.getExploreMoves();
     this.chooseMoves(eXplore, this.personality.expansion);
 
-    const eXpand = this.getExpandMoves();
-    this.chooseMoves(eXpand, 1.0 - this.personality.defensiveness);
+    const logistics = this.getLogisticsMoves();
+    this.chooseMoves(logistics, 1.0);
   }
 
-  calculateThreatLevels() {
-    this.threatLevels = this.botSystems.reduce((acc, system) => {
-      const adjacentEnemies = this.getAdjacentSystems(system).filter(
+  analyzeMap() {
+    this.threatLevels.clear();
+    this.frontline.clear();
+    this.backline.clear();
+
+    this.botSystems.forEach((system) => {
+      const neighbors = this.getAdjacentSystems(system);
+      const enemyNeighbors = neighbors.filter(
         (s) => s.owner && s.owner !== this.player
       );
-      const threatLevel = adjacentEnemies.reduce(
+      const neutralNeighbors = neighbors.filter((s) => s.owner === null);
+
+      // Threat Level Calculation
+      const threatLevel = enemyNeighbors.reduce(
         (sum, enemy) => sum + enemy.ships,
         0
       );
-      acc.set(system.id, threatLevel);
-      return acc;
-    }, new Map<number, number>());
+      this.threatLevels.set(system.id, threatLevel);
+
+      // Classification
+      if (enemyNeighbors.length > 0 || neutralNeighbors.length > 0) {
+        this.frontline.add(system.id);
+      } else {
+        this.backline.add(system.id);
+      }
+    });
   }
 
   getDefensiveMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
-      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      if (from.moveQueue.length > 0) return [];
 
       const moves: BotMove[] = [];
-      const fromThreatLevel = this.threatLevels.get(from.id) || 0;
+      const fromThreatLevel = this.threatLevels.get(from.id) ?? 0;
 
-      // --- Defend (Stay) Logic ---
+      // 1. Emergency Defense (Under Attack)
       if (fromThreatLevel > 0) {
-        let defense = from.ships * this.personality.defensiveness;
+        const defenseNeeded = fromThreatLevel * 1.1; // 10% safety margin
 
-        // Increase defensiveness based on inhabited status
-        if (from.type === SystemTypes.INHABITED) {
-          defense *= 1.5; // Keep more ships on inhabited worlds
-        }
+        if (from.ships < defenseNeeded) {
+          // We are overwhelmed. Try to pull from neighbors.
+          // (Logic for pulling from neighbors omitted for brevity, relying on Logistics/Reinforce)
 
-        let s = 1;
-        if (from.homeworld) s *= 1.5;
-        if (!from.homeworld && from.type === SystemTypes.INHABITED) s *= 1.2;
+          // Flee if hopeless
+          if (from.ships < fromThreatLevel * 0.5) {
+            // Find safest neighbor
+            const bestRetreat = this.getAdjacentSystems(from)
+              .filter((s) => s.owner === this.player)
+              .sort(
+                (a, b) =>
+                  (this.threatLevels.get(a.id) || 0) -
+                  (this.threatLevels.get(b.id) || 0)
+              )[0];
 
-        // Calculate win chance
-        const winChance = from.ships / (fromThreatLevel + 1);
-        let scoreModifier = 1.0;
-
-        if (from.ships < fromThreatLevel) {
-          // Overwhelmed: likely to lose the system
-          scoreModifier = 0.5 * winChance; // Reduce score significantly
-        } else {
-          // Holdable: likely to win
-          scoreModifier = 1.5; // Boost score
-        }
-
-        const risk =
-          fromThreatLevel *
-          (1 - this.personality.riskTolerance) *
-          s *
-          scoreModifier;
-
-        if (risk > defense) {
-          const threateningNeighbors = this.getAdjacentSystems(from)
-            .filter((s) => s.owner && s.owner !== this.player)
-            .map((s) => s.id);
-
+            if (bestRetreat) {
+              moves.push({
+                message: `Retreating from ${from.id}`,
+                from,
+                to: bestRetreat,
+                units: from.ships - 1,
+                score: 1000 // High priority
+              });
+            }
+          } else {
+            // Stand ground
+            moves.push({
+              message: `Holding ${from.id}`,
+              from,
+              to: from,
+              units: 0,
+              score: fromThreatLevel
+            });
+          }
+        } else if (from.ships < defenseNeeded * 1.5) {
+          // We are safe-ish, but should be careful.
+          // If we have overwhelming advantage (ships > 1.5 * defenseNeeded), we don't need to explicitly "Hold".
+          // But if we are just "okay", we might want to hold to be safe unless we find a good attack.
+          // Actually, let's only "Hold" if we are close to the margin.
           moves.push({
-            message: `Defending system ${from.id} against [${threateningNeighbors.join(', ')}] (Threat: ${fromThreatLevel})`,
+            message: `Defending ${from.id} from threat level ${fromThreatLevel}`,
             from,
             to: from,
             units: 0,
-            score: fromThreatLevel * scoreModifier
-          } satisfies BotMove);
+            score: fromThreatLevel
+          });
         }
-      }
-
-      // --- Reinforce Logic ---
-      if (from.ships > 1) {
-        from.lanes.forEach((lane) => {
-          const to = lane.from === from ? lane.to : lane.from;
-          if (to.owner !== this.player) return;
-
-          const toThreatLevel = this.threatLevels.get(to.id) || 0;
-          if (toThreatLevel === 0) return; // No threat to reenforce against
-
-          const dfrom = fromThreatLevel - from.ships;
-          const dto = toThreatLevel - to.ships;
-
-          // Logic for reinforcing or fleeing
-          let isFleeing = false;
-          if (dfrom > dto) {
-            // Source is more threatened than destination.
-            // Only allow move if we are overwhelmed at source (Fleeing)
-            if (from.ships < fromThreatLevel) {
-              isFleeing = true;
-            } else {
-              return; // Stand and fight if not overwhelmed
-            }
-          }
-
-          const idealUnits = Math.floor(
-            (from.ships - to.ships) * (1 - this.personality.defensiveness)
-          );
-          let units = this.getBestMoveAmount(from, to, idealUnits);
-
-          // Ping-Pong Fix: If not fleeing, prefer Balanced Move to avoid over-committing
-          if (!isFleeing) {
-            const balancedMove = Math.floor((from.ships - to.ships) / 2);
-            // If mass move is selected but balanced move is safer/better for stability, downgrade
-            if (units > balancedMove) {
-              units = Math.max(0, balancedMove);
-            }
-          }
-
-          let s = 1;
-          if (to.homeworld) s *= 1.5;
-          if (!to.homeworld && to.type === 'inhabited') s *= 1.2;
-
-          const min = from.ships * (1 - this.personality.riskTolerance) * s;
-
-          if (units > min) {
-            moves.push({
-              message: isFleeing
-                ? `Fleeing system ${from.id} to ${to.id}`
-                : `Reenforcing system ${to.id} from ${from.id}`,
-              from,
-              to,
-              units,
-              score: Math.abs(dto - dfrom)
-            } satisfies BotMove);
-          }
-        });
       }
 
       return moves;
@@ -234,14 +201,20 @@ export class Bot {
   getCoordinatedAttackMoves(): BotMove[][] {
     const targets = new Map<number, { target: System; attackers: System[] }>();
 
-    // Identify potential targets and available attackers
+    // Identify potential targets
     this.botSystems.forEach((from) => {
-      if (from.moveQueue.length > 0) return; // Busy
-      if (from.ships < 5) return; // Too weak to contribute
+      if (from.moveQueue.length > 0) return;
+      if (from.ships < 5) return;
 
       from.lanes.forEach((lane) => {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner !== null && to.owner !== this.player) {
+          // Don't attack if it exposes us to a DIFFERENT enemy
+          const otherEnemies = this.getAdjacentSystems(from).filter(
+            (s) => s.owner && s.owner !== this.player && s.id !== to.id
+          );
+          if (otherEnemies.length > 0) return;
+
           if (!targets.has(to.id)) {
             targets.set(to.id, { target: to, attackers: [] });
           }
@@ -252,39 +225,44 @@ export class Bot {
 
     const coordinatedMoves: BotMove[][] = [];
 
-    // Evaluate each target
     targets.forEach(({ target, attackers }) => {
-      if (attackers.length < 2) return; // Need at least 2 systems for a "coordinated" attack
+      // Prioritize weak/isolated targets
+      const targetAllies = this.getAdjacentSystems(target).filter(
+        (s) => s.owner === target.owner
+      ).length;
+      const isolationBonus = targetAllies === 0 ? 1.5 : 1.0;
 
-      const totalAttackPower = attackers.reduce(
-        (sum, s) =>
-          sum + Math.floor(s.ships * (1 - this.personality.defensiveness)),
-        0
-      );
+      const totalAttackPower = attackers.reduce((sum, s) => {
+        const threat = this.threatLevels.get(s.id) || 0;
+        const disposable = Math.max(0, s.ships - threat * 1.1);
+        return (
+          sum + Math.floor(disposable * (1 - this.personality.defensiveness))
+        );
+      }, 0);
 
       const targetDefense = target.ships + (target.homeworld ? 10 : 0);
       const requiredPower =
-        targetDefense * (1.5 - this.personality.riskTolerance); // Safety margin
+        targetDefense * (1.3 - this.personality.riskTolerance); // Slightly lower threshold than before
 
       if (totalAttackPower > requiredPower) {
-        // Launch attack!
         attackers.forEach((from) => {
-          // Double check availability, though we filtered earlier
           if (from.moveQueue.length > 0) return;
 
+          const threat = this.threatLevels.get(from.id) || 0;
+          const disposable = Math.max(0, from.ships - threat * 1.1);
           const idealUnits = Math.floor(
-            from.ships * (1 - this.personality.defensiveness)
+            disposable * (1 - this.personality.defensiveness)
           );
           const units = this.getBestMoveAmount(from, target, idealUnits);
 
           if (units > 0) {
             coordinatedMoves.push([
               {
-                message: `Coordinated attack on ${target.id} from ${from.id}`,
+                message: `Coordinated attack on ${target.id}`,
                 from,
                 to: target,
                 units,
-                score: 100 + (target.homeworld ? 50 : 0) // High priority
+                score: (100 + (target.homeworld ? 50 : 0)) * isolationBonus
               }
             ]);
           }
@@ -296,48 +274,28 @@ export class Bot {
   }
 
   getExterminateMoves(): BotMove[][] {
+    // Opportunistic attacks on weak neighbors
     return this.botSystems.map((from) => {
-      if (from.moveQueue.length > 0) return []; // Already has a move queued
-
+      if (from.moveQueue.length > 0) return [];
       if (from.ships < 3) return [];
 
       return from.lanes.flatMap((lane) => {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner === this.player || to.owner === null) return [];
 
-        const idealUnits = Math.floor(
-          from.ships * (1 - this.personality.defensiveness)
-        );
-        const units = this.getBestMoveAmount(from, to, idealUnits);
-        const min = (to.ships + 1) * (1 - this.personality.riskTolerance);
-
-        if (units > min) {
-          let score = (units - min) * 5;
-
-          // Bonus if taking system would isolate enemy systems
-          const adjacentToTarget = to.lanes.map((l) =>
-            l.from === to ? l.to : l.from
-          );
-          const enemyNeighbors = adjacentToTarget.filter(
-            (s) => s.owner === to.owner
-          ).length;
-          if (enemyNeighbors === 0) {
-            score += 30; // Isolation bonus
-          }
-
-          score += 20; // Base bonus for taking a system
-
+        // Check if we can win easily
+        if (from.ships > to.ships * 1.5 + 5) {
+          const units = from.ships - 2; // All in
           return [
             {
-              message: `Exterminating from system ${from.id} to ${to.id}`,
+              message: `Crushing weak neighbor ${to.id}`,
               from,
               to,
               units,
-              score
-            } satisfies BotMove
+              score: 40
+            }
           ];
         }
-
         return [];
       });
     });
@@ -345,90 +303,106 @@ export class Bot {
 
   getExploreMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
-      if (from.moveQueue.length > 0) return []; // Already has a move queued
+      if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
-      if (from.homeworld !== null && from.ships < 5) return []; // Keep more ships on homeworlds
 
       return from.lanes.flatMap((lane) => {
         const to = lane.from === from ? lane.to : lane.from;
         if (to.owner !== null) return [];
 
-        // Keep more ships on homeworlds
-        let ratio = 1 - this.personality.defensiveness * 0.5;
-        if (from.homeworld) {
-          ratio *= 0.5; // Send fewer ships from homeworld
-        }
-        const idealUnits = Math.floor(from.ships * ratio);
-        const unitsToSend = this.getBestMoveAmount(from, to, idealUnits);
-
-        if (unitsToSend > 0) {
-          let score = 50;
-
-          // Bonus for connecting to more unclaimed systems
-          const adjacentToTarget = to.lanes.map((l) =>
-            l.from === to ? l.to : l.from
-          );
-          const unclaimedNeighbors = adjacentToTarget.filter(
-            (s) => s.owner === null
-          ).length;
-          score += unclaimedNeighbors * 20;
-
-          // Bonus for connecting our territories
-          const friendlyNeighbors = adjacentToTarget.filter(
-            (s) => s.owner === this.player
-          ).length;
-          score += friendlyNeighbors * 10;
-
-          return [
-            {
-              message: `Exploring from system ${from.id} to ${to.id}`,
-              from,
-              to,
-              units: unitsToSend,
-              score
-            } satisfies BotMove
-          ];
-        }
-
-        return [];
+        const units = Math.max(1, Math.floor(from.ships * 0.3));
+        return [
+          {
+            message: `Exploring ${to.id}`,
+            from,
+            to,
+            units,
+            score: 30
+          }
+        ];
       });
     });
   }
 
-  getExpandMoves(): BotMove[][] {
+  getLogisticsMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
-      if (from.moveQueue.length > 0) return []; // Already has a move queued
-      if (from.ships <= 1) return [];
+      if (from.moveQueue.length > 0) return [];
+      if (from.ships < 2) return [];
 
-      const fromThreatLevel = this.threatLevels.get(from.id) || 0;
-      if (fromThreatLevel > 0) return []; // Prioritize defense over expansion
-
-      return from.lanes.flatMap((lane) => {
-        const to = lane.from === from ? lane.to : lane.from;
-        if (to.owner !== this.player) return [];
-
-        const idealUnits = Math.floor(
-          (from.ships - to.ships) * (1 - this.personality.defensiveness)
+      // If we are backline, push to frontline
+      if (this.backline.has(from.id)) {
+        // Find path to nearest frontline? Too expensive.
+        // Just push to any neighbor that is closer to frontline or IS frontline.
+        // Simple heuristic: Push to neighbor with FEWEST ships? No, that balances.
+        // Push to neighbor that is Frontline.
+        const frontlineNeighbors = this.getAdjacentSystems(from).filter(
+          (s) => this.frontline.has(s.id) && s.owner === this.player
         );
-        const units = this.getBestMoveAmount(from, to, idealUnits);
-        const min =
-          (1 - this.personality.riskTolerance) * (from.homeworld ? 10 : 1);
 
-        if (units > min && to.ships + 2 < from.ships) {
-          const score = 10 + (10 - to.ships); // Prefer weaker friendly systems, keep positive
+        if (frontlineNeighbors.length > 0) {
+          // Push to the one with most need (highest threat or lowest ships?)
+          // Let's push to the one with lowest ships to reinforce.
+          const target = frontlineNeighbors.sort(
+            (a, b) => a.ships - b.ships
+          )[0];
           return [
             {
-              message: `Expanding from system ${from.id} to ${to.id}`,
+              message: `Logistics: Frontline Support`,
               from,
-              to,
-              units,
-              score
-            } satisfies BotMove
+              to: target,
+              units: from.ships - 1, // Send almost everything
+              score: 10
+            }
           ];
         }
 
-        return [];
-      });
+        // If no frontline neighbors, push to any backline neighbor?
+        // Random walk towards front?
+        // Let's just balance with neighbors for now if deep in backline.
+        const neighbors = this.getAdjacentSystems(from).filter(
+          (s) => s.owner === this.player
+        );
+        const target = neighbors.sort((a, b) => a.ships - b.ships)[0];
+        if (target && target.ships < from.ships - 2) {
+          return [
+            {
+              message: `Logistics: Balancing`,
+              from,
+              to: target,
+              units: Math.floor((from.ships - target.ships) / 2),
+              score: 5
+            }
+          ];
+        }
+      }
+
+      // If we are frontline, maybe shift to a threatened neighbor?
+      if (this.frontline.has(from.id)) {
+        const threatenedNeighbors = this.getAdjacentSystems(from).filter(
+          (s) =>
+            s.owner === this.player &&
+            (this.threatLevels.get(s.id) || 0) > s.ships
+        );
+
+        if (
+          threatenedNeighbors.length > 0 &&
+          (this.threatLevels.get(from.id) || 0) < from.ships
+        ) {
+          // We are safe, neighbor is not. Help!
+          const target = threatenedNeighbors[0];
+          return [
+            {
+              message: `Logistics: Emergency Reinforce`,
+              from,
+              to: target,
+              units: Math.floor(from.ships / 2),
+              score: 50
+            }
+          ];
+        }
+      }
+
+      return [];
     });
   }
 

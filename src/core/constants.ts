@@ -29,8 +29,9 @@ export const MinDistanceBetweenSystems = Math.min(
   Math.sqrt(Math.PI / NumOfSystems)
 ); // Minimum distance between systems
 
-export const EVENT_TRACKING_ENABLED = import.meta.env.PROD;
-export const DEBUG_LOGGING_ENABLED = import.meta.env.DEV;
+const env = (import.meta as any).env || {};
+export const EVENT_TRACKING_ENABLED = env.PROD ?? false;
+export const DEBUG_LOGGING_ENABLED = env.DEV ?? true;
 export const START_PAUSED = true;
-export const ENABLE_CHEATS = import.meta.env.DEV;
+export const ENABLE_CHEATS = env.DEV ?? true;
 export const ENABLE_BOT_CONTROL = false;

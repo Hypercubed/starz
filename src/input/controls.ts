@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
-import { pauseToggle } from '../core/engine';
+
+import { pauseToggle } from '../core/engine.ts';
 import {
   centerOnHome,
   centerOnSystem,
@@ -7,17 +8,21 @@ import {
   rerender,
   rotateProjection,
   scaleZoom
-} from '../render/render';
-import { state } from '../game/state';
+} from '../render/render.ts';
+import { state } from '../game/state.ts';
 import {
   orderBalancedMove,
   orderMassMove,
   revealSystem
-} from '../game/actions';
-import { ENABLE_BOT_CONTROL, ENABLE_CHEATS, PLAYER } from '../core/constants';
-import { showHelp } from '../render/ui';
-import { debugLog } from '../utils/logging';
-import type { Lane, System } from '../types';
+} from '../game/actions.ts';
+import {
+  ENABLE_BOT_CONTROL,
+  ENABLE_CHEATS,
+  PLAYER
+} from '../core/constants.ts';
+import { showHelp } from '../render/ui.ts';
+import { debugLog } from '../utils/logging.ts';
+import type { Lane, System } from '../types.ts';
 
 const ROTATION_STEP = 5;
 
@@ -251,6 +256,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
       system.lastMove?.message ?? 'none',
       system.lastMove?.ships ?? 0
     );
+    console.log(system);
   }
 
   switch (event.button) {

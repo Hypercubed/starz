@@ -193,6 +193,16 @@ svg {
       r: 5;
     }
 
+    &.homeworld {
+      .system-icon {
+        stroke: var(--owner-color, var(--unoccupied));
+        stroke-opacity: 1;
+        fill-opacity: 1;
+        fill: var(--owner-color, var(--unoccupied));
+        transform: translate(0px, 1.5px) scale(1.4);
+      }
+    }
+
     &[data-owner="1"]:hover {
       .system-outline {
         stroke: var(--player-1);

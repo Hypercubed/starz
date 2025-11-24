@@ -55,7 +55,7 @@ test.describe('Game Initialization', () => {
     const systems = await getAllSystems(page);
 
     // Should have at least 2 systems visible
-    expect(systems.length).toBeGreaterThan(2);
+    expect(systems.length).toBeGreaterThanOrEqual(2);
     expect(systems.length).toBeLessThanOrEqual(5);
   });
 

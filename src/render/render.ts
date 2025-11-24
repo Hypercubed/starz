@@ -11,15 +11,15 @@ import {
   HEIGHT,
   PROJECTION,
   WIDTH
-} from '../core/constants';
-import { state } from '../game/state';
+} from '../core/constants.ts';
+import { state } from '../game/state.ts';
 import {
   SystemTypes,
   type Coordinates,
   type Lane,
   type System
-} from '../types';
-import { onClickLane, onClickSystem } from '../input/controls';
+} from '../types.ts';
+import { onClickLane, onClickSystem } from '../input/controls.ts';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;
@@ -229,6 +229,7 @@ export function centerOnCoordinates(coords: Coordinates) {
 }
 
 function rerenderUnthrottled() {
+  if (!svg) return;
   svg.selectAll('path.graticule').attr('d', geoPathGenerator as any);
   svg.selectAll('circle#globe').attr('d', geoPathGenerator as any);
   svg.selectAll('circle#globe').attr('r', geoProjection.scale());
@@ -311,7 +312,6 @@ function drawSystems() {
         .attr('y', 0)
         .attr('x', 0)
         .attr('text-anchor', 'end');
-
       return group;
     });
 
@@ -319,6 +319,7 @@ function drawSystems() {
     .attr('data-owner', (d) => (d.owner != null ? d.owner.toString() : 'null'))
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
+    .classed('homeworld', (d) => !!d.homeworld && d.owner === d.homeworld)
     .classed('visited', (d) => d.isVisited)
     .classed(
       'hidden',
@@ -327,8 +328,8 @@ function drawSystems() {
     .attr('transform', (d) => `translate(${geoProjection(d.location)})`);
 
   join.select('.system-icon').text((d) => {
-    if (d.type === "inhabited") return "✦";
     if (d.homeworld && d.owner === d.homeworld) return '✶';
+    if (d.type === 'inhabited') return '✦';
     return '●'; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
