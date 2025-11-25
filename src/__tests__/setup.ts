@@ -9,7 +9,6 @@ export function createMockSystem(overrides: Partial<System> = {}): System {
     id: Math.floor(Math.random() * 10000),
     type: SystemTypes.UNINHABITED,
     location: [0, 0],
-    lanes: [],
     owner: null,
     isRevealed: false,
     isVisited: false,
@@ -34,9 +33,8 @@ export function createMockLane(
 
   const defaultLane: Lane = {
     id,
-    from,
-    to,
-    isRevealed: false
+    fromIndex: from.id,
+    toIndex: to.id
   };
 
   return { ...defaultLane, ...overrides };
@@ -78,8 +76,6 @@ export function createConnectedSystems(count: number): {
   for (let i = 0; i < count - 1; i++) {
     const lane = createMockLane(systems[i], systems[i + 1]);
     lanes.push(lane);
-    systems[i].lanes.push(lane);
-    systems[i + 1].lanes.push(lane);
   }
 
   return { systems, lanes };

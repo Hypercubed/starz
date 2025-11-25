@@ -1,7 +1,7 @@
 import { queueMove } from './actions.ts';
 import { NumHumanPlayers } from '../core/constants.ts';
 import { state } from './state.ts';
-import { type System } from '../types.ts';
+import { type BotInterface, type System } from '../types.ts';
 
 interface BotMove {
   message: string;
@@ -55,7 +55,7 @@ export function botQueue() {
   });
 }
 
-export class Bot {
+export class Bot implements BotInterface {
   player: number;
   name: string;
   personality: BotPersonality;
@@ -74,14 +74,16 @@ export class Bot {
     this.player = player;
     this.name = personality;
     this.personality = PERSONALITIES[personality];
-    this.botSystems = state.systems.filter((system) => system.owner === player);
+    this.botSystems = state.world.systems.filter(
+      (system) => system.owner === player
+    );
     this.threatLevels = new Map();
     this.frontline = new Set();
     this.backline = new Set();
   }
 
   makeMoves() {
-    this.botSystems = state.systems.filter(
+    this.botSystems = state.world.systems.filter(
       (system) => system.owner === this.player
     );
     this.botSystems.forEach((system) => {
@@ -112,7 +114,7 @@ export class Bot {
     this.backline.clear();
 
     this.botSystems.forEach((system) => {
-      const neighbors = this.getAdjacentSystems(system);
+      const neighbors = state.world.getAdjacentSystems(system);
       const enemyNeighbors = neighbors.filter(
         (s) => s.owner && s.owner !== this.player
       );
@@ -150,7 +152,8 @@ export class Bot {
 
           if (from.ships < fromThreatLevel * 0.5) {
             // Find safest neighbor
-            const bestRetreat = this.getAdjacentSystems(from)
+            const bestRetreat = state.world
+              .getAdjacentSystems(from)
               .filter((s) => s.owner === this.player)
               .sort(
                 (a, b) =>
@@ -203,13 +206,18 @@ export class Bot {
       if (from.moveQueue.length > 0) return;
       if (from.ships < 5) return;
 
-      from.lanes.forEach((lane) => {
-        const to = lane.from === from ? lane.to : lane.from;
+      const neighbors = state.world.getAdjacentSystems(from);
+
+      if (!neighbors) return;
+
+      neighbors.forEach((to) => {
         if (to.owner !== null && to.owner !== this.player) {
           // Don't attack if it exposes us to a DIFFERENT enemy
-          const otherEnemies = this.getAdjacentSystems(from).filter(
-            (s) => s.owner && s.owner !== this.player && s.id !== to.id
-          );
+          const otherEnemies = state.world
+            .getAdjacentSystems(from)
+            .filter(
+              (s) => s.owner && s.owner !== this.player && s.id !== to.id
+            );
           if (otherEnemies.length > 0) return;
 
           if (!targets.has(to.id)) {
@@ -224,9 +232,9 @@ export class Bot {
 
     targets.forEach(({ target, attackers }) => {
       // Prioritize weak/isolated targets
-      const targetAllies = this.getAdjacentSystems(target).filter(
-        (s) => s.owner === target.owner
-      ).length;
+      const targetAllies = state.world
+        .getAdjacentSystems(target)
+        .filter((s) => s.owner === target.owner).length;
       const isolationBonus = targetAllies === 0 ? 1.5 : 1.0;
 
       const totalAttackPower = attackers.reduce((sum, s) => {
@@ -276,8 +284,8 @@ export class Bot {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 3) return [];
 
-      return from.lanes.flatMap((lane) => {
-        const to = lane.from === from ? lane.to : lane.from;
+      const neighbors = state.world.getAdjacentSystems(from);
+      return neighbors.flatMap((to) => {
         if (to.owner === this.player || to.owner === null) return [];
 
         // Check if we can win easily
@@ -303,8 +311,8 @@ export class Bot {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
 
-      return from.lanes.flatMap((lane) => {
-        const to = lane.from === from ? lane.to : lane.from;
+      const neighbors = state.world.getAdjacentSystems(from);
+      return neighbors.flatMap((to) => {
         if (to.owner !== null) return [];
 
         const units = Math.max(1, Math.floor(from.ships * 0.3));
@@ -332,9 +340,9 @@ export class Bot {
         // Just push to any neighbor that is closer to frontline or IS frontline.
         // Simple heuristic: Push to neighbor with FEWEST ships? No, that balances.
         // Push to neighbor that is Frontline.
-        const frontlineNeighbors = this.getAdjacentSystems(from).filter(
-          (s) => this.frontline.has(s.id) && s.owner === this.player
-        );
+        const frontlineNeighbors = state.world
+          .getAdjacentSystems(from)
+          .filter((s) => this.frontline.has(s.id) && s.owner === this.player);
 
         if (frontlineNeighbors.length > 0) {
           // Push to the one with most need (highest threat or lowest ships?)
@@ -356,9 +364,9 @@ export class Bot {
         // If no frontline neighbors, push to any backline neighbor?
         // Random walk towards front?
         // Let's just balance with neighbors for now if deep in backline.
-        const neighbors = this.getAdjacentSystems(from).filter(
-          (s) => s.owner === this.player
-        );
+        const neighbors = state.world
+          .getAdjacentSystems(from)
+          .filter((s) => s.owner === this.player);
         const target = neighbors.sort((a, b) => a.ships - b.ships)[0];
         if (target && target.ships < from.ships - 2) {
           return [
@@ -375,11 +383,13 @@ export class Bot {
 
       // If we are frontline, maybe shift to a threatened neighbor?
       if (this.frontline.has(from.id)) {
-        const threatenedNeighbors = this.getAdjacentSystems(from).filter(
-          (s) =>
-            s.owner === this.player &&
-            (this.threatLevels.get(s.id) || 0) > s.ships
-        );
+        const threatenedNeighbors = state.world
+          .getAdjacentSystems(from)
+          .filter(
+            (s) =>
+              s.owner === this.player &&
+              (this.threatLevels.get(s.id) || 0) > s.ships
+          );
 
         if (
           threatenedNeighbors.length > 0 &&
@@ -434,17 +444,6 @@ export class Bot {
 
       queueMove(move.from, move.to, move.units, move.message);
     });
-  }
-
-  // TODO: Move this to state.ts
-  getAdjacentSystems(system: System): System[] {
-    return system.lanes
-      .map((lane) => {
-        if (lane.from === system) return lane.to;
-        if (lane.to === system) return lane.from;
-        return null;
-      })
-      .filter((s): s is System => s !== null);
   }
 }
 

@@ -7,31 +7,21 @@ import { addMessage, state } from './state.ts';
 import type { System } from '../types.ts';
 
 export function orderBalancedMove(from: System, to: System) {
-  // Check if there's a lane between selectedSystem and system
-  const lane = state.lanes.find(
-    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to)
-  );
+  if (!state.world.hasLane(from, to)) return;
 
-  if (lane) {
-    const deltaShips =
-      to.owner === from.owner
-        ? Math.floor((from.ships - to.ships) / 2)
-        : Math.floor(from.ships / 2);
+  const deltaShips =
+    to.owner === from.owner
+      ? Math.floor((from.ships - to.ships) / 2)
+      : Math.floor(from.ships / 2);
 
-    moveShips(from, to, deltaShips);
-  }
+  moveShips(from, to, deltaShips);
 }
 
 export function orderMassMove(from: System, to: System) {
-  // Check if there's a lane between selectedSystem and system
-  const lane = state.lanes.find(
-    (l) => (l.from === from && l.to === to) || (l.to === from && l.from === to)
-  );
+  if (!state.world.hasLane(from, to)) return;
 
-  if (lane) {
-    const deltaShips = from.ships - 1;
-    moveShips(from, to, deltaShips);
-  }
+  const deltaShips = from.ships - 1;
+  moveShips(from, to, deltaShips);
 }
 
 function moveShips(from: System, to: System, ships: number) {
@@ -85,7 +75,7 @@ function takeSystem(player: number, system: System) {
 
 function eliminatePlayer(winner: number, loser: number) {
   // Take over homeworld, other systems and 50% of ships
-  state.systems.forEach((s) => {
+  state.world.systems.forEach((s) => {
     if (s.owner === loser) {
       s.owner = winner;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
@@ -108,10 +98,13 @@ function eliminatePlayer(winner: number, loser: number) {
 export function revealSystem(system: System) {
   system.isRevealed = true;
   system.isVisited = true;
-  system.lanes.forEach((lane) => {
-    lane.isRevealed = true;
-    lane.from.isRevealed = true;
-    lane.to.isRevealed = true;
+  const neighbors = state.world.getAdjacentSystems(system);
+
+  if (!neighbors) return;
+
+  neighbors.forEach((neighbor) => {
+    neighbor.isRevealed = true;
+    neighbor.isVisited = true;
   });
 }
 
@@ -128,14 +121,14 @@ export function queueMove(
   ships: number,
   message?: string
 ) {
-  from.moveQueue.push({ ships, to, message });
+  from.moveQueue.push({ ships, toIndex: to.id, message });
 }
 
 export function doQueuedMoves() {
-  state.systems.forEach((system) => {
+  state.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      moveShips(system, move.to, move.ships);
+      moveShips(system, state.world.systems[move.toIndex], move.ships);
       system.lastMove = move;
     }
   });

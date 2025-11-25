@@ -1,4 +1,5 @@
-import type { Lane, Messages, Player, System } from '../types.ts';
+import { Graph } from '../classes/graph.ts';
+import type { Messages, Player, System } from '../types.ts';
 
 export const state = {
   tick: 0,
@@ -6,8 +7,7 @@ export const state = {
   running: false,
   selectedSystems: [] as System[],
   lastSelectedSystem: null as System | null,
-  systems: [] as System[],
-  lanes: [] as Lane[],
+  world: new Graph(),
   players: [] as Player[],
   messages: [] as Messages[]
 };
@@ -17,8 +17,7 @@ export function resetState() {
   state.selectedSystems = [];
   state.lastSelectedSystem = null;
   state.timeScale = 1;
-  state.lanes = [];
-  state.systems = [];
+  state.world = new Graph();
   state.players = [];
   state.messages = [] as Messages[];
 }

@@ -39,7 +39,7 @@ export function setupKeboardControls() {
 
       switch (event.code) {
         case 'KeyC':
-          state.systems.forEach((system) => {
+          state.world.systems.forEach((system) => {
             if (system.owner === PLAYER) {
               system.ships *= 2;
             }
@@ -47,7 +47,7 @@ export function setupKeboardControls() {
           rerender();
           return;
         case 'KeyR':
-          state.systems.forEach(revealSystem);
+          state.world.systems.forEach(revealSystem);
           rerender();
           return;
         case 'NumpadAdd':
@@ -198,8 +198,7 @@ function selectPath(system: System) {
       state.lastSelectedSystem = system;
       return;
     }
-    for (const lane of current.lanes) {
-      const neighbor = lane.from === current ? lane.to : lane.from;
+    for (const neighbor of state.world.getAdjacentSystems(current)) {
       if (!visited.has(neighbor) && neighbor.owner === PLAYER) {
         visited.add(neighbor);
         queue.push([...path, neighbor]);
@@ -217,8 +216,8 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       break;
     case 2: {
       // Right click
-      let from = lane.from;
-      let to = lane.to;
+      let from = state.world.systems[lane.fromIndex];
+      let to = state.world.systems[lane.toIndex];
 
       if (from.owner !== PLAYER && to.owner !== PLAYER && !ENABLE_BOT_CONTROL)
         return; // Can't move if neither side is owned by player

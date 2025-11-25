@@ -42,7 +42,7 @@ function startNewGame() {
   generateMap();
   drawMap();
 
-  revealSystem(state.systems[0]);
+  revealSystem(state.world.systems[0]);
   centerOnHome();
   rerender();
 

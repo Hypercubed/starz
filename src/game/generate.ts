@@ -10,19 +10,12 @@ import {
   MAX_SHIPS_PER_SYSTEM
 } from '../core/constants.ts';
 import { state } from './state.ts';
-import {
-  SystemTypes,
-  type Coordinates,
-  type Lane,
-  type System
-} from '../types.ts';
+import { SystemTypes, type Coordinates, type System } from '../types.ts';
 import { debugLog } from '../utils/logging.ts';
-
-let systemIdCounter = 0;
+import { findClosestSystem, Graph } from '../classes/graph.ts';
 
 export function generateMap() {
-  state.systems = [];
-  state.lanes = [];
+  state.world = new Graph();
 
   const dz = HEIGHT / (NumOfSystems - 1);
   const z0 = -HEIGHT / 2;
@@ -34,9 +27,9 @@ export function generateMap() {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
     const longitude = Math.random() * 360 - 180;
 
-    const thisLocation: Coordinates = [longitude, latitude];
-    const thisSystem: System = createSystem(thisLocation);
-    const closestSystem = findClosestSystem(thisLocation);
+    const thisLocation = [longitude, latitude] as Coordinates;
+    const thisSystem = createSystem(thisLocation);
+    const closestSystem = state.world.findClosestSystem(thisSystem);
 
     if (closestSystem) {
       // Enforce minimum distance
@@ -48,30 +41,32 @@ export function generateMap() {
         continue;
       }
 
-      createLane(thisSystem, closestSystem);
+      state.world.addLane(thisSystem, closestSystem);
     }
 
-    state.systems.push(thisSystem);
+    state.world.addSystem(thisSystem);
   }
 
   // Now in reverse
-  const s = [state.systems[state.systems.length - 1]];
-  for (let i = state.systems.length - 2; i >= 0; i--) {
-    const system = state.systems[i];
+  const s = [state.world.systems[state.world.systems.length - 1]];
+  for (let i = state.world.systems.length - 2; i >= 0; i--) {
+    const system = state.world.systems[i];
 
     // Add a lane to the closest system that is not itself
     const closestSystem = findClosestSystem(system.location, s);
     if (closestSystem) {
-      createLane(system, closestSystem);
+      state.world.addLane(system, closestSystem);
     }
     s.push(system);
   }
 
+  state.world.buildNeighborMap();
+
   debugLog(
-    `Generated ${state.systems.length} systems and ${state.lanes.length} lanes.`
+    `Generated ${state.world.systems.length} systems and ${state.world.lanes.length} lanes.`
   );
 
-  const unoccupied = state.systems.slice(0); // Copy all systems
+  const unoccupied = state.world.systems.slice(0); // Copy all systems
   const occupied = [] as System[];
 
   // Setup inhabited systems (neutral + potential homeworlds)
@@ -106,7 +101,7 @@ export function generateMap() {
     // Ensure we have enough occupied systems, otherwise take from unoccupied
     let system: System;
     if (i <= NumHumanPlayers) {
-      system = state.systems[0];
+      system = state.world.systems[0];
       const occupiedIdx = occupied.findIndex((s) => s.id === system.id);
       const unoccupiedIdx = unoccupied.findIndex((s) => s.id === system.id);
       occupied.splice(occupiedIdx, 1);
@@ -142,10 +137,9 @@ export function generateMap() {
 
 function createSystem(location: Coordinates): System {
   return {
-    id: systemIdCounter++,
-    type: 'uninhabited',
+    id: state.world.getNextNodeIndex(),
+    type: SystemTypes.UNINHABITED,
     location,
-    lanes: [],
     owner: null,
     isRevealed: false,
     isVisited: false,
@@ -154,48 +148,4 @@ function createSystem(location: Coordinates): System {
     moveQueue: [],
     lastMove: null
   };
-}
-
-function createLane(from: System, to: System): Lane {
-  const id = [from.id, to.id].sort((a, b) => a - b).join('-');
-
-  const existingLane = state.lanes.find((lane) => lane.id === id);
-  if (existingLane) {
-    return existingLane;
-  }
-
-  const newLane: Lane = {
-    id,
-    from,
-    to,
-    isRevealed: false
-  };
-  state.lanes.push(newLane);
-  from.lanes.push(newLane);
-  to.lanes.push(newLane);
-  return newLane;
-}
-
-// Move to state.ts
-export function findClosestSystem(
-  loc: Coordinates,
-  systems = state.systems
-): System | null {
-  if (systems.length === 0) return null;
-
-  let closestSystem: System | null = null;
-  let minDistance = Infinity;
-
-  systems.forEach((candidate) => {
-    if (candidate.location[0] === loc[0] && candidate.location[1] === loc[1])
-      return;
-
-    const distance = d3.geoDistance(loc, candidate.location);
-    if (distance < minDistance) {
-      minDistance = distance;
-      closestSystem = candidate;
-    }
-  });
-
-  return closestSystem;
 }

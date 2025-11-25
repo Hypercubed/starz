@@ -213,7 +213,7 @@ export function centerOnHome() {
   if (selectedProjectionType === projections['Orthographic']) {
     geoProjection.rotate([0, 135]);
   } else {
-    centerOnCoordinates(state.systems[0].location);
+    centerOnCoordinates(state.world.systems[0].location);
   }
   geoProjection.scale(initialScale);
 }
@@ -246,7 +246,7 @@ function drawSystems() {
   // console.log("Current scale:", currentScale / initialScale);
   const reducedSize = currentScale / initialScale < 1;
 
-  let visibleSystems = state.systems;
+  let visibleSystems = state.world.systems;
 
   if (ENABLE_FOG_OF_WAR) {
     visibleSystems = visibleSystems.filter((system) => system.isRevealed);
@@ -346,8 +346,8 @@ const getFeatures = (() => {
   let systems: System[] = [];
 
   return () => {
-    if (!features || systems !== state.systems) {
-      systems = state.systems;
+    if (!features || systems !== state.world.systems) {
+      systems = state.world.systems;
       features = mesh.polygons(systems).features;
     }
     return features!;
@@ -381,10 +381,14 @@ function drawRegions() {
 }
 
 function drawLanes() {
-  let visibleLanes = state.lanes;
+  let visibleLanes = state.world.lanes;
 
   if (ENABLE_FOG_OF_WAR) {
-    visibleLanes = visibleLanes.filter((lane) => lane.isRevealed);
+    visibleLanes = visibleLanes.filter(
+      (lane) =>
+        state.world.systems[lane.fromIndex].isRevealed &&
+        state.world.systems[lane.toIndex].isRevealed
+    );
   }
 
   const g = svg
@@ -412,16 +416,20 @@ function drawLanes() {
         })
     )
     .attr('data-owner', (d) => {
-      return d.from.owner && d.from.owner === d.to.owner
-        ? d.from.owner.toString()
+      const from = state.world.systems[d.fromIndex];
+      const to = state.world.systems[d.toIndex];
+      return from.owner && from.owner === to.owner
+        ? from.owner.toString()
         : null;
     })
-    .attr('d', (d) =>
-      geoPathGenerator({
+    .attr('d', (d) => {
+      const from = state.world.systems[d.fromIndex];
+      const to = state.world.systems[d.toIndex];
+      return geoPathGenerator({
         type: 'LineString',
-        coordinates: [d.from.location, d.to.location]
-      })
-    );
+        coordinates: [from.location, to.location]
+      });
+    });
 }
 
 function throttle<T extends unknown[]>(

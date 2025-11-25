@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Bot, PERSONALITIES } from '../game/bots';
 import { state, resetState } from '../game/state';
-import { createMockSystem, createConnectedSystems } from './setup';
-import { SystemTypes } from '../types';
+import { createMockSystem } from './setup';
+import { SystemTypes, type Lane } from '../types';
 
 describe('bots', () => {
   beforeEach(() => {
@@ -36,76 +36,6 @@ describe('bots', () => {
         expect(rusherBot.personality.aggression).toBe(1.0);
         expect(turtleBot.personality.defensiveness).toBe(0.95);
         expect(balancedBot.personality.aggression).toBe(0.5);
-      });
-    });
-
-    describe('getAdjacentSystems', () => {
-      it('should return systems connected by lanes', () => {
-        const { systems } = createConnectedSystems(3);
-        state.systems = systems;
-
-        const bot = new Bot(2);
-        const adjacent = bot.getAdjacentSystems(systems[0]);
-
-        expect(adjacent).toHaveLength(1);
-        expect(adjacent[0]).toBe(systems[1]);
-      });
-
-      it('should return empty array for isolated systems', () => {
-        const system = createMockSystem({ id: 1 });
-        state.systems = [system];
-
-        const bot = new Bot(2);
-        const adjacent = bot.getAdjacentSystems(system);
-
-        expect(adjacent).toEqual([]);
-      });
-
-      it('should return all adjacent systems for a hub', () => {
-        const center = createMockSystem({ id: 0 });
-        const system1 = createMockSystem({ id: 1 });
-        const system2 = createMockSystem({ id: 2 });
-        const system3 = createMockSystem({ id: 3 });
-
-        // Create lanes from center to all other systems
-        center.lanes = [
-          { id: '0-1', from: center, to: system1, isRevealed: true },
-          { id: '0-2', from: center, to: system2, isRevealed: true },
-          { id: '0-3', from: center, to: system3, isRevealed: true }
-        ];
-
-        state.systems = [center, system1, system2, system3];
-
-        const bot = new Bot(2);
-        const adjacent = bot.getAdjacentSystems(center);
-
-        expect(adjacent).toHaveLength(3);
-        expect(adjacent).toContain(system1);
-        expect(adjacent).toContain(system2);
-        expect(adjacent).toContain(system3);
-      });
-
-      it('should handle bidirectional lanes', () => {
-        const system1 = createMockSystem({ id: 1 });
-        const system2 = createMockSystem({ id: 2 });
-
-        const lane = {
-          id: '1-2',
-          from: system1,
-          to: system2,
-          isRevealed: true
-        };
-
-        system1.lanes.push(lane);
-        system2.lanes.push(lane);
-        state.systems = [system1, system2];
-
-        const bot = new Bot(2);
-        const adjacent1 = bot.getAdjacentSystems(system1);
-        const adjacent2 = bot.getAdjacentSystems(system2);
-
-        expect(adjacent1).toContain(system2);
-        expect(adjacent2).toContain(system1);
       });
     });
 
@@ -185,7 +115,7 @@ describe('bots', () => {
 
     describe('makeMoves', () => {
       it('should not crash when bot has no systems', () => {
-        state.systems = [];
+        state.world.systems = [];
         const bot = new Bot(2);
 
         expect(() => bot.makeMoves()).not.toThrow();
@@ -205,15 +135,14 @@ describe('bots', () => {
           type: SystemTypes.UNINHABITED
         });
 
-        const lane = {
+        const lane: Lane = {
           id: '1-2',
-          from: botSystem,
-          to: targetSystem,
-          isRevealed: true
+          fromIndex: 0,
+          toIndex: 1
         };
 
-        botSystem.lanes.push(lane);
-        state.systems = [botSystem, targetSystem];
+        state.world.systems.push(botSystem, targetSystem);
+        state.world.lanes.push(lane);
 
         const bot = new Bot(2);
         bot.makeMoves();

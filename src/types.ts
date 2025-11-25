@@ -11,7 +11,6 @@ export interface System {
   id: number;
   type: SystemType;
   location: Coordinates;
-  lanes: Lane[];
   owner: number | null;
   isVisited: boolean;
   isRevealed: boolean;
@@ -24,14 +23,13 @@ export interface System {
 export interface Move {
   message?: string;
   ships: number;
-  to: System;
+  toIndex: number;
 }
 
 export interface Lane {
   id: string;
-  from: System;
-  to: System;
-  isRevealed: boolean;
+  fromIndex: number;
+  toIndex: number;
 }
 
 export interface PlayerStats {

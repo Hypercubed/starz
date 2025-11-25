@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { findClosestSystem } from '../game/generate';
 import { state } from '../game/state';
 import { createMockSystem, createMockCoordinates } from './setup';
+import { findClosestSystem, Graph } from '../classes/graph';
 
 // Mock the state module
 vi.mock('../game/state', () => ({
@@ -13,8 +13,7 @@ vi.mock('../game/state', () => ({
 
 describe('generate', () => {
   beforeEach(() => {
-    state.systems = [];
-    state.lanes = [];
+    state.world = new Graph();
   });
 
   describe('findClosestSystem', () => {
@@ -27,7 +26,7 @@ describe('generate', () => {
 
     it('should return null when no other systems exist', () => {
       const location = createMockCoordinates(0, 0);
-      const result = findClosestSystem(location);
+      const result = findClosestSystem(location, state.world.systems);
 
       expect(result).toBeNull();
     });

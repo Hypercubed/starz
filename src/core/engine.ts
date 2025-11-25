@@ -26,7 +26,7 @@ let runningInterval: number | null = null;
 
 export function updateStats() {
   state.players.forEach((player) => {
-    const systems = state.systems.filter(
+    const systems = state.world.systems.filter(
       (system) => system.owner === player.id
     );
     const homeworld = systems.find((system) => system.homeworld === player.id);
@@ -50,7 +50,7 @@ export function updateStats() {
 }
 
 export function turnUpdate() {
-  state.systems.forEach((system) => {
+  state.world.systems.forEach((system) => {
     if (system.type === 'inhabited' && system.owner != null) {
       if (system.owner > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
@@ -60,7 +60,7 @@ export function turnUpdate() {
 }
 
 export function roundUpdate() {
-  state.systems.forEach((system) => {
+  state.world.systems.forEach((system) => {
     if (system.owner != null && system.owner > 0) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;
     }
@@ -135,7 +135,7 @@ function checkVictory() {
   if (!state.running) return;
 
   // TODO: Use stats from state
-  const homeworlds = state.systems.filter(
+  const homeworlds = state.world.systems.filter(
     (system) => system.homeworld && system.owner === system.homeworld
   );
 
