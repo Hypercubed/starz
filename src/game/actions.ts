@@ -5,6 +5,7 @@ import { trackEvent } from '../utils/logging.ts';
 import { rerender } from '../render/render.ts';
 import { addMessage, state } from './state.ts';
 import type { System } from '../types.ts';
+import { showEndGame } from '../render/ui.ts';
 
 export function orderBalancedMove(from: System, to: System) {
   if (!state.world.hasLane(from, to)) return;
@@ -85,14 +86,31 @@ function eliminatePlayer(winner: number, loser: number) {
     }
   });
 
-  if (loser === PLAYER) {
-    addMessage(`You have lost your homeworld! Game Over.`);
-    state.lastSelectedSystem = null;
-    state.selectedSystems = [];
-    trackEvent('starz_gamesLost', { winner });
-    state.running = false;
-    rerender();
-  }
+  if (loser === PLAYER) playerLose(winner);
+}
+
+export function playerWin() {
+  state.running = false;
+
+  state.world.systems.forEach(revealSystem);
+  state.lastSelectedSystem = null;
+  state.selectedSystems = [];
+  rerender();
+
+  trackEvent('starz_gamesWon');
+  showEndGame(`You have conquered The Bubble!`);
+}
+
+export function playerLose(winner: number) {
+  state.running = false;
+
+  state.world.systems.forEach(revealSystem);
+  state.lastSelectedSystem = null;
+  state.selectedSystems = [];
+  rerender();
+
+  trackEvent('starz_gamesLost', { winner });
+  showEndGame(`You have lost your homeworld! Game Over.`);
 }
 
 export function revealSystem(system: System) {

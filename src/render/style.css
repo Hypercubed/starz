@@ -242,9 +242,9 @@ svg {
   .region {
     fill: var(--owner-color, transparent);
     fill-opacity: 0.3;
-    stroke: black;
-    stroke-width: 1;
-    stroke-opacity: 0.8;
+    stroke: var(--owner-color, transparent);
+    stroke-width: 4;
+    stroke-opacity: 0;
 
     &[data-owner="null"] {
       fill: transparent;

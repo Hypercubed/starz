@@ -66,3 +66,9 @@ export function showHelp() {
   const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
   helpDialog.showModal();
 }
+
+export function showEndGame(message: string) {
+  const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
+  endDialog.showModal();
+  endDialog.querySelector('p#endMessage')!.textContent = message;
+}

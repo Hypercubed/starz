@@ -20,7 +20,7 @@ import {
   ENABLE_CHEATS,
   PLAYER
 } from '../core/constants.ts';
-import { showHelp } from '../render/ui.ts';
+import { showEndGame, showHelp } from '../render/ui.ts';
 import { debugLog } from '../utils/logging.ts';
 import type { Lane, System } from '../types.ts';
 
@@ -75,6 +75,11 @@ export function setupKeboardControls() {
       case '?':
         showHelp();
         return;
+      case 'x': {
+        if (!event.ctrlKey) return;
+        showEndGame('Restart?');
+        return;
+      }
     }
   });
 

@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+// import { smoothPath } from "svg-smoother";
 
 // @ts-ignore
 import { geoVoronoi } from 'd3-geo-voronoi';
@@ -375,7 +376,10 @@ function drawRegions() {
     .join((enter: any) => enter.append('path').classed('region', true));
 
   join
-    .attr('d', geoPathGenerator)
+    .attr('d', (d) => {
+      const path = geoPathGenerator(d);
+      return path; // ? smoothPath(path, { radius: 5 }) : path;
+    })
     .datum((d: any) => d.properties.site as System)
     .attr('data-owner', (d) => (d.owner ? d.owner.toString() : 'null'));
 }

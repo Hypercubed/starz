@@ -1,4 +1,4 @@
-import { doQueuedMoves } from '../game/actions.ts';
+import { doQueuedMoves, playerLose, playerWin } from '../game/actions.ts';
 import { Bot, botQueue } from '../game/bots.ts';
 import {
   MAX_SHIPS_PER_SYSTEM,
@@ -140,14 +140,17 @@ function checkVictory() {
   );
 
   if (!gameOver && homeworlds.length === 1) {
-    const winner = homeworlds[0].owner;
+    const winner = homeworlds[0].owner!;
     addMessage(`Player ${winner} has conquered The Bubble!`);
     rerender();
     stopGame();
-    if (winner === PLAYER) {
-      trackEvent('starz_gamesWon');
-    }
     gameOver = true;
+
+    if (winner === PLAYER) {
+      playerWin();
+    } else {
+      playerLose(winner);
+    }
   }
 }
 

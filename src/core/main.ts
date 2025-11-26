@@ -14,21 +14,29 @@ import { runGameLoop, startGame, stopGame } from './engine.ts';
 import { setupKeboardControls } from '../input/controls.ts';
 
 window.onload = () => {
-  const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
-  helpButton.addEventListener('click', () => {
-    showHelp();
-  });
-
+  const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
   const startDialog = document.getElementById(
     'startDialog'
   ) as HTMLDialogElement;
-  // startDialog.showModal();
 
+  const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
   const startButton = document.getElementById(
     'startButton'
   ) as HTMLButtonElement;
+  const restartButton = document.getElementById(
+    'restartButton'
+  ) as HTMLButtonElement;
+
+  helpButton.addEventListener('click', showHelp);
+
   startButton.addEventListener('click', () => {
     startDialog.close();
+    runGameLoop();
+  });
+
+  restartButton.addEventListener('click', () => {
+    endDialog.close();
+    startNewGame();
     runGameLoop();
   });
 
