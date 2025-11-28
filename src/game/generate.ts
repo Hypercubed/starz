@@ -7,7 +7,8 @@ import {
   NumBots,
   NumHumanPlayers,
   MinDistanceBetweenSystems,
-  MAX_SHIPS_PER_SYSTEM
+  MAX_SHIPS_PER_SYSTEM,
+  PLAYER
 } from '../core/constants.ts';
 import { state } from './state.ts';
 import { SystemTypes, type Coordinates, type System } from '../types.ts';
@@ -93,46 +94,27 @@ export function generateMap() {
     occupied.push(system);
     unoccupied.splice(randomIndex, 1);
   }
+}
 
-  // Setup homeworlds for all players (Human + Bots)
-  const totalPlayers = NumHumanPlayers + NumBots;
-
-  for (let i = 1; i <= totalPlayers; i++) {
-    // Ensure we have enough occupied systems, otherwise take from unoccupied
-    let system: System;
-    if (i <= NumHumanPlayers) {
-      system = state.world.systems[0];
-      const occupiedIdx = occupied.findIndex((s) => s.id === system.id);
-      const unoccupiedIdx = unoccupied.findIndex((s) => s.id === system.id);
-      occupied.splice(occupiedIdx, 1);
-      unoccupied.splice(unoccupiedIdx, 1);
-    } else if (occupied.length > 0) {
-      const idx = Math.floor(Math.random() * occupied.length);
-      system = occupied[idx];
-      occupied.splice(idx, 1);
-    } else if (unoccupied.length > 0) {
-      const idx = Math.floor(Math.random() * unoccupied.length);
-      system = unoccupied[idx];
-      unoccupied.splice(idx, 1);
-      // Initialize it as inhabited since we pulled from unoccupied
-      system.type = SystemTypes.INHABITED;
-      system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
-    } else {
-      console.error('Not enough systems for players!');
-      break;
+export function assignSystem(player: number) {
+  let system = state.world.systems[0]; // For now, player 0 is always system 1
+  if (player !== PLAYER) {
+    const systems = state.world.systems.filter(
+      (system) => system.owner === 0 && system.type === SystemTypes.INHABITED
+    );
+    if (systems.length === 0) {
+      console.error('No available homeworlds to join.');
+      return null;
     }
 
-    system.ships = 1;
-    system.owner = i;
-    system.homeworld = i;
-    system.type = SystemTypes.INHABITED;
-
-    // If this is a human player, set initial selection
-    if (i <= NumHumanPlayers) {
-      state.lastSelectedSystem = system;
-      state.selectedSystems = [system];
-    }
+    const index = Math.floor(Math.random() * systems.length);
+    system = systems[index];
   }
+
+  system.ships = 1;
+  system.owner = player;
+  system.homeworld = player;
+  system.type = SystemTypes.INHABITED;
 }
 
 function createSystem(location: Coordinates): System {

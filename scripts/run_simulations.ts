@@ -30,7 +30,7 @@ async function runSimulation(gameId: number) {
     state.players.push({
       id: i,
       isHuman: false, // Force all to be bots
-      bot: new Bot(i, personalities[(i - 1) % personalities.length] as any),
+      bot: new Bot({}),
       stats: { player: i, systems: 0, ships: 0, homeworld: 0 }
     });
   }

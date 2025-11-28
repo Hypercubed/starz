@@ -1,64 +1,17 @@
 import '../render/style.css';
+import type { GameManager } from '../services/game-manager.ts';
 
-import { centerOnHome, drawMap, rerender } from '../render/render.ts';
-import { resetState, state } from '../game/state.ts';
-import { generateMap } from '../game/generate.ts';
-import { revealSystem } from '../game/actions.ts';
-import {
-  showHelp,
-  updateInfoBox,
-  updateLeaderbox,
-  updateMessageBox
-} from '../render/ui.ts';
-import { runGameLoop, startGame, stopGame } from './engine.ts';
-import { setupKeboardControls } from '../input/controls.ts';
+import { LocalGameManager } from '../services/local.ts';
+// import { PlayroomGameManager } from '../services/playroom.ts';
 
-window.onload = () => {
-  const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
-  const startDialog = document.getElementById(
-    'startDialog'
-  ) as HTMLDialogElement;
-
-  const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
-  const startButton = document.getElementById(
-    'startButton'
-  ) as HTMLButtonElement;
-  const restartButton = document.getElementById(
-    'restartButton'
-  ) as HTMLButtonElement;
-
-  helpButton.addEventListener('click', showHelp);
-
-  startButton.addEventListener('click', () => {
-    startDialog.close();
-    runGameLoop();
-  });
-
-  restartButton.addEventListener('click', () => {
-    endDialog.close();
-    startNewGame();
-    runGameLoop();
-  });
-
-  startNewGame();
+window.onload = async () => {
+  const gameManager = new LocalGameManager();
+  await gameManager.connect();
+  window.gameManager = gameManager;
 };
 
-function startNewGame() {
-  stopGame();
-
-  resetState();
-  generateMap();
-  drawMap();
-
-  revealSystem(state.world.systems[0]);
-  centerOnHome();
-  rerender();
-
-  setupKeboardControls();
-
-  updateInfoBox();
-  updateLeaderbox();
-  updateMessageBox();
-
-  startGame();
+declare global {
+  interface Window {
+    gameManager: GameManager;
+  }
 }

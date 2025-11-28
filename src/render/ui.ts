@@ -38,12 +38,12 @@ export function updateLeaderbox() {
     .selectAll('tr')
     .data(stats)
     .join('tr')
-    .attr('data-owner', (d) => d.id)
+    .attr('data-player', (d) => d.id)
     .attr('title', (d) => (d.bot ? d.bot.name : 'Human'));
 
   row
     .selectAll('td')
-    .data((d) => [d.id, d.stats.systems, d.stats.ships])
+    .data((d) => [d.name, d.stats.systems, d.stats.ships])
     .join('td')
     .text((d) => d);
 }
@@ -62,6 +62,22 @@ export function updateMessageBox() {
     .html((d) => d.html);
 }
 
+export function setupDialogs() {
+  const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
+
+  const restartButton = document.getElementById(
+    'restartButton'
+  ) as HTMLButtonElement;
+
+  restartButton.addEventListener('click', () => {
+    endDialog.close();
+    window.gameManager.connect();
+  });
+
+  const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
+  helpButton.addEventListener('click', showHelp);
+}
+
 export function showHelp() {
   const helpDialog = document.getElementById('helpDialog') as HTMLDialogElement;
   helpDialog.showModal();
@@ -71,4 +87,21 @@ export function showEndGame(message: string) {
   const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
   endDialog.showModal();
   endDialog.querySelector('p#endMessage')!.textContent = message;
+}
+
+export function showStartGame() {
+  const startDialog = document.getElementById(
+    'startDialog'
+  ) as HTMLDialogElement;
+  const startButton = document.getElementById(
+    'startButton'
+  ) as HTMLButtonElement;
+
+  startDialog.showModal();
+  startButton.addEventListener('click', () => {
+    startDialog.close();
+    window.gameManager.startGame();
+  });
+
+  return startDialog;
 }

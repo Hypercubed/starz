@@ -53,6 +53,7 @@ export interface BotInterface {
 
 export interface Player {
   id: number;
+  name: string;
   isHuman: boolean;
   bot?: BotInterface;
   stats: PlayerStats;

@@ -1,3 +1,5 @@
+// import { Bot as PlayroomBot } from "playroomkit";
+
 import { queueMove } from './actions.ts';
 import { NumHumanPlayers } from '../core/constants.ts';
 import { state } from './state.ts';
@@ -55,6 +57,13 @@ export function botQueue() {
   });
 }
 
+let botId = 2;
+
+export interface BotOptions {
+  playerIndex?: number;
+  personality?: BotPersonalities;
+}
+
 export class Bot implements BotInterface {
   player: number;
   name: string;
@@ -64,13 +73,17 @@ export class Bot implements BotInterface {
   frontline: Set<number>;
   backline: Set<number>;
 
-  constructor(player: number, personality?: BotPersonalities) {
+  constructor(botParams: BotOptions = {}) {
+    const player = botParams.playerIndex ?? botId++;
+    let personality = botParams.personality as BotPersonalities | undefined;
+
     if (!personality) {
       const keys = Object.keys(PERSONALITIES);
       personality = keys[
         (player - NumHumanPlayers - 1) % keys.length
       ] as BotPersonalities;
     }
+
     this.player = player;
     this.name = personality;
     this.personality = PERSONALITIES[personality];
@@ -80,6 +93,12 @@ export class Bot implements BotInterface {
     this.threatLevels = new Map();
     this.frontline = new Set();
     this.backline = new Set();
+  }
+
+  decideAction() {
+    console.log(`Bot Player ${this.player} making moves.`);
+    this.makeMoves();
+    return 'MOVE_FORWARD';
   }
 
   makeMoves() {
@@ -108,7 +127,7 @@ export class Bot implements BotInterface {
     this.chooseMoves(logistics, 1.0);
   }
 
-  analyzeMap() {
+  private analyzeMap() {
     this.threatLevels.clear();
     this.frontline.clear();
     this.backline.clear();
@@ -136,7 +155,7 @@ export class Bot implements BotInterface {
     });
   }
 
-  getDefensiveMoves(): BotMove[][] {
+  private getDefensiveMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
 
@@ -198,7 +217,7 @@ export class Bot implements BotInterface {
     });
   }
 
-  getCoordinatedAttackMoves(): BotMove[][] {
+  private getCoordinatedAttackMoves(): BotMove[][] {
     const targets = new Map<number, { target: System; attackers: System[] }>();
 
     // Identify potential targets
@@ -278,7 +297,7 @@ export class Bot implements BotInterface {
     return coordinatedMoves;
   }
 
-  getExterminateMoves(): BotMove[][] {
+  private getExterminateMoves(): BotMove[][] {
     // Opportunistic attacks on weak neighbors
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
@@ -306,7 +325,7 @@ export class Bot implements BotInterface {
     });
   }
 
-  getExploreMoves(): BotMove[][] {
+  private getExploreMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
@@ -329,7 +348,7 @@ export class Bot implements BotInterface {
     });
   }
 
-  getLogisticsMoves(): BotMove[][] {
+  private getLogisticsMoves(): BotMove[][] {
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
@@ -413,7 +432,11 @@ export class Bot implements BotInterface {
     });
   }
 
-  getBestMoveAmount(from: System, to: System, idealAmount: number): number {
+  private getBestMoveAmount(
+    from: System,
+    to: System,
+    idealAmount: number
+  ): number {
     const massMove = Math.max(0, from.ships - 1);
     let balancedMove = 0;
 
@@ -433,7 +456,7 @@ export class Bot implements BotInterface {
   }
 
   // @eslint-disable-next-line @typescript-eslint/no-unused-vars
-  chooseMoves(moves: BotMove[][], _weight = 1) {
+  private chooseMoves(moves: BotMove[][], _weight = 1) {
     if (moves.length === 0) return;
 
     moves.forEach((systemMoves) => {

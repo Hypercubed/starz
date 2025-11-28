@@ -44,6 +44,7 @@
     "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",
     "d3-geo-zoom": "^1.5.5",
+    "playroomkit": "^0.0.91",
     "svg-smoother": "^2.1.0",
     "versor": "^0.2.0"
   }

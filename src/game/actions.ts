@@ -6,6 +6,7 @@ import { rerender } from '../render/render.ts';
 import { addMessage, state } from './state.ts';
 import type { System } from '../types.ts';
 import { showEndGame } from '../render/ui.ts';
+import { GAME_STATE } from '../services/game-manager.ts';
 
 export function orderBalancedMove(from: System, to: System) {
   if (!state.world.hasLane(from, to)) return;
@@ -90,7 +91,8 @@ function eliminatePlayer(winner: number, loser: number) {
 }
 
 export function playerWin() {
-  state.running = false;
+  window.gameManager.stopGame();
+  window.gameManager.gameState = GAME_STATE.FINISHED;
 
   state.world.systems.forEach(revealSystem);
   state.lastSelectedSystem = null;
@@ -102,7 +104,8 @@ export function playerWin() {
 }
 
 export function playerLose(winner: number) {
-  state.running = false;
+  window.gameManager.stopGame();
+  window.gameManager.gameState = GAME_STATE.FINISHED;
 
   state.world.systems.forEach(revealSystem);
   state.lastSelectedSystem = null;

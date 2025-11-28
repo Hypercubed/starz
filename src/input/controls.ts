@@ -23,6 +23,7 @@ import {
 import { showEndGame, showHelp } from '../render/ui.ts';
 import { debugLog } from '../utils/logging.ts';
 import type { Lane, System } from '../types.ts';
+import { GAME_STATE } from '../services/game-manager.ts';
 
 const ROTATION_STEP = 5;
 
@@ -213,7 +214,7 @@ function selectPath(system: System) {
 }
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
-  if (!state.running) return;
+  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   switch (event.button) {
     case 0: // Left click
@@ -252,7 +253,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 }
 
 export function onClickSystem(event: PointerEvent, system: System) {
-  if (!state.running) return;
+  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(

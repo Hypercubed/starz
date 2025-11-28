@@ -317,7 +317,7 @@ function drawSystems() {
     });
 
   join
-    .attr('data-owner', (d) => (d.owner != null ? d.owner.toString() : 'null'))
+    .attr('data-player', (d) => (d.owner != null ? d.owner.toString() : 'null'))
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
     .classed('homeworld', (d) => !!d.homeworld && d.owner === d.homeworld)
@@ -381,7 +381,7 @@ function drawRegions() {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .attr('data-owner', (d) => (d.owner ? d.owner.toString() : 'null'));
+    .attr('data-player', (d) => (d.owner ? d.owner.toString() : 'null'));
 }
 
 function drawLanes() {
@@ -419,7 +419,7 @@ function drawLanes() {
           onClickLane(ev, d);
         })
     )
-    .attr('data-owner', (d) => {
+    .attr('data-player', (d) => {
       const from = state.world.systems[d.fromIndex];
       const to = state.world.systems[d.toIndex];
       return from.owner && from.owner === to.owner

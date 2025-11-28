@@ -1,28 +1,46 @@
-import { doQueuedMoves, playerLose, playerWin } from '../game/actions.ts';
-import { Bot, botQueue } from '../game/bots.ts';
 import {
   MAX_SHIPS_PER_SYSTEM,
   NumBots,
-  NumHumanPlayers,
   PLAYER,
   SHIPS_PER_ROUND,
   SHIPS_PER_TURN,
-  START_PAUSED,
-  TICK_DURATION_MS,
   TICKS_PER_ROUND,
   TICKS_PER_TURN
 } from './constants.ts';
-import { trackEvent } from '../utils/logging.ts';
-import { rerender } from '../render/render.ts';
-import { addMessage, state } from '../game/state.ts';
+
+import { addMessage, resetState, state } from '../game/state.ts';
+import { assignSystem, generateMap } from '../game/generate.ts';
+import { centerOnHome, drawMap, rerender } from '../render/render.ts';
+import {
+  doQueuedMoves,
+  playerLose,
+  playerWin,
+  revealSystem
+} from '../game/actions.ts';
 import {
   updateInfoBox,
   updateLeaderbox,
   updateMessageBox
 } from '../render/ui.ts';
+import { botQueue } from '../game/bots.ts';
+import { GAME_STATE } from '../services/game-manager.ts';
 
-let gameOver = false;
-let runningInterval: number | null = null;
+export function setupGame() {
+  resetState();
+
+  generateMap();
+
+  drawMap();
+
+  assignSystem(PLAYER);
+  revealSystem(state.world.systems[0]);
+  centerOnHome();
+  rerender();
+
+  updateInfoBox();
+  updateLeaderbox();
+  updateMessageBox();
+}
 
 export function updateStats() {
   state.players.forEach((player) => {
@@ -67,84 +85,21 @@ export function roundUpdate() {
   });
 }
 
-export function startGame() {
-  state.running = true;
-  gameOver = false;
-  trackEvent('starz_gamesStarted');
-  addMessage(`Game started. You are Player ${PLAYER}.`);
-
-  // Initialize players
-  state.players = [];
-  for (let i = 1; i <= NumHumanPlayers + NumBots; i++) {
-    const isHuman = i <= NumHumanPlayers;
-    state.players.push({
-      id: i,
-      isHuman,
-      bot: isHuman ? undefined : new Bot(i),
-      stats: { player: i, systems: 0, ships: 0, homeworld: 0 }
-    });
-  }
-
-  if (!START_PAUSED) {
-    runGameLoop();
-  }
-}
-
-export function runGameLoop() {
-  if (!state.running) {
-    stopGame();
-    return;
-  }
-
-  if (runningInterval) clearTimeout(runningInterval);
-  runningInterval = null;
-
-  state.tick++;
-
-  if (state.tick % TICKS_PER_TURN === 0) turnUpdate();
-  if (state.tick % TICKS_PER_ROUND === 0) roundUpdate();
-
-  botQueue();
-
-  doQueuedMoves();
-
-  rerender();
-  updateInfoBox();
-  updateStats();
-  updateLeaderbox();
-  checkVictory();
-  updateMessageBox();
-
-  runningInterval = setTimeout(() => {
-    runGameLoop();
-  }, TICK_DURATION_MS / state.timeScale);
-}
-
-export function stopGame() {
-  state.running = false;
-  state.selectedSystems = [];
-  state.lastSelectedSystem = null;
-  if (runningInterval) {
-    clearTimeout(runningInterval);
-    runningInterval = null;
-  }
-}
-
-function checkVictory() {
+export function checkVictory() {
   if ((NumBots as number) === 0) return;
-  if (!state.running) return;
+  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   // TODO: Use stats from state
   const homeworlds = state.world.systems.filter(
     (system) => system.homeworld && system.owner === system.homeworld
   );
 
-  if (!gameOver && homeworlds.length === 1) {
+  if (homeworlds.length === 1) {
     const winner = homeworlds[0].owner!;
     addMessage(`Player ${winner} has conquered The Bubble!`);
     rerender();
-    stopGame();
-    gameOver = true;
+
+    window.gameManager.stopGame();
 
     if (winner === PLAYER) {
       playerWin();
@@ -155,10 +110,22 @@ function checkVictory() {
 }
 
 export function pauseToggle() {
-  if (state.running) {
-    stopGame();
-  } else {
-    state.running = true;
-    runGameLoop();
-  }
+  if (!('pauseToggle' in window.gameManager)) return;
+  (window.gameManager as any).pauseToggle();
+}
+
+export function gameTick() {
+  state.tick++;
+
+  if (state.tick % TICKS_PER_TURN === 0) turnUpdate();
+  if (state.tick % TICKS_PER_ROUND === 0) roundUpdate();
+
+  botQueue();
+  doQueuedMoves();
+  updateStats();
+
+  rerender();
+  updateInfoBox();
+  updateLeaderbox();
+  updateMessageBox();
 }

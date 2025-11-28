@@ -1,8 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Bot, PERSONALITIES } from '../game/bots';
+import { Bot as BotClass, PERSONALITIES } from '../game/bots';
 import { state, resetState } from '../game/state';
 import { createMockSystem } from './setup';
 import { SystemTypes, type Lane } from '../types';
+
+function makeTestable<T extends new (...args: any) => any>(ctor: T) {
+  return ctor as any;
+}
+
+const Bot = makeTestable(BotClass);
 
 describe('bots', () => {
   beforeEach(() => {
@@ -12,7 +18,7 @@ describe('bots', () => {
   describe('Bot class', () => {
     describe('initialization', () => {
       it('should create a bot with default personality', () => {
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
 
         expect(bot.player).toBe(2);
         expect(bot.name).toBeDefined();
@@ -20,17 +26,23 @@ describe('bots', () => {
       });
 
       it('should create a bot with specified personality', () => {
-        const bot = new Bot(2, 'rusher');
+        const bot = new Bot({ playerIndex: 2, personality: 'rusher' });
 
         expect(bot.personality).toEqual(PERSONALITIES.rusher);
         expect(bot.personality.aggression).toBe(1.0);
       });
 
       it('should work with different personality types', () => {
-        const territoryBot = new Bot(2, 'territory');
-        const rusherBot = new Bot(3, 'rusher');
-        const turtleBot = new Bot(4, 'turtle');
-        const balancedBot = new Bot(5, 'balanced');
+        const territoryBot = new Bot({
+          playerIndex: 2,
+          personality: 'territory'
+        });
+        const rusherBot = new Bot({ playerIndex: 3, personality: 'rusher' });
+        const turtleBot = new Bot({ playerIndex: 4, personality: 'turtle' });
+        const balancedBot = new Bot({
+          playerIndex: 5,
+          personality: 'balanced'
+        });
 
         expect(territoryBot.personality.expansion).toBe(1.0);
         expect(rusherBot.personality.aggression).toBe(1.0);
@@ -51,7 +63,7 @@ describe('bots', () => {
           owner: null
         });
 
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
         const amount = bot.getBestMoveAmount(fromSystem, toSystem, 10);
 
         expect(amount).toBe(10);
