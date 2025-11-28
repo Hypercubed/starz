@@ -7,8 +7,7 @@ import {
   NumBots,
   NumHumanPlayers,
   MinDistanceBetweenSystems,
-  MAX_SHIPS_PER_SYSTEM,
-  PLAYER
+  MAX_SHIPS_PER_SYSTEM
 } from '../core/constants.ts';
 import { state } from './state.ts';
 import { SystemTypes, type Coordinates, type System } from '../types.ts';
@@ -86,7 +85,7 @@ export function generateMap() {
 
     // TODO: Enforce minimum distance between inhabited systems
 
-    system.owner = 0;
+    system.ownerIndex = 0;
     system.type = SystemTypes.INHABITED;
     system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
     system.homeworld = 0;
@@ -98,31 +97,34 @@ export function generateMap() {
 
 export function assignSystem(player: number) {
   let system = state.world.systems[0]; // For now, player 0 is always system 1
-  if (player !== PLAYER) {
-    const systems = state.world.systems.filter(
-      (system) => system.owner === 0 && system.type === SystemTypes.INHABITED
-    );
-    if (systems.length === 0) {
-      console.error('No available homeworlds to join.');
-      return null;
-    }
-
-    const index = Math.floor(Math.random() * systems.length);
-    system = systems[index];
+  // if (player !== PLAYER) {
+  const systems = state.world.systems.filter(
+    (system) => system.ownerIndex === 0 && system.type === SystemTypes.INHABITED
+  );
+  if (systems.length === 0) {
+    throw 'No available homeworlds to join.';
   }
 
+  const index = Math.floor(Math.random() * systems.length);
+  system = systems[index];
+  // }
+
   system.ships = 1;
-  system.owner = player;
+  system.ownerIndex = player;
   system.homeworld = player;
   system.type = SystemTypes.INHABITED;
+
+  return system;
 }
 
 function createSystem(location: Coordinates): System {
+  const index = state.world.getNextNodeIndex();
   return {
-    id: state.world.getNextNodeIndex(),
+    id: `${index}`,
+    index,
     type: SystemTypes.UNINHABITED,
     location,
-    owner: null,
+    ownerIndex: null,
     isRevealed: false,
     isVisited: false,
     ships: 0,

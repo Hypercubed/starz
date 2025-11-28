@@ -4,10 +4,11 @@ import {
   PLAYER,
   START_PAUSED
 } from '../core/constants';
+import { revealSystem } from '../game/actions';
 import { Bot } from '../game/bots';
 import { assignSystem } from '../game/generate';
 import { state } from '../game/state';
-import { rerender } from '../render/render';
+import { centerOnHome, rerender } from '../render/render';
 import { showStartGame } from '../render/ui';
 import { GAME_STATE, GameManager } from './game-manager';
 
@@ -42,16 +43,23 @@ export class LocalGameManager extends GameManager {
     const player = bot?.player ?? PLAYER; // For now, human is always PLAYER
 
     if (bot) {
-      // For now, only assign system to bots, player 1 is already assigned
       assignSystem(player);
+    } else {
+      const s = assignSystem(PLAYER);
+      revealSystem(s);
+      centerOnHome();
+
+      state.lastSelectedSystem = s;
+      state.selectedSystems = [s];
     }
 
     state.players.push({
-      id: player,
+      id: `${player}`,
+      index: playerIndex,
       name: `${player}`,
       isHuman: player === PLAYER,
       bot,
-      stats: { player: player, systems: 0, ships: 0, homeworld: 0 }
+      stats: { playerIndex: playerIndex, systems: 0, ships: 0, homeworld: 0 }
     });
   }
 

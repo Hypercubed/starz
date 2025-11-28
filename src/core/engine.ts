@@ -9,13 +9,12 @@ import {
 } from './constants.ts';
 
 import { addMessage, resetState, state } from '../game/state.ts';
-import { assignSystem, generateMap } from '../game/generate.ts';
-import { centerOnHome, drawMap, rerender } from '../render/render.ts';
+import { generateMap } from '../game/generate.ts';
+import { drawMap, rerender } from '../render/render.ts';
 import {
   doQueuedMoves,
   playerLose,
   playerWin,
-  revealSystem
 } from '../game/actions.ts';
 import {
   updateInfoBox,
@@ -32,9 +31,9 @@ export function setupGame() {
 
   drawMap();
 
-  assignSystem(PLAYER);
-  revealSystem(state.world.systems[0]);
-  centerOnHome();
+  // assignSystem(PLAYER);
+  // revealSystem(state.world.systems[0]);
+  // centerOnHome();
   rerender();
 
   updateInfoBox();
@@ -45,12 +44,12 @@ export function setupGame() {
 export function updateStats() {
   state.players.forEach((player) => {
     const systems = state.world.systems.filter(
-      (system) => system.owner === player.id
+      (system) => system.ownerIndex === player.index
     );
-    const homeworld = systems.find((system) => system.homeworld === player.id);
+    const homeworld = systems.find((system) => system.homeworld === player.index);
     const ships = systems.reduce((sum, system) => sum + (system.ships ?? 0), 0);
     player.stats = {
-      player: player.id,
+      playerIndex: player.index,
       systems: systems.length,
       ships,
       homeworld: homeworld?.ships ?? 0
@@ -69,8 +68,8 @@ export function updateStats() {
 
 export function turnUpdate() {
   state.world.systems.forEach((system) => {
-    if (system.type === 'inhabited' && system.owner != null) {
-      if (system.owner > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
+    if (system.type === 'inhabited' && system.ownerIndex != null) {
+      if (system.ownerIndex > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
       }
     }
@@ -79,7 +78,7 @@ export function turnUpdate() {
 
 export function roundUpdate() {
   state.world.systems.forEach((system) => {
-    if (system.owner != null && system.owner > 0) {
+    if (system.ownerIndex != null && system.ownerIndex > 0) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;
     }
   });
@@ -91,11 +90,11 @@ export function checkVictory() {
 
   // TODO: Use stats from state
   const homeworlds = state.world.systems.filter(
-    (system) => system.homeworld && system.owner === system.homeworld
+    (system) => system.homeworld && system.ownerIndex === system.homeworld
   );
 
   if (homeworlds.length === 1) {
-    const winner = homeworlds[0].owner!;
+    const winner = homeworlds[0].ownerIndex!;
     addMessage(`Player ${winner} has conquered The Bubble!`);
     rerender();
 

@@ -5,6 +5,8 @@ import { setupKeboardControls } from '../input/controls';
 import { setupDialogs } from '../render/ui';
 import { trackEvent } from '../utils/logging';
 import { rerender } from '../render/render';
+import type { Move } from '../types';
+import { moveShips } from '../game/actions';
 
 export const GAME_STATE = {
   WAITING: 'WAITING',
@@ -45,6 +47,14 @@ export abstract class GameManager {
 
     state.selectedSystems = [];
     state.lastSelectedSystem = null;
+    rerender();
+  }
+
+  makeMove(move: Move) {
+    const from = state.world.systems[move.fromIndex];
+    const to = state.world.systems[move.toIndex];
+    moveShips(from, to, move.ships);
+    from.lastMove = move;
     rerender();
   }
 

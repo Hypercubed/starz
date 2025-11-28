@@ -10,6 +10,7 @@ import versor from 'versor';
 import {
   ENABLE_FOG_OF_WAR,
   HEIGHT,
+  PLAYER,
   PROJECTION,
   WIDTH
 } from '../core/constants.ts';
@@ -43,6 +44,7 @@ let selectedProjectionType = projections[PROJECTION];
 let geoProjection = selectedProjectionType().translate([0, 0]);
 let initialScale = geoProjection.scale();
 let geoPathGenerator = d3.geoPath().projection(geoProjection);
+let graticuleFeature: any;
 
 const mesh = geoVoronoi()
   .x((d: System) => d.location[0])
@@ -97,18 +99,6 @@ export function drawMap() {
 
   svg.call(createDrag() as any);
   svg.call(createZoom() as any);
-
-  function drawGraticule() {
-    const g = svg.append('g').attr('id', 'graticule');
-    const graticule = d3.geoGraticule();
-
-    g.append('path')
-      .datum(graticule)
-      .attr('class', 'graticule')
-      .attr('d', geoPathGenerator)
-      .style('fill', 'none')
-      .style('stroke', '#333');
-  }
 
   function createDrag() {
     return drag().on('drag.render', rerender).on('end.render', rerender);
@@ -202,6 +192,52 @@ export function drawMap() {
   }
 }
 
+function getFeature() {
+  const geoGraticuleGenerator = d3.geoGraticule();
+  const playersHome = getPlayersHomeworld();
+
+  if (playersHome) {
+    if (!graticuleFeature) {
+      const rot1 = d3.geoRotation([0, 90 + playersHome.location[1], 0]);
+      const rot2 = d3.geoRotation([playersHome.location[0], 0, 0]);
+
+      graticuleFeature = {
+        type: "FeatureCollection",
+        features: geoGraticuleGenerator.lines().map(line => ({
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: line.coordinates.map(coord => rot2(rot1(coord as [number, number])))
+          }
+        }))
+      };
+
+    }
+    return graticuleFeature;
+  }
+
+  return geoGraticuleGenerator();
+}
+
+function drawGraticule() {
+  const feature = getFeature();
+
+  const g = svg
+    .selectAll('g#graticule')
+    .data([feature])
+    .join((enter) => enter.append('g').attr('id', 'graticule'));
+
+  g.selectAll('path')
+    .data([feature])
+    .join((enter) => enter
+      .append('path')
+      .attr('class', 'graticule')
+      .style('fill', 'none')
+      .style('stroke', '#333')
+    )
+    .attr('d', geoPathGenerator);
+}
+
 export function scaleZoom(scale: number) {
   const newScale = geoProjection.scale() * scale;
   if (newScale < initialScale * MIN_ZOOM_SCALE) return;
@@ -210,11 +246,18 @@ export function scaleZoom(scale: number) {
   rerender();
 }
 
+function getPlayersHomeworld() {
+  return state.world.systems.filter(
+    (system) => system.homeworld === PLAYER
+  )[0];
+}
+
 export function centerOnHome() {
+  const location = getPlayersHomeworld().location;
   if (selectedProjectionType === projections['Orthographic']) {
-    geoProjection.rotate([0, 135]);
+    centerOnCoordinates([location[0], location[1] - 45]);
   } else {
-    centerOnCoordinates(state.world.systems[0].location);
+    centerOnCoordinates(location);
   }
   geoProjection.scale(initialScale);
 }
@@ -231,9 +274,8 @@ export function centerOnCoordinates(coords: Coordinates) {
 
 function rerenderUnthrottled() {
   if (!svg) return;
-  svg.selectAll('path.graticule').attr('d', geoPathGenerator as any);
-  svg.selectAll('circle#globe').attr('d', geoPathGenerator as any);
-  svg.selectAll('circle#globe').attr('r', geoProjection.scale());
+
+  drawGraticule();
 
   if (ENABLE_MESH) drawRegions();
   drawSystems();
@@ -317,10 +359,10 @@ function drawSystems() {
     });
 
   join
-    .attr('data-player', (d) => (d.owner != null ? d.owner.toString() : 'null'))
+    .attr('data-player', (d) => (d.ownerIndex != null ? d.ownerIndex.toString() : 'null'))
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
-    .classed('homeworld', (d) => !!d.homeworld && d.owner === d.homeworld)
+    .classed('homeworld', (d) => !!d.homeworld && d.ownerIndex === d.homeworld)
     .classed('visited', (d) => d.isVisited)
     .classed(
       'hidden',
@@ -329,7 +371,7 @@ function drawSystems() {
     .attr('transform', (d) => `translate(${geoProjection(d.location)})`);
 
   join.select('.system-icon').text((d) => {
-    if (d.homeworld && d.owner === d.homeworld) return '✶';
+    if (d.homeworld && d.ownerIndex === d.homeworld) return '✶';
     if (d.type === 'inhabited') return '✦';
     return '●'; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
@@ -381,7 +423,7 @@ function drawRegions() {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .attr('data-player', (d) => (d.owner ? d.owner.toString() : 'null'));
+    .attr('data-player', (d) => (d.ownerIndex ? d.ownerIndex.toString() : 'null'));
 }
 
 function drawLanes() {
@@ -422,8 +464,8 @@ function drawLanes() {
     .attr('data-player', (d) => {
       const from = state.world.systems[d.fromIndex];
       const to = state.world.systems[d.toIndex];
-      return from.owner && from.owner === to.owner
-        ? from.owner.toString()
+      return from.ownerIndex && from.ownerIndex === to.ownerIndex
+        ? from.ownerIndex.toString()
         : null;
     })
     .attr('d', (d) => {

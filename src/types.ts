@@ -8,10 +8,11 @@ export const SystemTypes = {
 export type SystemType = (typeof SystemTypes)[keyof typeof SystemTypes];
 
 export interface System {
-  id: number;
+  id: string;
+  index: number;
   type: SystemType;
   location: Coordinates;
-  owner: number | null;
+  ownerIndex: number | null;
   isVisited: boolean;
   isRevealed: boolean;
   ships: number;
@@ -21,19 +22,22 @@ export interface System {
 }
 
 export interface Move {
+  playerIndex: number;
   message?: string;
   ships: number;
+  fromIndex: number;
   toIndex: number;
 }
 
 export interface Lane {
   id: string;
+  index: number;
   fromIndex: number;
   toIndex: number;
 }
 
 export interface PlayerStats {
-  player: number;
+  playerIndex: number;
   systems: number;
   ships: number;
   homeworld: number;
@@ -52,7 +56,8 @@ export interface BotInterface {
 }
 
 export interface Player {
-  id: number;
+  id: string;
+  index: number;
   name: string;
   isHuman: boolean;
   bot?: BotInterface;

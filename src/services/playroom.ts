@@ -66,10 +66,11 @@ export class PlayroomGameManager extends GameManager {
 
     state.players.push({
       name: profile.name || `${player}`,
-      id: player,
+      id: `${player}`,
+      index: player,
       isHuman: player === PLAYER,
       bot,
-      stats: { player: player, systems: 0, ships: 0, homeworld: 0 }
+      stats: { playerIndex: player, systems: 0, ships: 0, homeworld: 0 }
     });
 
     const { hexString } = profile.color;

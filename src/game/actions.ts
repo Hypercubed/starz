@@ -8,28 +8,10 @@ import type { System } from '../types.ts';
 import { showEndGame } from '../render/ui.ts';
 import { GAME_STATE } from '../services/game-manager.ts';
 
-export function orderBalancedMove(from: System, to: System) {
-  if (!state.world.hasLane(from, to)) return;
-
-  const deltaShips =
-    to.owner === from.owner
-      ? Math.floor((from.ships - to.ships) / 2)
-      : Math.floor(from.ships / 2);
-
-  moveShips(from, to, deltaShips);
-}
-
-export function orderMassMove(from: System, to: System) {
-  if (!state.world.hasLane(from, to)) return;
-
-  const deltaShips = from.ships - 1;
-  moveShips(from, to, deltaShips);
-}
-
-function moveShips(from: System, to: System, ships: number) {
+export function moveShips(from: System, to: System, ships: number) {
   if (ships === 0) return;
   if (ships < 0) {
-    if (from.owner !== to.owner) return;
+    if (from.ownerIndex !== to.ownerIndex) return;
     const s = from;
     from = to;
     to = s;
@@ -37,7 +19,7 @@ function moveShips(from: System, to: System, ships: number) {
   }
   if (from.ships < ships) return;
 
-  if (to.owner === from.owner) {
+  if (to.ownerIndex === from.ownerIndex) {
     transferShips(from, to, ships);
   } else {
     attackSystem(from, to, ships);
@@ -45,7 +27,7 @@ function moveShips(from: System, to: System, ships: number) {
 }
 
 function attackSystem(from: System, to: System, attackingShips: number) {
-  const player = from.owner!;
+  const player = from.ownerIndex!;
   const defendingShips = to.ships ?? 0;
 
   if (attackingShips > defendingShips) {
@@ -60,7 +42,7 @@ function attackSystem(from: System, to: System, attackingShips: number) {
 }
 
 function takeSystem(player: number, system: System) {
-  system.owner = player;
+  system.ownerIndex = player;
   system.moveQueue = [];
   if (player === PLAYER) revealSystem(system);
 
@@ -78,8 +60,8 @@ function takeSystem(player: number, system: System) {
 function eliminatePlayer(winner: number, loser: number) {
   // Take over homeworld, other systems and 50% of ships
   state.world.systems.forEach((s) => {
-    if (s.owner === loser) {
-      s.owner = winner;
+    if (s.ownerIndex === loser) {
+      s.ownerIndex = winner;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
       s.homeworld = null; // No longer a homeworld
       s.moveQueue = [];
@@ -133,23 +115,25 @@ function transferShips(from: System, to: System, ships: number) {
   if (from.ships < ships) return; // Not enough ships to transfer
   from.ships -= ships;
   to.ships += ships;
-  if (to.owner === PLAYER) revealSystem(to);
+  if (to.ownerIndex === PLAYER) revealSystem(to);
 }
 
 export function queueMove(
   from: System,
   to: System,
   ships: number,
+  playerIndex: number,
   message?: string
 ) {
-  from.moveQueue.push({ ships, toIndex: to.id, message });
+  from.moveQueue.push({ ships, toIndex: to.index, fromIndex: from.index, playerIndex, message });
 }
 
 export function doQueuedMoves() {
   state.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      moveShips(system, state.world.systems[move.toIndex], move.ships);
+      const to = state.world.systems[move.toIndex];
+      moveShips(system, to, move.ships);
       system.lastMove = move;
     }
   });
