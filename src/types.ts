@@ -35,6 +35,7 @@ export interface Lane {
 }
 
 export interface PlayerStats {
+  playerId: string;
   systems: number;
   ships: number;
   homeworld: number;

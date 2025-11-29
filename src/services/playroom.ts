@@ -5,18 +5,20 @@ import {
   isHost,
   myPlayer,
   onPlayerJoin,
+  RPC,
   setState,
   type PlayerState
 } from 'playroomkit';
 
-import { addMessage, state } from '../game/state';
+import { addMessage, addPlayer, getPlayersHomeworld, state } from '../game/state';
 import { assignSystem } from '../game/generate';
 import { centerOnHome, rerender } from '../render/render';
 import { Bot } from '../game/bots';
 import { GameManager } from './game-manager';
 import { revealSystem } from '../game/actions';
-import type { Player } from '../types';
-import { Graph } from '../classes/graph';
+import type { Move, Player, PlayerStats, System } from '../types';
+import { Graph, type GraphJSON } from '../classes/graph';
+import { updateInfoBox, updateLeaderbox, updateMessageBox } from '../render/ui';
 
 class PlayroomBot extends _PlayroomBot {
   gameBot: Bot;
@@ -27,6 +29,22 @@ class PlayroomBot extends _PlayroomBot {
     this.gameBot = new Bot();
   }
 }
+
+const PLAYROOM_EVENTS = {
+  PLAYER_CONNECTED: 'PLAYER_CONNECTED',
+  GAME_STARTED: 'GAME_STARTED',
+  MOVE_MADE: 'MOVE_MADE',
+} as const;
+
+export type MoveMadeEventData = {
+  move: Move;
+  from: System;
+  to: System;
+};
+
+export type GameStartedEventData = {
+  world: GraphJSON;
+};
 
 export class PlayroomGameManager extends GameManager {
   constructor() {
@@ -49,6 +67,14 @@ export class PlayroomGameManager extends GameManager {
     super.startGame();
 
     onPlayerJoin((playerState) => this.playerJoin(playerState));
+
+    if (isHost()) {
+      const data = {
+        world: state.world.toJSON(),
+      } satisfies GameStartedEventData;
+
+      await RPC.call(PLAYROOM_EVENTS.GAME_STARTED, data, RPC.Mode.OTHERS);
+    }
   }
 
   runGameLoop() {
@@ -59,47 +85,52 @@ export class PlayroomGameManager extends GameManager {
   private syncState() {
     if (isHost()) {
       setState('tick', state.tick, false);
-      setState('world', state.world.toJSON(), false);
-      // setState("state", { ...state, world: undefined, players: undefined }, false);
-      // setState("players", state.players.map(p => ({ ...p, bot: undefined })), false);
+      setState('playerStats', state.players.map(p => p.stats), false);
     } else {
-      state.tick = getState('tick');
+      state.tick = getState('tick') as number;
+      const playerStats = getState('playerStats') as PlayerStats[];
+      if (playerStats) {
+        state.players.forEach((p) => {
+          const stats = playerStats.find((s) => s.playerId === p.id);
+          if (stats) {
+            p.stats = stats;
+          }
+        });
+      }
 
-      const world = getState('world');
-      state.world = world ? Graph.fromJSON(world) : state.world;
-
-      // const players = getState("players");
-      // state.players = players ?? state.players;
-
-      // const s = getState("state") as typeof state;
-      // Object.assign(state, { messages: s.messages });
       rerender();
+      updateInfoBox();
+      updateLeaderbox();
+      updateMessageBox();
     }
   }
 
   playerJoin(playerState: PlayerState) {
-    const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
     const profile = playerState.getProfile();
+    if (state.playerMap.has(playerState.id)) return;
+
+    const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
 
     const colorIndex = state.players.length + 1;
     const { hexString } = profile.color;
 
     const player = {
-      name: profile.name || `${playerState.id}`,
-      id: `${colorIndex}`,
+      name: profile.name || playerState.id,
+      id: playerState.id,
       bot,
-      stats: { systems: 0, ships: 0, homeworld: 0 },
+      stats: { playerId: playerState.id, systems: 0, ships: 0, homeworld: 0 },
       colorIndex,
       color: hexString
     } satisfies Player;
 
-    state.players.push(player);
+    addPlayer(player);
 
     if (bot) {
       assignSystem(player.id);
       bot.id = player.id;
     } else {
       const s = assignSystem(player.id);
+
       if (playerState.id === myPlayer().id) {
         state.thisPlayer = player.id;
         state.lastSelectedSystem = s;
@@ -109,6 +140,14 @@ export class PlayroomGameManager extends GameManager {
         centerOnHome();
         addMessage(`You are Player ${player.name}.`);
       }
+    }
+
+    if (isHost()) {
+      const data = {
+        world: state.world.toJSON(),
+      } satisfies GameStartedEventData;
+
+      RPC.call(PLAYROOM_EVENTS.GAME_STARTED, data, RPC.Mode.OTHERS); // TODO: remove
     }
 
     if (hexString) {
@@ -126,5 +165,38 @@ export class PlayroomGameManager extends GameManager {
     // playerState.onQuit(() => {
     //   // Handle player quitting.
     // });
+  }
+
+  makeMove(move: Move) {
+    super.makeMove(move);
+
+    const from = state.world.nodeMap.get(move.fromId)!;
+    const to = state.world.nodeMap.get(move.toId)!;
+
+    const data = { move, from, to } satisfies MoveMadeEventData;
+
+    RPC.call(PLAYROOM_EVENTS.MOVE_MADE, data, RPC.Mode.ALL).catch((error) => {
+      console.log(error);
+    });
+  }
+
+  registerEvents() {
+    super.registerEvents();
+
+    RPC.register(PLAYROOM_EVENTS.GAME_STARTED, async (data: GameStartedEventData) => {
+      state.world = Graph.fromJSON(data.world);
+
+      // const homeworld = getPlayersHomeworld()!;
+      // revealSystem(homeworld);
+      centerOnHome();
+    });
+
+    RPC.register(PLAYROOM_EVENTS.MOVE_MADE, async (data: MoveMadeEventData) => {
+      const from = state.world.nodeMap.get(data.move.fromId)!;
+      const to = state.world.nodeMap.get(data.move.toId)!;
+
+      Object.assign(from, data.from);
+      Object.assign(to, data.to);
+    });
   }
 }

@@ -74,7 +74,7 @@ export class Bot implements BotInterface {
 
     if (!personality) {
       const keys = Object.keys(PERSONALITIES);
-      personality = keys[index] as BotPersonalities;
+      personality = keys[index % keys.length] as BotPersonalities;
     }
 
     this.name = personality;

@@ -43,6 +43,7 @@ export function updateStats() {
     const homeworld = systems.find((system) => system.homeworld === player.id);
     const ships = systems.reduce((sum, system) => sum + (system.ships ?? 0), 0);
     player.stats = {
+      playerId: player.id,
       systems: systems.length,
       ships,
       homeworld: homeworld?.ships ?? 0

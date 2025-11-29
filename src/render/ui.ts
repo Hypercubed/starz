@@ -38,7 +38,9 @@ export function updateLeaderbox() {
     .selectAll('tr')
     .data(stats)
     .join('tr')
-    .attr('data-player', (d) => d.colorIndex)
+    .style('--owner-color', (d) => {
+      return state.playerMap.get(d.id)?.color ?? null;
+    })
     .attr('title', (d) => (d.bot ? d.bot.name : 'Human'));
 
   row

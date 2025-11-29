@@ -254,6 +254,8 @@ export function centerOnHome() {
   const home = getPlayersHomeworld();
   if (!home) return;
 
+  graticuleFeature = null;
+
   const location = home.location;
   if (selectedProjectionType === projections['Orthographic']) {
     centerOnCoordinates([location[0], location[1] - 45]);
@@ -341,10 +343,7 @@ function drawSystems() {
     });
 
   join
-    .attr(
-      'data-player',
-      (d) => state.playerMap.get(d.ownerId!)?.colorIndex ?? 'null'
-    )
+    .style('--owner-color', (d) => state.playerMap.get(d.ownerId!)?.color ?? null)
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
@@ -408,10 +407,7 @@ function drawRegions() {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .attr(
-      'data-player',
-      (d) => state.playerMap.get(d.ownerId!)?.colorIndex ?? 'null'
-    );
+    .style('--owner-color', (d) => state.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
 function drawLanes() {
@@ -449,10 +445,13 @@ function drawLanes() {
           onClickLane(ev, d);
         })
     )
-    .attr('data-player', (d) => {
+    .style('--owner-color', (d) => {
       const from = state.world.nodeMap.get(d.fromId)!;
+      if (!from.ownerId) return null;
       const to = state.world.nodeMap.get(d.toId)!;
-      return from.ownerId && from.ownerId === to.ownerId ? from.ownerId : null;
+      if (!to.ownerId) return null;
+      if (from.ownerId !== to.ownerId) return null;
+      return state.playerMap.get(from.ownerId)?.color ?? null;
     })
     .attr('d', (d) => {
       const from = state.world.nodeMap.get(d.fromId)!;

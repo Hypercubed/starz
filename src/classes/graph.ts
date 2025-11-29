@@ -5,6 +5,11 @@ import type { Coordinates, Lane, System } from '../types';
 
 const createId = init({ length: 5 });
 
+export type GraphJSON = {
+  systems: Array<System>;
+  lanes: Array<Lane>;
+};
+
 export class Graph {
   systems: Array<System> = [];
   lanes: Array<Lane> = [];
@@ -74,17 +79,29 @@ export class Graph {
   }
 
   // Serialization
-  toJSON() {
+  toJSON(): GraphJSON {
     return {
       systems: this.systems,
       lanes: this.lanes
     };
   }
 
-  static fromJSON(json: any) {
+  static fromJSON(json: GraphJSON) {
     const graph = new Graph();
-    graph.systems = json.systems;
-    graph.lanes = json.lanes;
+    graph.systems = json.systems ?? [];
+    graph.lanes = json.lanes ?? [];
+
+    graph.nodeMap = new Map<string, System>();
+    graph.laneMap = new Map<string, Lane>();
+
+    graph.systems.forEach((system) => {
+      graph.nodeMap.set(system.id, system);
+    });
+
+    graph.lanes.forEach((lane) => {
+      graph.laneMap.set(lane.id, lane);
+    });
+
     graph.buildNeighborMap();
     return graph;
   }
