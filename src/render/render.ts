@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import { debounce } from 'ts-debounce';
 // import { smoothPath } from "svg-smoother";
 
 // @ts-ignore
@@ -10,11 +11,10 @@ import versor from 'versor';
 import {
   ENABLE_FOG_OF_WAR,
   HEIGHT,
-  PLAYER,
   PROJECTION,
   WIDTH
 } from '../core/constants.ts';
-import { state } from '../game/state.ts';
+import { getPlayersHomeworld, state } from '../game/state.ts';
 import {
   SystemTypes,
   type Coordinates,
@@ -101,7 +101,9 @@ export function drawMap() {
   svg.call(createZoom() as any);
 
   function createDrag() {
-    return drag().on('drag.render', rerender).on('end.render', rerender);
+    return drag()
+      .on('drag.render', () => rerender())
+      .on('end.render', () => rerender());
   }
 
   function createZoom(): d3.ZoomBehavior<Element, unknown> {
@@ -202,16 +204,17 @@ function getFeature() {
       const rot2 = d3.geoRotation([playersHome.location[0], 0, 0]);
 
       graticuleFeature = {
-        type: "FeatureCollection",
-        features: geoGraticuleGenerator.lines().map(line => ({
-          type: "Feature",
+        type: 'FeatureCollection',
+        features: geoGraticuleGenerator.lines().map((line) => ({
+          type: 'Feature',
           geometry: {
-            type: "LineString",
-            coordinates: line.coordinates.map(coord => rot2(rot1(coord as [number, number])))
+            type: 'LineString',
+            coordinates: line.coordinates.map((coord) =>
+              rot2(rot1(coord as [number, number]))
+            )
           }
         }))
       };
-
     }
     return graticuleFeature;
   }
@@ -229,11 +232,12 @@ function drawGraticule() {
 
   g.selectAll('path')
     .data([feature])
-    .join((enter) => enter
-      .append('path')
-      .attr('class', 'graticule')
-      .style('fill', 'none')
-      .style('stroke', '#333')
+    .join((enter) =>
+      enter
+        .append('path')
+        .attr('class', 'graticule')
+        .style('fill', 'none')
+        .style('stroke', '#333')
     )
     .attr('d', geoPathGenerator);
 }
@@ -246,14 +250,11 @@ export function scaleZoom(scale: number) {
   rerender();
 }
 
-function getPlayersHomeworld() {
-  return state.world.systems.filter(
-    (system) => system.homeworld === PLAYER
-  )[0];
-}
-
 export function centerOnHome() {
-  const location = getPlayersHomeworld().location;
+  const home = getPlayersHomeworld();
+  if (!home) return;
+
+  const location = home.location;
   if (selectedProjectionType === projections['Orthographic']) {
     centerOnCoordinates([location[0], location[1] - 45]);
   } else {
@@ -282,11 +283,10 @@ function rerenderUnthrottled() {
   drawLanes();
 }
 
-export const rerender = throttle(rerenderUnthrottled, 16);
+export const rerender = debounce(rerenderUnthrottled, 16);
 
 function drawSystems() {
   const currentScale = geoProjection.scale();
-  // console.log("Current scale:", currentScale / initialScale);
   const reducedSize = currentScale / initialScale < 1;
 
   let visibleSystems = state.world.systems;
@@ -324,24 +324,6 @@ function drawSystems() {
         .attr('cy', 0)
         .attr('r', SYSTEM_SIZE / 2);
 
-      // group
-      //   .append("circle")
-      //   .attr("class", "system-marker")
-      //   .attr("r", 4)
-      //   .attr("fill", "white")
-      //   .attr("stroke", "white")
-      //   .attr("stroke-width", 1);
-
-      // group.append('path')
-      //   .attr('class', 'system-region')
-      //   // .attr('r', 40)
-      //   .attr('fill', 'var(--owner-color, gray)')
-      //   .attr('fill-opacity', 0.3)
-      //   .attr('stroke', 'none')
-      //   // .attr('cx', 0)
-      //   // .attr('cy', 0)
-      //   ;
-
       group
         .append('text')
         .attr('class', 'ship-count')
@@ -359,10 +341,13 @@ function drawSystems() {
     });
 
   join
-    .attr('data-player', (d) => (d.ownerIndex != null ? d.ownerIndex.toString() : 'null'))
+    .attr(
+      'data-player',
+      (d) => state.playerMap.get(d.ownerId!)?.colorIndex ?? 'null'
+    )
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
-    .classed('homeworld', (d) => !!d.homeworld && d.ownerIndex === d.homeworld)
+    .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
     .classed('visited', (d) => d.isVisited)
     .classed(
       'hidden',
@@ -371,7 +356,7 @@ function drawSystems() {
     .attr('transform', (d) => `translate(${geoProjection(d.location)})`);
 
   join.select('.system-icon').text((d) => {
-    if (d.homeworld && d.ownerIndex === d.homeworld) return '✶';
+    if (d.homeworld && d.ownerId === d.homeworld) return '✶';
     if (d.type === 'inhabited') return '✦';
     return '●'; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
@@ -423,7 +408,10 @@ function drawRegions() {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .attr('data-player', (d) => (d.ownerIndex ? d.ownerIndex.toString() : 'null'));
+    .attr(
+      'data-player',
+      (d) => state.playerMap.get(d.ownerId!)?.colorIndex ?? 'null'
+    );
 }
 
 function drawLanes() {
@@ -432,8 +420,8 @@ function drawLanes() {
   if (ENABLE_FOG_OF_WAR) {
     visibleLanes = visibleLanes.filter(
       (lane) =>
-        state.world.systems[lane.fromIndex].isRevealed &&
-        state.world.systems[lane.toIndex].isRevealed
+        state.world.nodeMap.get(lane.fromId)?.isRevealed &&
+        state.world.nodeMap.get(lane.toId)?.isRevealed
     );
   }
 
@@ -462,36 +450,16 @@ function drawLanes() {
         })
     )
     .attr('data-player', (d) => {
-      const from = state.world.systems[d.fromIndex];
-      const to = state.world.systems[d.toIndex];
-      return from.ownerIndex && from.ownerIndex === to.ownerIndex
-        ? from.ownerIndex.toString()
-        : null;
+      const from = state.world.nodeMap.get(d.fromId)!;
+      const to = state.world.nodeMap.get(d.toId)!;
+      return from.ownerId && from.ownerId === to.ownerId ? from.ownerId : null;
     })
     .attr('d', (d) => {
-      const from = state.world.systems[d.fromIndex];
-      const to = state.world.systems[d.toIndex];
+      const from = state.world.nodeMap.get(d.fromId)!;
+      const to = state.world.nodeMap.get(d.toId)!;
       return geoPathGenerator({
         type: 'LineString',
         coordinates: [from.location, to.location]
       });
     });
-}
-
-function throttle<T extends unknown[]>(
-  callback: (...args: T) => void,
-  delay: number
-) {
-  let isWaiting = false;
-
-  return (...args: T) => {
-    if (isWaiting) return;
-
-    callback(...args);
-    isWaiting = true;
-
-    setTimeout(() => {
-      isWaiting = false;
-    }, delay);
-  };
 }

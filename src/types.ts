@@ -9,35 +9,32 @@ export type SystemType = (typeof SystemTypes)[keyof typeof SystemTypes];
 
 export interface System {
   id: string;
-  index: number;
   type: SystemType;
   location: Coordinates;
-  ownerIndex: number | null;
+  ownerId: string | null;
   isVisited: boolean;
   isRevealed: boolean;
   ships: number;
-  homeworld: number | null;
+  homeworld: string | null;
   moveQueue: Move[];
   lastMove: Move | null;
 }
 
 export interface Move {
-  playerIndex: number;
+  playerId: string;
   message?: string;
   ships: number;
-  fromIndex: number;
-  toIndex: number;
+  fromId: string;
+  toId: string;
 }
 
 export interface Lane {
   id: string;
-  index: number;
-  fromIndex: number;
-  toIndex: number;
+  fromId: string;
+  toId: string;
 }
 
 export interface PlayerStats {
-  playerIndex: number;
   systems: number;
   ships: number;
   homeworld: number;
@@ -57,9 +54,9 @@ export interface BotInterface {
 
 export interface Player {
   id: string;
-  index: number;
   name: string;
-  isHuman: boolean;
   bot?: BotInterface;
   stats: PlayerStats;
+  colorIndex: number; // TODO: Remove this
+  color: string;
 }

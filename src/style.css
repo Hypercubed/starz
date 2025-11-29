@@ -12,19 +12,6 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --player-1: #c0392b;
-  /* Red */
-  --player-2: #f1c40f;
-  /* Yellow */
-  --player-3: #9b59b6;
-  /* Purple */
-  --player-4: #00b386;
-  /* Green */
-  --player-5: #cc6600;
-  /* Orange */
-  --player-6: #0a4c8c;
-  /* Blue */
-
   --unoccupied: #808080;
   --inhabited: #808080;
 }
@@ -257,16 +244,45 @@ svg {
   --owner-color: var(--inhabited);
 }
 
-*[data-player="1"] { --owner-color: var(--player-1); }
-*[data-player="2"] { --owner-color: var(--player-2); }
-*[data-player="3"] { --owner-color: var(--player-3); }
-*[data-player="4"] { --owner-color: var(--player-4); }
-*[data-player="5"] { --owner-color: var(--player-5); }
-*[data-player="6"] { --owner-color: var(--player-6); }
-*[data-player="7"] { --owner-color: var(--player-7); }
-*[data-player="8"] { --owner-color: var(--player-8); }
-*[data-player="9"] { --owner-color: var(--player-9); }
-*[data-player="10"] { --owner-color: var(--player-10); }
+*[data-player="1"] {
+  --owner-color: var(--player-1);
+}
+
+*[data-player="2"] {
+  --owner-color: var(--player-2);
+}
+
+*[data-player="3"] {
+  --owner-color: var(--player-3);
+}
+
+*[data-player="4"] {
+  --owner-color: var(--player-4);
+}
+
+*[data-player="5"] {
+  --owner-color: var(--player-5);
+}
+
+*[data-player="6"] {
+  --owner-color: var(--player-6);
+}
+
+*[data-player="7"] {
+  --owner-color: var(--player-7);
+}
+
+*[data-player="8"] {
+  --owner-color: var(--player-8);
+}
+
+*[data-player="9"] {
+  --owner-color: var(--player-9);
+}
+
+*[data-player="10"] {
+  --owner-color: var(--player-10);
+}
 
 .hidden {
   display: none;

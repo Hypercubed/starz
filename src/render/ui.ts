@@ -38,7 +38,7 @@ export function updateLeaderbox() {
     .selectAll('tr')
     .data(stats)
     .join('tr')
-    .attr('data-player', (d) => d.id)
+    .attr('data-player', (d) => d.colorIndex)
     .attr('title', (d) => (d.bot ? d.bot.name : 'Human'));
 
   row

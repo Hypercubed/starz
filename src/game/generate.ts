@@ -85,33 +85,29 @@ export function generateMap() {
 
     // TODO: Enforce minimum distance between inhabited systems
 
-    system.ownerIndex = 0;
+    system.ownerId = null;
     system.type = SystemTypes.INHABITED;
     system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
-    system.homeworld = 0;
+    system.homeworld = null;
 
     occupied.push(system);
     unoccupied.splice(randomIndex, 1);
   }
 }
 
-export function assignSystem(player: number) {
-  let system = state.world.systems[0]; // For now, player 0 is always system 1
-  // if (player !== PLAYER) {
+export function assignSystem(playerId: string) {
   const systems = state.world.systems.filter(
-    (system) => system.ownerIndex === 0 && system.type === SystemTypes.INHABITED
+    (system) => !system.ownerId && system.type === SystemTypes.INHABITED
   );
   if (systems.length === 0) {
     throw 'No available homeworlds to join.';
   }
 
   const index = Math.floor(Math.random() * systems.length);
-  system = systems[index];
-  // }
+  const system = systems[index];
 
   system.ships = 1;
-  system.ownerIndex = player;
-  system.homeworld = player;
+  system.ownerId = system.homeworld = playerId;
   system.type = SystemTypes.INHABITED;
 
   return system;
@@ -121,10 +117,9 @@ function createSystem(location: Coordinates): System {
   const index = state.world.getNextNodeIndex();
   return {
     id: `${index}`,
-    index,
     type: SystemTypes.UNINHABITED,
     location,
-    ownerIndex: null,
+    ownerId: null,
     isRevealed: false,
     isVisited: false,
     ships: 0,

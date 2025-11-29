@@ -1,6 +1,6 @@
 import { checkVictory, gameTick, setupGame } from '../core/engine';
 import { addMessage, state } from '../game/state';
-import { PLAYER, TICK_DURATION_MS } from '../core/constants';
+import { TICK_DURATION_MS } from '../core/constants';
 import { setupKeboardControls } from '../input/controls';
 import { setupDialogs } from '../render/ui';
 import { trackEvent } from '../utils/logging';
@@ -35,7 +35,7 @@ export abstract class GameManager {
 
   startGame() {
     trackEvent('starz_gamesStarted');
-    addMessage(`Game started. You are Player ${PLAYER}.`);
+    addMessage(`Game started.`);
 
     this.gameState = GAME_STATE.PLAYING;
     this.runGameLoop();
@@ -51,11 +51,10 @@ export abstract class GameManager {
   }
 
   makeMove(move: Move) {
-    const from = state.world.systems[move.fromIndex];
-    const to = state.world.systems[move.toIndex];
+    const from = state.world.systems.find((s) => s.id === move.fromId)!;
+    const to = state.world.systems.find((s) => s.id === move.toId)!;
     moveShips(from, to, move.ships);
     from.lastMove = move;
-    rerender();
   }
 
   protected registerEvents() {

@@ -1,4 +1,3 @@
-import { PLAYER } from '../core/constants.ts';
 import { removeSystemSelect } from '../input/controls.ts';
 
 import { trackEvent } from '../utils/logging.ts';
@@ -11,7 +10,7 @@ import { GAME_STATE } from '../services/game-manager.ts';
 export function moveShips(from: System, to: System, ships: number) {
   if (ships === 0) return;
   if (ships < 0) {
-    if (from.ownerIndex !== to.ownerIndex) return;
+    if (from.ownerId !== to.ownerId) return;
     const s = from;
     from = to;
     to = s;
@@ -19,7 +18,7 @@ export function moveShips(from: System, to: System, ships: number) {
   }
   if (from.ships < ships) return;
 
-  if (to.ownerIndex === from.ownerIndex) {
+  if (to.ownerId === from.ownerId) {
     transferShips(from, to, ships);
   } else {
     attackSystem(from, to, ships);
@@ -27,7 +26,7 @@ export function moveShips(from: System, to: System, ships: number) {
 }
 
 function attackSystem(from: System, to: System, attackingShips: number) {
-  const player = from.ownerIndex!;
+  const player = from.ownerId!;
   const defendingShips = to.ships ?? 0;
 
   if (attackingShips > defendingShips) {
@@ -41,35 +40,38 @@ function attackSystem(from: System, to: System, attackingShips: number) {
   }
 }
 
-function takeSystem(player: number, system: System) {
-  system.ownerIndex = player;
+function takeSystem(playerId: string, system: System) {
+  system.ownerId = playerId;
   system.moveQueue = [];
-  if (player === PLAYER) revealSystem(system);
+  if (playerId === state.thisPlayer) revealSystem(system);
 
-  if (system.homeworld && system.homeworld !== player) {
-    const loser = system.homeworld;
+  if (system.homeworld && system.homeworld !== playerId) {
+    const loserId = system.homeworld;
+    const loser = state.playerMap.get(loserId)!;
+    const winner = state.playerMap.get(playerId)!;
+
     addMessage(
-      `Player ${player} has taken over the homeworld of Player ${loser}!`
+      `Player ${winner.name} has taken over the homeworld of Player ${loser.name}!`
     );
     system.homeworld = null; // No longer a homeworld
-    eliminatePlayer(player, loser);
+    eliminatePlayer(playerId, loserId);
     removeSystemSelect(system);
   }
 }
 
-function eliminatePlayer(winner: number, loser: number) {
+function eliminatePlayer(winnerId: string, loserId: string) {
   // Take over homeworld, other systems and 50% of ships
   state.world.systems.forEach((s) => {
-    if (s.ownerIndex === loser) {
-      s.ownerIndex = winner;
+    if (s.ownerId === loserId) {
+      s.ownerId = winnerId;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
       s.homeworld = null; // No longer a homeworld
       s.moveQueue = [];
-      if (winner === PLAYER) revealSystem(s);
+      if (winnerId === state.thisPlayer) revealSystem(s);
     }
   });
 
-  if (loser === PLAYER) playerLose(winner);
+  if (loserId === state.thisPlayer) playerLose(winnerId);
 }
 
 export function playerWin() {
@@ -85,7 +87,7 @@ export function playerWin() {
   showEndGame(`You have conquered The Bubble!`);
 }
 
-export function playerLose(winner: number) {
+export function playerLose(winner: string) {
   window.gameManager.stopGame();
   window.gameManager.gameState = GAME_STATE.FINISHED;
 
@@ -115,24 +117,30 @@ function transferShips(from: System, to: System, ships: number) {
   if (from.ships < ships) return; // Not enough ships to transfer
   from.ships -= ships;
   to.ships += ships;
-  if (to.ownerIndex === PLAYER) revealSystem(to);
+  if (to.ownerId === state.thisPlayer) revealSystem(to);
 }
 
 export function queueMove(
   from: System,
   to: System,
   ships: number,
-  playerIndex: number,
+  playerId: string,
   message?: string
 ) {
-  from.moveQueue.push({ ships, toIndex: to.index, fromIndex: from.index, playerIndex, message });
+  from.moveQueue.push({
+    ships,
+    toId: to.id,
+    fromId: from.id,
+    playerId,
+    message
+  });
 }
 
 export function doQueuedMoves() {
   state.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      const to = state.world.systems[move.toIndex];
+      const to = state.world.systems.find((s) => s.id === move.toId)!;
       moveShips(system, to, move.ships);
       system.lastMove = move;
     }

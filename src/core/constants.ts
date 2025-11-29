@@ -1,5 +1,3 @@
-export const PLAYER = 1;
-
 export const WIDTH = 750;
 export const HEIGHT = 750;
 

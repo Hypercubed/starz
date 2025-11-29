@@ -1,29 +1,37 @@
 import { geoDistance } from 'd3';
+import { init } from '@paralleldrive/cuid2';
+
 import type { Coordinates, Lane, System } from '../types';
+
+const createId = init({ length: 5 });
 
 export class Graph {
   systems: Array<System> = [];
   lanes: Array<Lane> = [];
-  neighborMap = new Map<number, Array<number>>();
 
-  addSystem(node: System): number {
+  nodeMap = new Map<string, System>();
+  laneMap = new Map<string, Lane>();
+
+  neighborMap = new Map<string, Array<string>>();
+
+  addSystem(node: System): void {
     this.systems.push(node);
-    return this.systems.length - 1;
+    this.nodeMap.set(node.id, node);
   }
 
-  addLane(from: System, to: System): number {
-    const id = [from.id, to.id].sort((a, b) => a - b).join('-');
+  addLane(from: System, to: System): void {
+    const id = [from.id, to.id].sort((a, b) => a.localeCompare(b)).join('-');
     const existingLaneIndex = this.lanes.findIndex((lane) => lane.id === id);
-    if (existingLaneIndex !== -1) return existingLaneIndex;
+    if (existingLaneIndex !== -1) return;
 
-    const newLane: Lane = {
+    const newLane = {
       id,
-      fromIndex: from.id,
-      toIndex: to.id
-    };
+      fromId: from.id,
+      toId: to.id
+    } satisfies Lane;
 
     this.lanes.push(newLane);
-    return this.lanes.length - 1;
+    this.laneMap.set(id, newLane);
   }
 
   getNextNodeIndex(): number {
@@ -31,17 +39,17 @@ export class Graph {
   }
 
   buildNeighborMap() {
-    const map = new Map<number, Array<number>>();
+    const map = new Map<string, Array<string>>();
     this.lanes.forEach((lane) => {
-      if (!map.has(lane.fromIndex)) {
-        map.set(lane.fromIndex, []);
+      if (!map.has(lane.fromId)) {
+        map.set(lane.fromId, []);
       }
-      map.get(lane.fromIndex)?.push(lane.toIndex);
+      map.get(lane.fromId)?.push(lane.toId);
 
-      if (!map.has(lane.toIndex)) {
-        map.set(lane.toIndex, []);
+      if (!map.has(lane.toId)) {
+        map.set(lane.toId, []);
       }
-      map.get(lane.toIndex)?.push(lane.fromIndex);
+      map.get(lane.toId)?.push(lane.fromId);
     });
     this.neighborMap = map;
   }
@@ -57,7 +65,7 @@ export class Graph {
 
     const neighbors = this.neighborMap.get(system.id);
     if (!neighbors) return [];
-    return neighbors.map((index) => this.systems[index]);
+    return neighbors.map((id) => this.nodeMap.get(id)!);
   }
 
   // Check if there's a lane between two systems
@@ -79,6 +87,10 @@ export class Graph {
     graph.lanes = json.lanes;
     graph.buildNeighborMap();
     return graph;
+  }
+
+  static cuid() {
+    return createId();
   }
 }
 

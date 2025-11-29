@@ -1,7 +1,5 @@
 import {
   MAX_SHIPS_PER_SYSTEM,
-  NumBots,
-  PLAYER,
   SHIPS_PER_ROUND,
   SHIPS_PER_TURN,
   TICKS_PER_ROUND,
@@ -11,11 +9,7 @@ import {
 import { addMessage, resetState, state } from '../game/state.ts';
 import { generateMap } from '../game/generate.ts';
 import { drawMap, rerender } from '../render/render.ts';
-import {
-  doQueuedMoves,
-  playerLose,
-  playerWin,
-} from '../game/actions.ts';
+import { doQueuedMoves, playerLose, playerWin } from '../game/actions.ts';
 import {
   updateInfoBox,
   updateLeaderbox,
@@ -44,12 +38,11 @@ export function setupGame() {
 export function updateStats() {
   state.players.forEach((player) => {
     const systems = state.world.systems.filter(
-      (system) => system.ownerIndex === player.index
+      (system) => system.ownerId === player.id
     );
-    const homeworld = systems.find((system) => system.homeworld === player.index);
+    const homeworld = systems.find((system) => system.homeworld === player.id);
     const ships = systems.reduce((sum, system) => sum + (system.ships ?? 0), 0);
     player.stats = {
-      playerIndex: player.index,
       systems: systems.length,
       ships,
       homeworld: homeworld?.ships ?? 0
@@ -68,8 +61,8 @@ export function updateStats() {
 
 export function turnUpdate() {
   state.world.systems.forEach((system) => {
-    if (system.type === 'inhabited' && system.ownerIndex != null) {
-      if (system.ownerIndex > 0 || system.ships < MAX_SHIPS_PER_SYSTEM) {
+    if (system.type === 'inhabited' && system.ownerId != null) {
+      if (system.ownerId || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
       }
     }
@@ -78,32 +71,34 @@ export function turnUpdate() {
 
 export function roundUpdate() {
   state.world.systems.forEach((system) => {
-    if (system.ownerIndex != null && system.ownerIndex > 0) {
+    if (system.ownerId != null) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;
     }
   });
 }
 
 export function checkVictory() {
-  if ((NumBots as number) === 0) return;
+  if (state.players.length === 1) return;
   if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   // TODO: Use stats from state
   const homeworlds = state.world.systems.filter(
-    (system) => system.homeworld && system.ownerIndex === system.homeworld
+    (system) => system.homeworld && system.ownerId === system.homeworld
   );
 
   if (homeworlds.length === 1) {
-    const winner = homeworlds[0].ownerIndex!;
-    addMessage(`Player ${winner} has conquered The Bubble!`);
+    const winnerId = homeworlds[0].ownerId!;
+    const winner = state.playerMap.get(winnerId)!;
+
+    addMessage(`Player ${winner.name} has conquered The Bubble!`);
     rerender();
 
     window.gameManager.stopGame();
 
-    if (winner === PLAYER) {
+    if (winnerId === state.thisPlayer) {
       playerWin();
     } else {
-      playerLose(winner);
+      playerLose(winnerId);
     }
   }
 }

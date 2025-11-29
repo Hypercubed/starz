@@ -10,14 +10,8 @@ import {
   scaleZoom
 } from '../render/render.ts';
 import { state } from '../game/state.ts';
-import {
-  revealSystem
-} from '../game/actions.ts';
-import {
-  ENABLE_BOT_CONTROL,
-  ENABLE_CHEATS,
-  PLAYER
-} from '../core/constants.ts';
+import { revealSystem } from '../game/actions.ts';
+import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../core/constants.ts';
 import { showEndGame, showHelp } from '../render/ui.ts';
 import { debugLog } from '../utils/logging.ts';
 import type { Lane, Move, System } from '../types.ts';
@@ -39,7 +33,7 @@ export function setupKeboardControls() {
       switch (event.code) {
         case 'KeyC':
           state.world.systems.forEach((system) => {
-            if (system.ownerIndex === PLAYER) {
+            if (system.ownerId === state.thisPlayer) {
               system.ships *= 2;
             }
           });
@@ -145,6 +139,7 @@ export function setupKeboardControls() {
 function clearSelection() {
   state.selectedSystems = [];
   state.lastSelectedSystem = null;
+  rerender();
 }
 
 function toggleSingleSystemSelect(system: System) {
@@ -203,7 +198,7 @@ function selectPath(system: System) {
       return;
     }
     for (const neighbor of state.world.getAdjacentSystems(current)) {
-      if (!visited.has(neighbor) && neighbor.ownerIndex === PLAYER) {
+      if (!visited.has(neighbor) && neighbor.ownerId === state.thisPlayer) {
         visited.add(neighbor);
         queue.push([...path, neighbor]);
       }
@@ -220,12 +215,16 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       break;
     case 2: {
       // Right click
-      let from = state.world.systems[lane.fromIndex];
-      let to = state.world.systems[lane.toIndex];
+      let from = state.world.nodeMap.get(lane.fromId)!;
+      let to = state.world.nodeMap.get(lane.toId)!;
 
-      if (from.ownerIndex !== PLAYER && to.ownerIndex !== PLAYER && !ENABLE_BOT_CONTROL)
+      if (
+        from.ownerId !== state.thisPlayer &&
+        to.ownerId !== state.thisPlayer &&
+        !ENABLE_BOT_CONTROL
+      )
         return; // Can't move if neither side is owned by player
-      if (from.ownerIndex !== PLAYER) {
+      if (from.ownerId !== state.thisPlayer) {
         // Make sure 'from' is owned by player
         const s = from;
         from = to;
@@ -240,13 +239,14 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
         }
 
         addSystemSelect(from);
-        if (to.ownerIndex === PLAYER) {
+        if (to.ownerId === state.thisPlayer) {
           addSystemSelect(to);
         }
       }
       break;
     }
   }
+
   rerender();
 }
 
@@ -264,7 +264,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
   switch (event.button) {
     case 0: // Left click
-      if (system.ownerIndex !== PLAYER && !ENABLE_BOT_CONTROL) return;
+      if (system.ownerId !== state.thisPlayer && !ENABLE_BOT_CONTROL) return;
 
       if (event.ctrlKey || event.metaKey) {
         toggleSystemSelect(system);
@@ -278,7 +278,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
     case 2: // Right click
       state.selectedSystems.forEach((selectedSystem) => {
         orderMassMove(selectedSystem, system);
-        if (system.ownerIndex !== PLAYER && !ENABLE_BOT_CONTROL) return;
+        if (system.ownerId !== state.thisPlayer && !ENABLE_BOT_CONTROL) return;
 
         if (!event.altKey) {
           if (!event.ctrlKey && !event.shiftKey) {
@@ -297,16 +297,16 @@ export function orderBalancedMove(from: System, to: System) {
   if (!state.world.hasLane(from, to)) return;
 
   const deltaShips =
-    to.ownerIndex === from.ownerIndex
+    to.ownerId === from.ownerId
       ? Math.floor((from.ships - to.ships) / 2)
       : Math.floor(from.ships / 2);
 
   const move = {
     message: `Move ${deltaShips} ships from ${from.id} to ${to.id}`,
     ships: deltaShips,
-    toIndex: to.index,
-    fromIndex: from.index,
-    playerIndex: PLAYER
+    toId: to.id,
+    fromId: from.id,
+    playerId: state.thisPlayer!
   } satisfies Move;
 
   window.gameManager.makeMove(move);
@@ -320,9 +320,9 @@ export function orderMassMove(from: System, to: System) {
   const move = {
     message: `Move ${deltaShips} ships from ${from.id} to ${to.id}`,
     ships: deltaShips,
-    toIndex: to.index,
-    fromIndex: from.index,
-    playerIndex: PLAYER
+    toId: to.id,
+    fromId: from.id,
+    playerId: state.thisPlayer!
   } satisfies Move;
 
   window.gameManager.makeMove(move);
