@@ -120,8 +120,6 @@ function createSystem(location: Coordinates): System {
     type: SystemTypes.UNINHABITED,
     location,
     ownerId: null,
-    isRevealed: false,
-    isVisited: false,
     ships: 0,
     homeworld: null,
     moveQueue: [],

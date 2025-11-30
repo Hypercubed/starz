@@ -1,5 +1,4 @@
-import { queueMove } from './actions.ts';
-import { state } from './state.ts';
+import { queueMove, state } from './state.ts';
 import { type BotInterface, type System } from '../types.ts';
 
 interface BotMove {
@@ -62,9 +61,9 @@ export class Bot implements BotInterface {
   name: string;
   personality: BotPersonality;
   botSystems!: System[];
-  threatLevels!: Map<number, number>;
-  frontline!: Set<number>;
-  backline!: Set<number>;
+  threatLevels = new Map<string, number>();
+  frontline = new Set<string>();
+  backline = new Set<string>();
 
   constructor(botParams: BotOptions = {}) {
     const index = botId++;
@@ -79,9 +78,6 @@ export class Bot implements BotInterface {
 
     this.name = personality;
     this.personality = PERSONALITIES[personality];
-    this.threatLevels = new Map();
-    this.frontline = new Set();
-    this.backline = new Set();
   }
 
   decideAction() {
@@ -133,13 +129,13 @@ export class Bot implements BotInterface {
         (sum, enemy) => sum + enemy.ships,
         0
       );
-      this.threatLevels.set(system.index, threatLevel);
+      this.threatLevels.set(system.id, threatLevel);
 
       // Classification
       if (enemyNeighbors.length > 0 || neutralNeighbors.length > 0) {
-        this.frontline.add(system.index);
+        this.frontline.add(system.id);
       } else {
-        this.backline.add(system.index);
+        this.backline.add(system.id);
       }
     });
   }
@@ -149,7 +145,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return [];
 
       const moves: BotMove[] = [];
-      const fromThreatLevel = this.threatLevels.get(from.index) ?? 0;
+      const fromThreatLevel = this.threatLevels.get(from.id) ?? 0;
 
       // 1. Emergency Defense (Under Attack)
       if (fromThreatLevel > 0) {
@@ -165,13 +161,13 @@ export class Bot implements BotInterface {
               .filter((s) => s.ownerId === this.id)
               .sort(
                 (a, b) =>
-                  (this.threatLevels.get(a.index) || 0) -
-                  (this.threatLevels.get(b.index) || 0)
+                  (this.threatLevels.get(a.id) || 0) -
+                  (this.threatLevels.get(b.id) || 0)
               )[0];
 
             if (bestRetreat) {
               moves.push({
-                message: `Retreating from ${from.index}`,
+                message: `Retreating from ${from.id}`,
                 from,
                 to: bestRetreat,
                 units: from.ships - 1,
@@ -207,7 +203,7 @@ export class Bot implements BotInterface {
   }
 
   private getCoordinatedAttackMoves(): BotMove[][] {
-    const targets = new Map<number, { target: System; attackers: System[] }>();
+    const targets = new Map<string, { target: System; attackers: System[] }>();
 
     // Identify potential targets
     this.botSystems.forEach((from) => {
@@ -224,14 +220,14 @@ export class Bot implements BotInterface {
           const otherEnemies = state.world
             .getAdjacentSystems(from)
             .filter(
-              (s) => s.ownerId && s.ownerId !== this.id && s.index !== to.index
+              (s) => s.ownerId && s.ownerId !== this.id && s.id !== to.id
             );
           if (otherEnemies.length > 0) return;
 
-          if (!targets.has(to.index)) {
-            targets.set(to.index, { target: to, attackers: [] });
+          if (!targets.has(to.id)) {
+            targets.set(to.id, { target: to, attackers: [] });
           }
-          targets.get(to.index)!.attackers.push(from);
+          targets.get(to.id)!.attackers.push(from);
         }
       });
     });
@@ -246,7 +242,7 @@ export class Bot implements BotInterface {
       const isolationBonus = targetAllies === 0 ? 1.5 : 1.0;
 
       const totalAttackPower = attackers.reduce((sum, s) => {
-        const threat = this.threatLevels.get(s.index) || 0;
+        const threat = this.threatLevels.get(s.id) || 0;
         const disposable = Math.max(0, s.ships - threat * 1.1);
         return (
           sum + Math.floor(disposable * (1 - this.personality.defensiveness))
@@ -261,7 +257,7 @@ export class Bot implements BotInterface {
         attackers.forEach((from) => {
           if (from.moveQueue.length > 0) return;
 
-          const threat = this.threatLevels.get(from.index) || 0;
+          const threat = this.threatLevels.get(from.id) || 0;
           const disposable = Math.max(0, from.ships - threat * 1.1);
           const idealUnits = Math.floor(
             disposable * (1 - this.personality.defensiveness)
@@ -343,14 +339,14 @@ export class Bot implements BotInterface {
       if (from.ships < 2) return [];
 
       // If we are backline, push to frontline
-      if (this.backline.has(from.index)) {
+      if (this.backline.has(from.id)) {
         // Find path to nearest frontline? Too expensive.
         // Just push to any neighbor that is closer to frontline or IS frontline.
         // Simple heuristic: Push to neighbor with FEWEST ships? No, that balances.
         // Push to neighbor that is Frontline.
         const frontlineNeighbors = state.world
           .getAdjacentSystems(from)
-          .filter((s) => this.frontline.has(s.index) && s.ownerId === this.id);
+          .filter((s) => this.frontline.has(s.id) && s.ownerId === this.id);
 
         if (frontlineNeighbors.length > 0) {
           // Push to the one with most need (highest threat or lowest ships?)
@@ -390,18 +386,18 @@ export class Bot implements BotInterface {
       }
 
       // If we are frontline, maybe shift to a threatened neighbor?
-      if (this.frontline.has(from.index)) {
+      if (this.frontline.has(from.id)) {
         const threatenedNeighbors = state.world
           .getAdjacentSystems(from)
           .filter(
             (s) =>
               s.ownerId === this.id &&
-              (this.threatLevels.get(s.index) || 0) > s.ships
+              (this.threatLevels.get(s.id) || 0) > s.ships
           );
 
         if (
           threatenedNeighbors.length > 0 &&
-          (this.threatLevels.get(from.index) || 0) < from.ships
+          (this.threatLevels.get(from.id) || 0) < from.ships
         ) {
           // We are safe, neighbor is not. Help!
           const target = threatenedNeighbors[0];

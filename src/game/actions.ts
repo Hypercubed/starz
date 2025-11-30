@@ -1,11 +1,10 @@
-import { removeSystemSelect } from '../input/controls.ts';
-
-import { trackEvent } from '../utils/logging.ts';
-import { rerender } from '../render/render.ts';
-import { addMessage, state } from './state.ts';
+import {
+  addMessage,
+  removeSystemSelect,
+  revealSystem,
+  state
+} from './state.ts';
 import type { System } from '../types.ts';
-import { showEndGame } from '../render/ui.ts';
-import { GAME_STATE } from '../services/game-manager.ts';
 
 export function moveShips(from: System, to: System, ships: number) {
   if (ships === 0) return;
@@ -43,7 +42,7 @@ function attackSystem(from: System, to: System, attackingShips: number) {
 function takeSystem(playerId: string, system: System) {
   system.ownerId = playerId;
   system.moveQueue = [];
-  if (playerId === state.thisPlayer) revealSystem(system);
+  if (playerId === state.thisPlayerId) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== playerId) {
     const loserId = system.homeworld;
@@ -67,82 +66,25 @@ function eliminatePlayer(winnerId: string, loserId: string) {
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
       s.homeworld = null; // No longer a homeworld
       s.moveQueue = [];
-      if (winnerId === state.thisPlayer) revealSystem(s);
+      if (winnerId === state.thisPlayerId) revealSystem(s);
     }
   });
 
-  if (loserId === state.thisPlayer) playerLose(winnerId);
-}
-
-export function playerWin() {
-  window.gameManager.stopGame();
-  window.gameManager.gameState = GAME_STATE.FINISHED;
-
-  state.world.systems.forEach(revealSystem);
-  state.lastSelectedSystem = null;
-  state.selectedSystems = [];
-  rerender();
-
-  trackEvent('starz_gamesWon');
-  showEndGame(`You have conquered The Bubble!`);
-}
-
-export function playerLose(winner: string) {
-  window.gameManager.stopGame();
-  window.gameManager.gameState = GAME_STATE.FINISHED;
-
-  state.world.systems.forEach(revealSystem);
-  state.lastSelectedSystem = null;
-  state.selectedSystems = [];
-  rerender();
-
-  trackEvent('starz_gamesLost', { winner });
-  showEndGame(`You have lost your homeworld! Game Over.`);
-}
-
-export function revealSystem(system: System) {
-  system.isRevealed = true;
-  system.isVisited = true;
-  const neighbors = state.world.getAdjacentSystems(system);
-
-  if (!neighbors) return;
-
-  neighbors.forEach((neighbor) => {
-    neighbor.isRevealed = true;
-    neighbor.isVisited = true;
-  });
+  if (loserId === state.thisPlayerId) window.gameManager.playerLose(winnerId);
 }
 
 function transferShips(from: System, to: System, ships: number) {
   if (from.ships < ships) return; // Not enough ships to transfer
   from.ships -= ships;
   to.ships += ships;
-  if (to.ownerId === state.thisPlayer) revealSystem(to);
-}
-
-export function queueMove(
-  from: System,
-  to: System,
-  ships: number,
-  playerId: string,
-  message?: string
-) {
-  from.moveQueue.push({
-    ships,
-    toId: to.id,
-    fromId: from.id,
-    playerId,
-    message
-  });
+  if (to.ownerId === state.thisPlayerId) revealSystem(to);
 }
 
 export function doQueuedMoves() {
   state.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      const to = state.world.systems.find((s) => s.id === move.toId)!;
-      moveShips(system, to, move.ships);
-      system.lastMove = move;
+      window.gameManager.makeMove(move);
     }
   });
 }

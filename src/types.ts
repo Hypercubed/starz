@@ -12,8 +12,6 @@ export interface System {
   type: SystemType;
   location: Coordinates;
   ownerId: string | null;
-  isVisited: boolean;
-  isRevealed: boolean;
   ships: number;
   homeworld: string | null;
   moveQueue: Move[];
@@ -58,6 +56,7 @@ export interface Player {
   name: string;
   bot?: BotInterface;
   stats: PlayerStats;
-  colorIndex: number; // TODO: Remove this
   color: string;
+  visitedSystems: Set<string>;
+  revealedSystems: Set<string>;
 }

@@ -6,34 +6,16 @@ import {
   TICKS_PER_TURN
 } from './constants.ts';
 
-import { addMessage, resetState, state } from '../game/state.ts';
-import { generateMap } from '../game/generate.ts';
-import { drawMap, rerender } from '../render/render.ts';
-import { doQueuedMoves, playerLose, playerWin } from '../game/actions.ts';
+import { addMessage, state } from '../game/state.ts';
+import { rerender } from '../render/render.ts';
+import { doQueuedMoves } from '../game/actions.ts';
 import {
   updateInfoBox,
   updateLeaderbox,
   updateMessageBox
 } from '../render/ui.ts';
 import { botQueue } from '../game/bots.ts';
-import { GAME_STATE } from '../services/game-manager.ts';
-
-export function setupGame() {
-  resetState();
-
-  generateMap();
-
-  drawMap();
-
-  // assignSystem(PLAYER);
-  // revealSystem(state.world.systems[0]);
-  // centerOnHome();
-  rerender();
-
-  updateInfoBox();
-  updateLeaderbox();
-  updateMessageBox();
-}
+import { GAME_STATE } from '../managers/types.ts';
 
 export function updateStats() {
   state.players.forEach((player) => {
@@ -92,21 +74,17 @@ export function checkVictory() {
     const winner = state.playerMap.get(winnerId)!;
 
     addMessage(`Player ${winner.name} has conquered The Bubble!`);
-    rerender();
 
     window.gameManager.stopGame();
 
-    if (winnerId === state.thisPlayer) {
-      playerWin();
+    if (winnerId === state.thisPlayerId) {
+      window.gameManager.playerWin();
     } else {
-      playerLose(winnerId);
+      window.gameManager.playerLose(winnerId);
     }
-  }
-}
 
-export function pauseToggle() {
-  if (!('pauseToggle' in window.gameManager)) return;
-  (window.gameManager as any).pauseToggle();
+    rerender();
+  }
 }
 
 export function gameTick() {

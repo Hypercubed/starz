@@ -1,10 +1,10 @@
-import type { GameManager } from './services/game-manager.ts';
+import type { GameManager } from './managers/manager.ts';
 
-// import { LocalGameManager } from './services/local.ts';
-import { PlayroomGameManager } from './services/playroom.ts';
+import { LocalGameManager } from './managers/local.ts';
+// import { PlayroomGameManager } from './managers/playroom.ts';
 
 window.onload = async () => {
-  const gameManager = new PlayroomGameManager();
+  const gameManager = new LocalGameManager();
   window.gameManager = gameManager;
   await gameManager.connect();
 };

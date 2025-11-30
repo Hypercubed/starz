@@ -14,14 +14,13 @@ import {
   PROJECTION,
   WIDTH
 } from '../core/constants.ts';
-import { getPlayersHomeworld, state } from '../game/state.ts';
+import { getPlayersHomeworld, state, thisPlayer } from '../game/state.ts';
 import {
   SystemTypes,
   type Coordinates,
   type Lane,
   type System
 } from '../types.ts';
-import { onClickLane, onClickSystem } from '../input/controls.ts';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;
@@ -293,8 +292,12 @@ function drawSystems() {
 
   let visibleSystems = state.world.systems;
 
+  const player = thisPlayer();
+
   if (ENABLE_FOG_OF_WAR) {
-    visibleSystems = visibleSystems.filter((system) => system.isRevealed);
+    visibleSystems = visibleSystems.filter((system) =>
+      player ? player.revealedSystems.has(system.id) : false
+    );
   }
 
   const g = svg
@@ -311,12 +314,12 @@ function drawSystems() {
         .append('g')
         .attr('class', 'system')
         .attr('id', (d) => `system-${d.id}`)
-        .on('click', (ev: PointerEvent, d: System) => {
-          onClickSystem(ev, d);
-        })
+        .on('click', (ev: PointerEvent, d: System) =>
+          window.gameManager.onSystemClick(ev, d)
+        )
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
-          onClickSystem(ev, d);
+          window.gameManager.onSystemClick(ev, d);
         });
 
       group
@@ -343,11 +346,14 @@ function drawSystems() {
     });
 
   join
-    .style('--owner-color', (d) => state.playerMap.get(d.ownerId!)?.color ?? null)
+    .style(
+      '--owner-color',
+      (d) => state.playerMap.get(d.ownerId!)?.color ?? null
+    )
     .classed('selected', (d) => state.selectedSystems.includes(d))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
-    .classed('visited', (d) => d.isVisited)
+    .classed('visited', (d) => player?.visitedSystems.has(d.id) ?? false)
     .classed(
       'hidden',
       (d) => !geoPathGenerator({ type: 'Point', coordinates: d.location })
@@ -384,10 +390,12 @@ const getFeatures = (() => {
 function drawRegions() {
   let features = getFeatures();
 
+  const player = thisPlayer();
+
   if (ENABLE_FOG_OF_WAR) {
     features = features.filter((feature) => {
       const system = feature.properties?.site as System;
-      return system.isVisited;
+      return player ? player.visitedSystems.has(system.id) : false;
     });
   }
 
@@ -399,7 +407,18 @@ function drawRegions() {
   const join = g
     .selectAll('path')
     .data(features, (d: any) => d.properties?.site.id)
-    .join((enter: any) => enter.append('path').classed('region', true));
+    .join((enter: any) =>
+      enter
+        .append('path')
+        .classed('region', true)
+        .on('click', (ev: PointerEvent, d: System) =>
+          window.gameManager.onSystemClick(ev, d)
+        )
+        .on('contextmenu', (ev: PointerEvent, d: System) => {
+          ev.preventDefault();
+          window.gameManager.onSystemClick(ev, d);
+        })
+    );
 
   join
     .attr('d', (d) => {
@@ -407,30 +426,34 @@ function drawRegions() {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .style('--owner-color', (d) => state.playerMap.get(d.ownerId!)?.color ?? null);
+    .style(
+      '--owner-color',
+      (d) => state.playerMap.get(d.ownerId!)?.color ?? null
+    );
 }
 
 function drawLanes() {
   let visibleLanes = state.world.lanes;
 
+  const playerId = state.thisPlayerId;
+  const player = state.playerMap.get(playerId!);
+
   if (ENABLE_FOG_OF_WAR) {
     visibleLanes = visibleLanes.filter(
       (lane) =>
-        state.world.nodeMap.get(lane.fromId)?.isRevealed &&
-        state.world.nodeMap.get(lane.toId)?.isRevealed
+        !!player &&
+        player.revealedSystems.has(lane.fromId) &&
+        player.revealedSystems.has(lane.toId)
     );
   }
 
   const g = svg
     .selectAll('g#lanes')
-    .data([visibleLanes])
+    .data([null])
     .join((enter) => enter.append('g').attr('id', 'lanes'));
 
   g.selectAll('.lane')
-    .data(
-      (d) => d,
-      (d) => (d as Lane).id
-    )
+    .data(visibleLanes, (d) => (d as Lane).id)
     .join((enter) =>
       enter
         .append('path')
@@ -439,10 +462,12 @@ function drawLanes() {
         .attr('stroke-width', 2)
         .attr('stroke', 'orange')
         .attr('id', (_, i) => `lane-${i}`)
-        .on('click', (ev: PointerEvent, d: Lane) => onClickLane(ev, d))
+        .on('click', (ev: PointerEvent, d: Lane) =>
+          window.gameManager.onLaneClick(ev, d)
+        )
         .on('contextmenu', (ev: PointerEvent, d: Lane) => {
           ev.preventDefault();
-          onClickLane(ev, d);
+          window.gameManager.onLaneClick(ev, d);
         })
     )
     .style('--owner-color', (d) => {

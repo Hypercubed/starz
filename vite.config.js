@@ -4,6 +4,9 @@ export default defineConfig({
   base: "./",
   build: {
     outDir: "docs",
+    rollupOptions: {
+      external: ["src/__tests__"],
+    },
   },
   test: {
     globals: true,

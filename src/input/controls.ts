@@ -1,6 +1,5 @@
 import * as d3 from 'd3';
 
-import { pauseToggle } from '../core/engine.ts';
 import {
   centerOnHome,
   centerOnSystem,
@@ -9,13 +8,19 @@ import {
   rotateProjection,
   scaleZoom
 } from '../render/render.ts';
-import { state } from '../game/state.ts';
-import { revealSystem } from '../game/actions.ts';
+import {
+  addSystemSelect,
+  clearSelection,
+  state,
+  toggleSingleSystemSelect,
+  toggleSystemSelect
+} from '../game/state.ts';
+import { revealSystem } from '../game/state.ts';
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../core/constants.ts';
-import { showEndGame, showHelp } from '../render/ui.ts';
+import { showHelp } from '../render/ui.ts';
 import { debugLog } from '../utils/logging.ts';
 import type { Lane, Move, System } from '../types.ts';
-import { GAME_STATE } from '../services/game-manager.ts';
+import { GAME_STATE } from '../managers/types.ts';
 
 const ROTATION_STEP = 5;
 
@@ -33,7 +38,7 @@ export function setupKeboardControls() {
       switch (event.code) {
         case 'KeyC':
           state.world.systems.forEach((system) => {
-            if (system.ownerId === state.thisPlayer) {
+            if (system.ownerId === state.thisPlayerId) {
               system.ships *= 2;
             }
           });
@@ -70,7 +75,7 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        showEndGame('Restart?');
+        window.gameManager.quit();
         return;
       }
     }
@@ -81,7 +86,8 @@ export function setupKeboardControls() {
 
     switch (event.code) {
       case 'Space':
-        pauseToggle();
+        if (!('pauseToggle' in window.gameManager)) return;
+        (window.gameManager as any).pauseToggle();
         return;
       case 'Equal':
       case 'NumpadAdd':
@@ -136,47 +142,6 @@ export function setupKeboardControls() {
   });
 }
 
-function clearSelection() {
-  state.selectedSystems = [];
-  state.lastSelectedSystem = null;
-  rerender();
-}
-
-function toggleSingleSystemSelect(system: System) {
-  if (
-    state.selectedSystems.length === 1 &&
-    state.selectedSystems[0] === system
-  ) {
-    clearSelection();
-  } else {
-    // Select only this system
-    state.selectedSystems = [system];
-    state.lastSelectedSystem = system;
-  }
-}
-
-function toggleSystemSelect(system: System) {
-  if (state.selectedSystems.includes(system)) {
-    removeSystemSelect(system);
-  } else {
-    addSystemSelect(system);
-  }
-}
-
-function addSystemSelect(system: System) {
-  if (!state.selectedSystems.includes(system)) {
-    state.selectedSystems.push(system);
-    state.lastSelectedSystem = system;
-  }
-}
-
-export function removeSystemSelect(system: System) {
-  state.selectedSystems = state.selectedSystems.filter((s) => s !== system);
-  if (state.lastSelectedSystem === system) {
-    state.lastSelectedSystem = null;
-  }
-}
-
 function selectPath(system: System) {
   if (state.lastSelectedSystem == null) return;
 
@@ -198,7 +163,7 @@ function selectPath(system: System) {
       return;
     }
     for (const neighbor of state.world.getAdjacentSystems(current)) {
-      if (!visited.has(neighbor) && neighbor.ownerId === state.thisPlayer) {
+      if (!visited.has(neighbor) && neighbor.ownerId === state.thisPlayerId) {
         visited.add(neighbor);
         queue.push([...path, neighbor]);
       }
@@ -219,12 +184,12 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       let to = state.world.nodeMap.get(lane.toId)!;
 
       if (
-        from.ownerId !== state.thisPlayer &&
-        to.ownerId !== state.thisPlayer &&
+        from.ownerId !== state.thisPlayerId &&
+        to.ownerId !== state.thisPlayerId &&
         !ENABLE_BOT_CONTROL
       )
         return; // Can't move if neither side is owned by player
-      if (from.ownerId !== state.thisPlayer) {
+      if (from.ownerId !== state.thisPlayerId) {
         // Make sure 'from' is owned by player
         const s = from;
         from = to;
@@ -234,20 +199,13 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       orderBalancedMove(from, to);
 
       if (!event.altKey) {
-        if (!event.ctrlKey && !event.shiftKey) {
-          clearSelection();
-        }
-
+        if (!event.ctrlKey && !event.shiftKey) clearSelection();
         addSystemSelect(from);
-        if (to.ownerId === state.thisPlayer) {
-          addSystemSelect(to);
-        }
+        if (to.ownerId === state.thisPlayerId) addSystemSelect(to);
       }
       break;
     }
   }
-
-  rerender();
 }
 
 export function onClickSystem(event: PointerEvent, system: System) {
@@ -264,7 +222,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
   switch (event.button) {
     case 0: // Left click
-      if (system.ownerId !== state.thisPlayer && !ENABLE_BOT_CONTROL) return;
+      if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL) return;
 
       if (event.ctrlKey || event.metaKey) {
         toggleSystemSelect(system);
@@ -278,7 +236,8 @@ export function onClickSystem(event: PointerEvent, system: System) {
     case 2: // Right click
       state.selectedSystems.forEach((selectedSystem) => {
         orderMassMove(selectedSystem, system);
-        if (system.ownerId !== state.thisPlayer && !ENABLE_BOT_CONTROL) return;
+        if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL)
+          return;
 
         if (!event.altKey) {
           if (!event.ctrlKey && !event.shiftKey) {
@@ -289,8 +248,6 @@ export function onClickSystem(event: PointerEvent, system: System) {
       });
       break;
   }
-
-  rerender();
 }
 
 export function orderBalancedMove(from: System, to: System) {
@@ -306,7 +263,7 @@ export function orderBalancedMove(from: System, to: System) {
     ships: deltaShips,
     toId: to.id,
     fromId: from.id,
-    playerId: state.thisPlayer!
+    playerId: state.thisPlayerId!
   } satisfies Move;
 
   window.gameManager.makeMove(move);
@@ -322,7 +279,7 @@ export function orderMassMove(from: System, to: System) {
     ships: deltaShips,
     toId: to.id,
     fromId: from.id,
-    playerId: state.thisPlayer!
+    playerId: state.thisPlayerId!
   } satisfies Move;
 
   window.gameManager.makeMove(move);

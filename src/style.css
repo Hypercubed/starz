@@ -210,14 +210,7 @@ svg {
       display: inline;
     }
 
-    &[data-player] {
-      stroke-width: 2;
-      stroke-opacity: 0.7;
-    }
-
     &:hover {
-      /* TODO: only if one side is selected? */
-      stroke: var(--player-1);
       stroke-width: 6;
     }
   }

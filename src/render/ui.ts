@@ -89,6 +89,11 @@ export function showEndGame(message: string) {
   const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
   endDialog.showModal();
   endDialog.querySelector('p#endMessage')!.textContent = message;
+
+  return new Promise<boolean>((resolve) => {
+    endDialog.addEventListener('close', () => resolve(true));
+    endDialog.addEventListener('cancel', () => resolve(false));
+  });
 }
 
 export function showStartGame() {
