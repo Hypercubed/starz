@@ -33,3 +33,12 @@ export const DEBUG_LOGGING_ENABLED = env.DEV ?? true;
 export const START_PAUSED = true;
 export const ENABLE_CHEATS = env.DEV ?? true;
 export const ENABLE_BOT_CONTROL = false;
+
+export const COLORS = [
+  '#c0392b', // Red
+  '#f1c40f', // Yellow
+  '#9b59b6', // Purple
+  '#00b386', // Green
+  '#cc6600', // Orange
+  '#0a4c8c' // Blue
+] as const;

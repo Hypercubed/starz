@@ -1,10 +1,5 @@
-import {
-  addMessage,
-  removeSystemSelect,
-  revealSystem,
-  state
-} from './state.ts';
-import type { System } from '../types.ts';
+import { revealSystem, state } from './state.ts';
+import { Orders, type Move, type Order, type System } from '../types.ts';
 
 export function moveShips(from: System, to: System, ships: number) {
   if (ships === 0) return;
@@ -45,20 +40,14 @@ function takeSystem(playerId: string, system: System) {
   if (playerId === state.thisPlayerId) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    const loserId = system.homeworld;
-    const loser = state.playerMap.get(loserId)!;
-    const winner = state.playerMap.get(playerId)!;
-
-    addMessage(
-      `Player ${winner.name} has taken over the homeworld of Player ${loser.name}!`
-    );
-    system.homeworld = null; // No longer a homeworld
-    eliminatePlayer(playerId, loserId);
-    removeSystemSelect(system);
+    window.gameManager.eliminatePlayer(system.homeworld, playerId);
   }
 }
 
-function eliminatePlayer(winnerId: string, loserId: string) {
+export function eliminatePlayer(
+  loserId: string,
+  winnerId: string | null = null
+) {
   // Take over homeworld, other systems and 50% of ships
   state.world.systems.forEach((s) => {
     if (s.ownerId === loserId) {
@@ -68,9 +57,20 @@ function eliminatePlayer(winnerId: string, loserId: string) {
       s.moveQueue = [];
       if (winnerId === state.thisPlayerId) revealSystem(s);
     }
+
+    if (s.homeworld === loserId) {
+      s.homeworld = null; // No longer a homeworld
+    }
   });
 
-  if (loserId === state.thisPlayerId) window.gameManager.playerLose(winnerId);
+  const loser = state.playerMap.get(loserId);
+  if (loser) {
+    loser.isAlive = false;
+  }
+
+  if (loserId === state.thisPlayerId) {
+    window.gameManager.playerLose(winnerId);
+  }
 }
 
 function transferShips(from: System, to: System, ships: number) {
@@ -87,4 +87,70 @@ export function doQueuedMoves() {
       window.gameManager.makeMove(move);
     }
   });
+}
+
+function validateOrder(order: Order): boolean {
+  const fromSystem = state.world.systemMap.get(order.fromId)!;
+
+  if (fromSystem.ownerId !== order.playerId) return false;
+  if (!state.world.hasLane(order.fromId, order.toId)) return false;
+  if (fromSystem.ships <= 1) return false;
+  return true;
+}
+
+export function orderToMove(order: Order): Move | null {
+  if (!validateOrder(order)) return null;
+
+  switch (order.type) {
+    case Orders.MASS_MOVE:
+      return massMoveShips(order.fromId, order.toId);
+      break;
+    case Orders.BALANCED_MOVE:
+      return balancedMoveShips(order.fromId, order.toId);
+      break;
+  }
+
+  return null;
+
+  function massMoveShips(fromId: string, toId: string): Move {
+    const fromSystem = state.world.systemMap.get(fromId)!;
+    const deltaShips = fromSystem.ships - 1;
+
+    return {
+      message: `Move ${deltaShips} ships from ${fromId} to ${toId}`,
+      ships: deltaShips,
+      toId: toId,
+      fromId: fromId,
+      playerId: state.thisPlayerId!
+    } satisfies Move;
+  }
+
+  function balancedMoveShips(fromId: string, toId: string): Move | null {
+    let fromSystem = state.world.systemMap.get(fromId)!;
+    let toSystem = state.world.systemMap.get(toId)!;
+
+    const deltaShips =
+      toSystem.ownerId === fromSystem.ownerId
+        ? Math.floor((fromSystem.ships - toSystem.ships) / 2)
+        : Math.floor(fromSystem.ships / 2);
+
+    if (deltaShips <= 0) {
+      if (deltaShips < 0 && toSystem.ownerId === fromSystem.ownerId) {
+        // swap
+        const temp = fromSystem;
+        fromSystem = toSystem;
+        toSystem = temp;
+      } else {
+        return null;
+      }
+    }
+
+    return {
+      message: `Move ${deltaShips} ships from ${fromId} to ${toId}`,
+      ships: deltaShips,
+      toId: toId,
+      fromId: fromId,
+      playerId: state.thisPlayerId!
+    } satisfies Move;
+  }
 }

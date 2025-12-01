@@ -41,13 +41,15 @@ export function updateLeaderbox() {
     .style('--owner-color', (d) => {
       return state.playerMap.get(d.id)?.color ?? null;
     })
-    .attr('title', (d) => (d.bot ? d.bot.name : 'Human'));
+    .attr('title', (d) => (d.bot ? d.bot.name : 'Human'))
+    .classed('eliminated', (d) => !d.isAlive);
 
   row
     .selectAll('td')
     .data((d) => [d.name, d.stats.systems, d.stats.ships])
     .join('td')
-    .text((d) => d);
+    // eslint-disable-next-line no-irregular-whitespace
+    .text((d) => ` ${d} `);
 }
 
 export function updateMessageBox() {

@@ -65,6 +65,12 @@ button {
     text-align: center;
     color: var(--owner-color, var(--unoccupied));
   }
+
+  tr.eliminated td {
+    text-decoration: line-through;
+    text-decoration-color: white;
+    text-decoration-thickness: 1px;
+  }
 }
 
 #messagebox {

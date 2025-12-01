@@ -264,7 +264,9 @@ export function centerOnHome() {
   geoProjection.scale(initialScale);
 }
 
-export function centerOnSystem(system: System) {
+export function centerOnSystem(systemId: string) {
+  const system = state.world.systemMap.get(systemId);
+  if (!system) return;
   centerOnCoordinates(system.location);
   geoProjection.scale(initialScale);
 }
@@ -350,7 +352,7 @@ function drawSystems() {
       '--owner-color',
       (d) => state.playerMap.get(d.ownerId!)?.color ?? null
     )
-    .classed('selected', (d) => state.selectedSystems.includes(d))
+    .classed('selected', (d) => state.selectedSystems.has(d.id))
     .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
     .classed('visited', (d) => player?.visitedSystems.has(d.id) ?? false)
@@ -471,16 +473,16 @@ function drawLanes() {
         })
     )
     .style('--owner-color', (d) => {
-      const from = state.world.nodeMap.get(d.fromId)!;
+      const from = state.world.systemMap.get(d.fromId)!;
       if (!from.ownerId) return null;
-      const to = state.world.nodeMap.get(d.toId)!;
+      const to = state.world.systemMap.get(d.toId)!;
       if (!to.ownerId) return null;
       if (from.ownerId !== to.ownerId) return null;
       return state.playerMap.get(from.ownerId)?.color ?? null;
     })
     .attr('d', (d) => {
-      const from = state.world.nodeMap.get(d.fromId)!;
-      const to = state.world.nodeMap.get(d.toId)!;
+      const from = state.world.systemMap.get(d.fromId)!;
+      const to = state.world.systemMap.get(d.toId)!;
       return geoPathGenerator({
         type: 'LineString',
         coordinates: [from.location, to.location]

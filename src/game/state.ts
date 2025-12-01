@@ -6,8 +6,8 @@ export const state = {
   timeScale: 1,
   running: false,
   thisPlayerId: null as string | null,
-  selectedSystems: [] as System[],
-  lastSelectedSystem: null as System | null,
+  selectedSystems: new Set<string>(),
+  lastSelectedSystem: null as string | null, // TODO: Make this an id
   world: new Graph(),
   players: [] as Player[],
   playerMap: new Map<string, Player>(),
@@ -17,7 +17,7 @@ export const state = {
 export function resetState() {
   state.tick = 0;
   state.thisPlayerId = null;
-  state.selectedSystems = [];
+  state.selectedSystems = new Set<string>();
   state.lastSelectedSystem = null;
   state.timeScale = 1;
   state.world = new Graph();
@@ -59,11 +59,12 @@ export function revealSystem(system: System) {
   if (!playerId) return;
 
   const player = state.playerMap.get(playerId)!;
+  if (!player) return;
 
   player.revealedSystems.add(system.id);
   player.visitedSystems.add(system.id);
 
-  const neighbors = state.world.getAdjacentSystems(system);
+  const neighbors = state.world.getAdjacentSystems(system.id);
 
   if (!neighbors) return;
   neighbors.forEach((neighbor) => {
@@ -89,41 +90,39 @@ export function queueMove(
 }
 
 export function clearSelection() {
-  state.selectedSystems = [];
+  state.selectedSystems.clear();
   state.lastSelectedSystem = null;
 }
 
-export function toggleSingleSystemSelect(system: System) {
-  if (
-    state.selectedSystems.length === 1 &&
-    state.selectedSystems[0] === system
-  ) {
+export function toggleSingleSystemSelect(systemId: string) {
+  if (state.selectedSystems.size === 1 && state.selectedSystems.has(systemId)) {
     clearSelection();
   } else {
     // Select only this system
-    state.selectedSystems = [system];
-    state.lastSelectedSystem = system;
+    state.selectedSystems.clear();
+    state.selectedSystems.add(systemId);
+    state.lastSelectedSystem = systemId;
   }
 }
 
-export function toggleSystemSelect(system: System) {
-  if (state.selectedSystems.includes(system)) {
-    removeSystemSelect(system);
+export function toggleSystemSelect(systemId: string) {
+  if (state.selectedSystems.has(systemId)) {
+    removeSystemSelect(systemId);
   } else {
-    addSystemSelect(system);
+    addSystemSelect(systemId);
   }
 }
 
-export function addSystemSelect(system: System) {
-  if (!state.selectedSystems.includes(system)) {
-    state.selectedSystems.push(system);
-    state.lastSelectedSystem = system;
+export function addSystemSelect(systemId: string) {
+  if (!state.selectedSystems.has(systemId)) {
+    state.selectedSystems.add(systemId);
+    state.lastSelectedSystem = systemId;
   }
 }
 
-export function removeSystemSelect(system: System) {
-  state.selectedSystems = state.selectedSystems.filter((s) => s !== system);
-  if (state.lastSelectedSystem === system) {
+export function removeSystemSelect(systemId: string) {
+  state.selectedSystems.delete(systemId);
+  if (state.lastSelectedSystem === systemId) {
     state.lastSelectedSystem = null;
   }
 }

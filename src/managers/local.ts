@@ -1,23 +1,19 @@
 import { init } from '@paralleldrive/cuid2';
-import { NumBots, NumHumanPlayers, START_PAUSED } from '../core/constants';
+import {
+  COLORS,
+  NumBots,
+  NumHumanPlayers,
+  START_PAUSED
+} from '../core/constants';
 import { Bot } from '../game/bots';
 import { assignSystem, generateMap } from '../game/generate';
-import { addMessage, resetState, state } from '../game/state';
+import { resetState, state } from '../game/state';
 import { rerender } from '../render/render';
 import { showStartGame } from '../render/ui';
 import { GameManager } from './manager';
 import { GAME_STATE } from './types';
 
 const createId = init({ length: 5 });
-
-const COLORS = [
-  '#c0392b', // Red
-  '#f1c40f', // Yellow
-  '#9b59b6', // Purple
-  '#00b386', // Green
-  '#cc6600', // Orange
-  '#0a4c8c' // Blue
-];
 
 export class LocalGameManager extends GameManager {
   async connect() {
@@ -40,8 +36,6 @@ export class LocalGameManager extends GameManager {
     super.setupThisPlayer(thisPlayer.id);
     super.setupGame();
 
-    addMessage(`You are Player ${thisPlayer.name}.`);
-
     if (START_PAUSED) {
       showStartGame();
     } else {
@@ -53,7 +47,7 @@ export class LocalGameManager extends GameManager {
 
   playerJoin(playerIndex: number) {
     const bot: Bot | undefined =
-      playerIndex > NumHumanPlayers ? new Bot() : undefined;
+      playerIndex > NumHumanPlayers ? new Bot({ playerIndex }) : undefined;
 
     const color = COLORS[playerIndex];
     const name = /* bot?.name ?? */ `${playerIndex}`;

@@ -1,17 +1,15 @@
-import type { System, Lane, Coordinates } from '../types';
-import { SystemTypes } from '../types';
+import type { System, Lane, Coordinates } from '../src/types';
+import { SystemTypes } from '../src/types';
 
 /**
  * Creates a mock system for testing purposes
  */
 export function createMockSystem(overrides: Partial<System> = {}): System {
   const defaultSystem: System = {
-    id: Math.floor(Math.random() * 10000),
+    id: '' + Math.floor(Math.random() * 10000),
     type: SystemTypes.UNINHABITED,
     location: [0, 0],
-    owner: null,
-    isRevealed: false,
-    isVisited: false,
+    ownerId: null,
     ships: 0,
     homeworld: null,
     moveQueue: [],
@@ -29,12 +27,12 @@ export function createMockLane(
   to: System,
   overrides: Partial<Lane> = {}
 ): Lane {
-  const id = [from.id, to.id].sort((a, b) => a - b).join('-');
+  const id = [from.id, to.id].sort((a: string, b: string) => a.localeCompare(b)).join('-');
 
   const defaultLane: Lane = {
     id,
-    fromIndex: from.id,
-    toIndex: to.id
+    fromId: from.id,
+    toId: to.id
   };
 
   return { ...defaultLane, ...overrides };
@@ -66,7 +64,7 @@ export function createConnectedSystems(count: number): {
 
     systems.push(
       createMockSystem({
-        id: i,
+        id: '' + i,
         location: [longitude, latitude]
       })
     );

@@ -1,14 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { Bot as BotClass, PERSONALITIES } from '../game/bots';
-import { state, resetState } from '../game/state';
+import { Bot, PERSONALITIES } from '../src/game/bots';
+import { state, resetState } from '../src/game/state';
 import { createMockSystem } from './setup';
-import { SystemTypes, type Lane } from '../types';
-
-function makeTestable<T extends new (...args: any) => any>(ctor: T) {
-  return ctor as any;
-}
-
-const Bot = makeTestable(BotClass);
+import { SystemTypes, type Lane } from '../src/types';
 
 describe('bots', () => {
   beforeEach(() => {
@@ -20,7 +14,7 @@ describe('bots', () => {
       it('should create a bot with default personality', () => {
         const bot = new Bot({ playerIndex: 2 });
 
-        expect(bot.player).toBe(2);
+        expect(bot.id).toBe('2');
         expect(bot.name).toBeDefined();
         expect(bot.personality).toBeDefined();
       });
@@ -54,13 +48,13 @@ describe('bots', () => {
     describe('getBestMoveAmount', () => {
       it('should return ideal amount if system has enough ships', () => {
         const fromSystem = createMockSystem({
-          id: 1,
-          owner: 2,
+          id: `1`,
+          ownerId: `2`,
           ships: 20
         });
         const toSystem = createMockSystem({
-          id: 2,
-          owner: null
+          id: `2`,
+          ownerId: null
         });
 
         const bot = new Bot({ playerIndex: 2 });
@@ -71,16 +65,16 @@ describe('bots', () => {
 
       it('should leave at least one ship in source system', () => {
         const fromSystem = createMockSystem({
-          id: 1,
-          owner: 2,
+          id: `1`,
+          ownerId: `2`,
           ships: 5
         });
         const toSystem = createMockSystem({
-          id: 2,
-          owner: null
+          id: `2`,
+          ownerId: null
         });
 
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
         const amount = bot.getBestMoveAmount(fromSystem, toSystem, 10);
 
         expect(amount).toBeLessThan(5);
@@ -89,16 +83,16 @@ describe('bots', () => {
 
       it('should not send ships if source has only one ship', () => {
         const fromSystem = createMockSystem({
-          id: 1,
-          owner: 2,
+          id: `1`,
+          ownerId: `2`,
           ships: 1
         });
         const toSystem = createMockSystem({
-          id: 2,
-          owner: null
+          id: `2`,
+          ownerId: null
         });
 
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
         const amount = bot.getBestMoveAmount(fromSystem, toSystem, 5);
 
         expect(amount).toBe(0);
@@ -106,18 +100,18 @@ describe('bots', () => {
 
       it('should send enough ships to capture uninhabited systems', () => {
         const fromSystem = createMockSystem({
-          id: 1,
-          owner: 2,
+          id: `1`,
+          ownerId: `2`,
           ships: 10
         });
         const toSystem = createMockSystem({
-          id: 2,
-          owner: null,
+          id: `2`,
+          ownerId: null,
           type: SystemTypes.UNINHABITED,
           ships: 0
         });
 
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
         const amount = bot.getBestMoveAmount(fromSystem, toSystem, 3);
 
         expect(amount).toBeGreaterThan(0);
@@ -128,35 +122,35 @@ describe('bots', () => {
     describe('makeMoves', () => {
       it('should not crash when bot has no systems', () => {
         state.world.systems = [];
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
 
         expect(() => bot.makeMoves()).not.toThrow();
       });
 
       it('should queue moves when bot has systems', () => {
         const botSystem = createMockSystem({
-          id: 1,
-          owner: 2,
+          id: `1`,
+          ownerId: `2`,
           ships: 10,
           type: SystemTypes.INHABITED
         });
         const targetSystem = createMockSystem({
-          id: 2,
-          owner: null,
+          id: `2`,
+          ownerId: null,
           ships: 0,
           type: SystemTypes.UNINHABITED
         });
 
         const lane: Lane = {
           id: '1-2',
-          fromIndex: 0,
-          toIndex: 1
+          fromId: `1`,
+          toId: `2`
         };
 
         state.world.systems.push(botSystem, targetSystem);
         state.world.lanes.push(lane);
 
-        const bot = new Bot(2);
+        const bot = new Bot({ playerIndex: 2 });
         bot.makeMoves();
 
         // Bot should have evaluated moves (exact behavior depends on personality)

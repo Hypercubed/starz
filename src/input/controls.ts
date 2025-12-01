@@ -19,7 +19,7 @@ import { revealSystem } from '../game/state.ts';
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../core/constants.ts';
 import { showHelp } from '../render/ui.ts';
 import { debugLog } from '../utils/logging.ts';
-import type { Lane, Move, System } from '../types.ts';
+import { Orders, type Lane, type Order, type System } from '../types.ts';
 import { GAME_STATE } from '../managers/types.ts';
 
 const ROTATION_STEP = 5;
@@ -142,30 +142,31 @@ export function setupKeboardControls() {
   });
 }
 
-function selectPath(system: System) {
+function selectPath(systemId: string) {
   if (state.lastSelectedSystem == null) return;
 
   // Simple BFS to find shortest path
-  const queue: System[][] = [[state.lastSelectedSystem]];
-  const visited = new Set<System>();
+  const queue: string[][] = [[state.lastSelectedSystem]];
+  const visited = new Set<string>();
   visited.add(state.lastSelectedSystem);
 
   while (queue.length > 0) {
     const path = queue.shift()!;
     const current = path[path.length - 1];
 
-    if (current === system) {
+    if (current === systemId) {
       // Found path
-      state.selectedSystems = Array.from(
-        new Set([...state.selectedSystems, ...path])
-      );
-      state.lastSelectedSystem = system;
+      state.selectedSystems = new Set([...state.selectedSystems, ...path]);
+      state.lastSelectedSystem = systemId;
       return;
     }
     for (const neighbor of state.world.getAdjacentSystems(current)) {
-      if (!visited.has(neighbor) && neighbor.ownerId === state.thisPlayerId) {
-        visited.add(neighbor);
-        queue.push([...path, neighbor]);
+      if (
+        !visited.has(neighbor.id) &&
+        neighbor.ownerId === state.thisPlayerId
+      ) {
+        visited.add(neighbor.id);
+        queue.push([...path, neighbor.id]);
       }
     }
   }
@@ -180,8 +181,8 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       break;
     case 2: {
       // Right click
-      let from = state.world.nodeMap.get(lane.fromId)!;
-      let to = state.world.nodeMap.get(lane.toId)!;
+      let from = state.world.systemMap.get(lane.fromId)!;
+      let to = state.world.systemMap.get(lane.toId)!;
 
       if (
         from.ownerId !== state.thisPlayerId &&
@@ -189,6 +190,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
         !ENABLE_BOT_CONTROL
       )
         return; // Can't move if neither side is owned by player
+
       if (from.ownerId !== state.thisPlayerId) {
         // Make sure 'from' is owned by player
         const s = from;
@@ -196,12 +198,13 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
         to = s;
       }
 
-      orderBalancedMove(from, to);
+      orderBalancedMove(from.id, to.id);
+      if (to.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL) return;
 
       if (!event.altKey) {
         if (!event.ctrlKey && !event.shiftKey) clearSelection();
-        addSystemSelect(from);
-        if (to.ownerId === state.thisPlayerId) addSystemSelect(to);
+        addSystemSelect(from.id);
+        if (to.ownerId === state.thisPlayerId) addSystemSelect(to.id);
       }
       break;
     }
@@ -225,17 +228,21 @@ export function onClickSystem(event: PointerEvent, system: System) {
       if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL) return;
 
       if (event.ctrlKey || event.metaKey) {
-        toggleSystemSelect(system);
+        toggleSystemSelect(system.id);
       } else if (event.shiftKey) {
-        selectPath(system);
+        selectPath(system.id);
       } else {
-        toggleSingleSystemSelect(system);
+        toggleSingleSystemSelect(system.id);
       }
       break;
     case -1: // Long press (touch)
-    case 2: // Right click
-      state.selectedSystems.forEach((selectedSystem) => {
-        orderMassMove(selectedSystem, system);
+    case 2: {
+      // Right click
+      const selectedSystems = Array.from(state.selectedSystems);
+      if (selectedSystems.length === 0) return;
+
+      selectedSystems.forEach((fromId) => {
+        orderMassMove(fromId, system.id);
         if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL)
           return;
 
@@ -243,44 +250,38 @@ export function onClickSystem(event: PointerEvent, system: System) {
           if (!event.ctrlKey && !event.shiftKey) {
             clearSelection();
           }
-          addSystemSelect(system);
+          addSystemSelect(system.id);
         }
       });
       break;
+    }
   }
 }
 
-export function orderBalancedMove(from: System, to: System) {
-  if (!state.world.hasLane(from, to)) return;
+export function orderBalancedMove(fromId: string, toId: string) {
+  if (!state.world.hasLane(fromId, toId)) return;
 
-  const deltaShips =
-    to.ownerId === from.ownerId
-      ? Math.floor((from.ships - to.ships) / 2)
-      : Math.floor(from.ships / 2);
-
-  const move = {
-    message: `Move ${deltaShips} ships from ${from.id} to ${to.id}`,
-    ships: deltaShips,
-    toId: to.id,
-    fromId: from.id,
+  const order = {
+    type: Orders.BALANCED_MOVE,
+    message: `Balanced move from ${fromId} to ${toId}`,
+    toId,
+    fromId,
     playerId: state.thisPlayerId!
-  } satisfies Move;
+  } satisfies Order;
 
-  window.gameManager.makeMove(move);
+  window.gameManager.takeOrder(order);
 }
 
-export function orderMassMove(from: System, to: System) {
-  if (!state.world.hasLane(from, to)) return;
+export function orderMassMove(fromId: string, toId: string) {
+  if (!state.world.hasLane(fromId, toId)) return;
 
-  const deltaShips = from.ships - 1;
+  const order = {
+    type: Orders.MASS_MOVE,
+    toId,
+    fromId,
+    playerId: state.thisPlayerId!,
+    message: `Mass move from ${fromId} to ${toId}`
+  } satisfies Order;
 
-  const move = {
-    message: `Move ${deltaShips} ships from ${from.id} to ${to.id}`,
-    ships: deltaShips,
-    toId: to.id,
-    fromId: from.id,
-    playerId: state.thisPlayerId!
-  } satisfies Move;
-
-  window.gameManager.makeMove(move);
+  window.gameManager.takeOrder(order);
 }

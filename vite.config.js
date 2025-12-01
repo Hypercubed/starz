@@ -3,15 +3,12 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   base: "./",
   build: {
-    outDir: "docs",
-    rollupOptions: {
-      external: ["src/__tests__"],
-    },
+    outDir: "docs"
   },
   test: {
     globals: true,
     environment: "happy-dom",
-    include: ["./src/**/*.test.ts"],
+    include: ["./__tests__/*.test.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

@@ -14,14 +14,14 @@ export class Graph {
   systems: Array<System> = [];
   lanes: Array<Lane> = [];
 
-  nodeMap = new Map<string, System>();
+  systemMap = new Map<string, System>();
   laneMap = new Map<string, Lane>();
 
   neighborMap = new Map<string, Array<string>>();
 
   addSystem(node: System): void {
     this.systems.push(node);
-    this.nodeMap.set(node.id, node);
+    this.systemMap.set(node.id, node);
   }
 
   addLane(from: System, to: System): void {
@@ -63,19 +63,22 @@ export class Graph {
     return findClosestSystem(system.location, this.systems);
   }
 
-  getAdjacentSystems(system: System): System[] {
+  getAdjacentSystems(systemId: string): System[] {
+    const system = this.systemMap.get(systemId);
+    if (!system) return [];
+
     if (!this.neighborMap) {
       this.buildNeighborMap();
     }
 
     const neighbors = this.neighborMap.get(system.id);
     if (!neighbors) return [];
-    return neighbors.map((id) => this.nodeMap.get(id)!);
+    return neighbors.map((id) => this.systemMap.get(id)!);
   }
 
   // Check if there's a lane between two systems
-  hasLane(system1: System, system2: System): boolean {
-    return this.neighborMap.get(system1.id)?.includes(system2.id) || false;
+  hasLane(systemId1: string, systemId2: string): boolean {
+    return this.neighborMap.get(systemId1)?.includes(systemId2) || false;
   }
 
   // Serialization
@@ -91,11 +94,11 @@ export class Graph {
     graph.systems = json.systems ?? [];
     graph.lanes = json.lanes ?? [];
 
-    graph.nodeMap = new Map<string, System>();
+    graph.systemMap = new Map<string, System>();
     graph.laneMap = new Map<string, Lane>();
 
     graph.systems.forEach((system) => {
-      graph.nodeMap.set(system.id, system);
+      graph.systemMap.set(system.id, system);
     });
 
     graph.lanes.forEach((lane) => {

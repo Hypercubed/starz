@@ -7,6 +7,13 @@ export const SystemTypes = {
 
 export type SystemType = (typeof SystemTypes)[keyof typeof SystemTypes];
 
+export const Orders = {
+  MASS_MOVE: 'MASS_MOVE',
+  BALANCED_MOVE: 'BALANCED_MOVE'
+};
+
+export type OrderType = (typeof Orders)[keyof typeof Orders];
+
 export interface System {
   id: string;
   type: SystemType;
@@ -18,12 +25,20 @@ export interface System {
   lastMove: Move | null;
 }
 
+export interface Order {
+  type: OrderType;
+  playerId: string;
+  fromId: string;
+  toId: string;
+  message?: string;
+}
+
 export interface Move {
   playerId: string;
-  message?: string;
   ships: number;
   fromId: string;
   toId: string;
+  message?: string;
 }
 
 export interface Lane {
@@ -57,6 +72,7 @@ export interface Player {
   bot?: BotInterface;
   stats: PlayerStats;
   color: string;
+  isAlive: boolean;
   visitedSystems: Set<string>;
   revealedSystems: Set<string>;
 }

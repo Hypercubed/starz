@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { state } from '../game/state';
+import { state } from '../src/game/state';
 import { createMockSystem, createMockCoordinates } from './setup';
-import { findClosestSystem, Graph } from '../classes/graph';
+import { findClosestSystem, Graph } from '../src/classes/graph';
 
 // Mock the state module
 vi.mock('../game/state', () => ({
@@ -62,11 +62,11 @@ describe('generate', () => {
     it('should exclude the query location itself', () => {
       const location = createMockCoordinates(10, 10);
       const sameSystem = createMockSystem({
-        id: 1,
+        id: '1',
         location: createMockCoordinates(10, 10)
       });
       const otherSystem = createMockSystem({
-        id: 2,
+        id: '2',
         location: createMockCoordinates(20, 20)
       });
 
@@ -78,15 +78,15 @@ describe('generate', () => {
     it('should handle systems with different longitudes and latitudes', () => {
       const location = createMockCoordinates(0, 0);
       const system1 = createMockSystem({
-        id: 1,
+        id: '1',
         location: createMockCoordinates(-10, 5)
       });
       const system2 = createMockSystem({
-        id: 2,
+        id: '2',
         location: createMockCoordinates(15, -8)
       });
       const system3 = createMockSystem({
-        id: 3,
+        id: '3',
         location: createMockCoordinates(2, 2)
       });
 
@@ -99,11 +99,11 @@ describe('generate', () => {
       // Points near the poles behave differently than equatorial points
       const location = createMockCoordinates(0, 89); // Near north pole
       const system1 = createMockSystem({
-        id: 1,
+        id: '1',
         location: createMockCoordinates(0, 88)
       });
       const system2 = createMockSystem({
-        id: 2,
+        id: '2',
         location: createMockCoordinates(180, 89) // Same latitude, opposite longitude
       });
 
@@ -116,15 +116,15 @@ describe('generate', () => {
     it('should handle multiple systems and find the globally closest', () => {
       const location = createMockCoordinates(0, 0);
       const systems = [
-        createMockSystem({ id: 1, location: createMockCoordinates(10, 10) }),
-        createMockSystem({ id: 2, location: createMockCoordinates(20, 20) }),
-        createMockSystem({ id: 3, location: createMockCoordinates(5, 5) }),
-        createMockSystem({ id: 4, location: createMockCoordinates(15, 15) })
+        createMockSystem({ id: '1', location: createMockCoordinates(10, 10) }),
+        createMockSystem({ id: '2', location: createMockCoordinates(20, 20) }),
+        createMockSystem({ id: '3', location: createMockCoordinates(5, 5) }),
+        createMockSystem({ id: '4', location: createMockCoordinates(15, 15) })
       ];
 
       const result = findClosestSystem(location, systems);
 
-      expect(result?.id).toBe(3); // ID 3 is at (5, 5), closest to (0, 0)
+      expect(result?.id).toBe('3'); // ID 3 is at (5, 5), closest to (0, 0)
     });
   });
 });

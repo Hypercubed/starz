@@ -60,13 +60,14 @@ export class Bot implements BotInterface {
   id: string;
   name: string;
   personality: BotPersonality;
+
   botSystems!: System[];
   threatLevels = new Map<string, number>();
   frontline = new Set<string>();
   backline = new Set<string>();
 
   constructor(botParams: BotOptions = {}) {
-    const index = botId++;
+    const index = botParams.playerIndex ?? botId++;
     this.id = `${index}`;
 
     let personality = botParams.personality as BotPersonalities | undefined;
@@ -80,16 +81,12 @@ export class Bot implements BotInterface {
     this.personality = PERSONALITIES[personality];
   }
 
-  decideAction() {
-    console.log(`Bot Player ${this.id} making moves.`);
-    this.makeMoves();
-    return 'MOVE_FORWARD';
-  }
-
   makeMoves() {
     this.botSystems = state.world.systems.filter(
       (system) => system.ownerId === this.id
     );
+    if (this.botSystems.length === 0) return;
+
     this.botSystems.forEach((system) => {
       system.moveQueue = []; // Clear previous moves
     });
@@ -118,7 +115,7 @@ export class Bot implements BotInterface {
     this.backline.clear();
 
     this.botSystems.forEach((system) => {
-      const neighbors = state.world.getAdjacentSystems(system);
+      const neighbors = state.world.getAdjacentSystems(system.id);
       const enemyNeighbors = neighbors.filter(
         (s) => s.ownerId && s.ownerId !== this.id
       );
@@ -157,7 +154,7 @@ export class Bot implements BotInterface {
           if (from.ships < fromThreatLevel * 0.5) {
             // Find safest neighbor
             const bestRetreat = state.world
-              .getAdjacentSystems(from)
+              .getAdjacentSystems(from.id)
               .filter((s) => s.ownerId === this.id)
               .sort(
                 (a, b) =>
@@ -210,7 +207,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return;
       if (from.ships < 5) return;
 
-      const neighbors = state.world.getAdjacentSystems(from);
+      const neighbors = state.world.getAdjacentSystems(from.id);
 
       if (!neighbors) return;
 
@@ -218,7 +215,7 @@ export class Bot implements BotInterface {
         if (to.ownerId !== null && to.ownerId !== this.id) {
           // Don't attack if it exposes us to a DIFFERENT enemy
           const otherEnemies = state.world
-            .getAdjacentSystems(from)
+            .getAdjacentSystems(from.id)
             .filter(
               (s) => s.ownerId && s.ownerId !== this.id && s.id !== to.id
             );
@@ -237,7 +234,7 @@ export class Bot implements BotInterface {
     targets.forEach(({ target, attackers }) => {
       // Prioritize weak/isolated targets
       const targetAllies = state.world
-        .getAdjacentSystems(target)
+        .getAdjacentSystems(target.id)
         .filter((s) => s.ownerId === target.ownerId).length;
       const isolationBonus = targetAllies === 0 ? 1.5 : 1.0;
 
@@ -288,7 +285,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 3) return [];
 
-      const neighbors = state.world.getAdjacentSystems(from);
+      const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId === this.id || to.ownerId === null) return [];
 
@@ -315,7 +312,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
 
-      const neighbors = state.world.getAdjacentSystems(from);
+      const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId !== null) return [];
 
@@ -345,7 +342,7 @@ export class Bot implements BotInterface {
         // Simple heuristic: Push to neighbor with FEWEST ships? No, that balances.
         // Push to neighbor that is Frontline.
         const frontlineNeighbors = state.world
-          .getAdjacentSystems(from)
+          .getAdjacentSystems(from.id)
           .filter((s) => this.frontline.has(s.id) && s.ownerId === this.id);
 
         if (frontlineNeighbors.length > 0) {
@@ -369,7 +366,7 @@ export class Bot implements BotInterface {
         // Random walk towards front?
         // Let's just balance with neighbors for now if deep in backline.
         const neighbors = state.world
-          .getAdjacentSystems(from)
+          .getAdjacentSystems(from.id)
           .filter((s) => s.ownerId === this.id);
         const target = neighbors.sort((a, b) => a.ships - b.ships)[0];
         if (target && target.ships < from.ships - 2) {
@@ -388,7 +385,7 @@ export class Bot implements BotInterface {
       // If we are frontline, maybe shift to a threatened neighbor?
       if (this.frontline.has(from.id)) {
         const threatenedNeighbors = state.world
-          .getAdjacentSystems(from)
+          .getAdjacentSystems(from.id)
           .filter(
             (s) =>
               s.ownerId === this.id &&
@@ -417,11 +414,7 @@ export class Bot implements BotInterface {
     });
   }
 
-  private getBestMoveAmount(
-    from: System,
-    to: System,
-    idealAmount: number
-  ): number {
+  getBestMoveAmount(from: System, to: System, idealAmount: number): number {
     const massMove = Math.max(0, from.ships - 1);
     let balancedMove = 0;
 
@@ -441,16 +434,21 @@ export class Bot implements BotInterface {
   }
 
   // @eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private chooseMoves(moves: BotMove[][], _weight = 1) {
+  chooseMoves(moves: BotMove[][], weight = 1) {
     if (moves.length === 0) return;
 
     moves.forEach((systemMoves) => {
       // For each system's possible moves, pick one
       if (systemMoves.length === 0) return;
       const sortedMoves = [...systemMoves].sort(scoreSort);
-      const move = sortedMoves[0];
-
-      queueMove(move.from, move.to, move.units, this.id, move.message);
+      for (let i = 0; i < sortedMoves.length; i++) {
+        const move = sortedMoves[i];
+        if (Math.random() < weight) {
+          // Weighted choice gives more variety
+          queueMove(move.from, move.to, move.units, this.id, move.message);
+          return;
+        }
+      }
     });
   }
 }
