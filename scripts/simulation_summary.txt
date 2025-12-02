@@ -1,8 +1,8 @@
 === Simulation Summary ===
-Total Games: 1000
-Timeouts: 2
-Player 1 (territory): 268 wins. Ticks: Min=493, Max=3435, Avg=1265
-Player 2 (rusher): 214 wins. Ticks: Min=460, Max=4029, Avg=1278
-Player 3 (turtle): 257 wins. Ticks: Min=591, Max=3179, Avg=1145
-Player 4 (balanced): 259 wins. Ticks: Min=600, Max=3091, Avg=1218
+Total Games: 5000
+Timeouts: 21
+Player 1 (territory): 1253 wins. Ticks: Min=470, Max=4809, Avg=1237
+Player 2 (rusher): 1069 wins. Ticks: Min=440, Max=4222, Avg=1288
+Player 3 (turtle): 1366 wins. Ticks: Min=237, Max=4704, Avg=1181
+Player 4 (balanced): 1291 wins. Ticks: Min=506, Max=4663, Avg=1242
 ==========================

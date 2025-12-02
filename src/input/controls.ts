@@ -196,6 +196,13 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
         const s = from;
         from = to;
         to = s;
+      } else if (from.ownerId === from.ownerId) {
+        if (to.ships > from.ships) {
+          // swap
+          const s = from;
+          from = to;
+          to = s;
+        }
       }
 
       orderBalancedMove(from.id, to.id);

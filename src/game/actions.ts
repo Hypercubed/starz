@@ -112,9 +112,11 @@ export function orderToMove(order: Order): Move | null {
 
   return null;
 
-  function massMoveShips(fromId: string, toId: string): Move {
+  function massMoveShips(fromId: string, toId: string): Move | null {
     const fromSystem = state.world.systemMap.get(fromId)!;
     const deltaShips = fromSystem.ships - 1;
+
+    if (deltaShips <= 0) return null;
 
     return {
       message: `Move ${deltaShips} ships from ${fromId} to ${toId}`,
@@ -126,30 +128,21 @@ export function orderToMove(order: Order): Move | null {
   }
 
   function balancedMoveShips(fromId: string, toId: string): Move | null {
-    let fromSystem = state.world.systemMap.get(fromId)!;
-    let toSystem = state.world.systemMap.get(toId)!;
+    const fromSystem = state.world.systemMap.get(fromId)!;
+    const toSystem = state.world.systemMap.get(toId)!;
 
     const deltaShips =
       toSystem.ownerId === fromSystem.ownerId
         ? Math.floor((fromSystem.ships - toSystem.ships) / 2)
         : Math.floor(fromSystem.ships / 2);
 
-    if (deltaShips <= 0) {
-      if (deltaShips < 0 && toSystem.ownerId === fromSystem.ownerId) {
-        // swap
-        const temp = fromSystem;
-        fromSystem = toSystem;
-        toSystem = temp;
-      } else {
-        return null;
-      }
-    }
+    if (deltaShips <= 0) return null;
 
     return {
-      message: `Move ${deltaShips} ships from ${fromId} to ${toId}`,
+      message: `Move ${deltaShips} ships from ${fromSystem.id} to ${toSystem.id}`,
       ships: deltaShips,
-      toId: toId,
-      fromId: fromId,
+      toId: toSystem.id,
+      fromId: fromSystem.id,
       playerId: state.thisPlayerId!
     } satisfies Move;
   }

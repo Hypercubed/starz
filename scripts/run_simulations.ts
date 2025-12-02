@@ -5,7 +5,7 @@ import { Bot } from '../src/game/bots.ts';
 import { SimGameManager } from '../src/managers/simulation.ts';
 import type {} from '../src/globals.d.ts';
 
-const N = 1000; // Number of simulations
+const N = 5000; // Number of simulations
 const T = 5000; // Max ticks per simulation
 
 async function runSimulation(gameId: number) {

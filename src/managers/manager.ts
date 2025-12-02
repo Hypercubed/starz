@@ -11,6 +11,7 @@ import {
 import { eliminatePlayer, moveShips, orderToMove } from '../game/actions.ts';
 import type { Bot } from '../game/bots.ts';
 import { GAME_STATE, type GameState } from './types.ts';
+import { debugLog } from '../utils/logging.ts';
 
 export abstract class GameManager {
   gameState: GameState = GAME_STATE.WAITING;
@@ -77,6 +78,9 @@ export abstract class GameManager {
   }
 
   takeOrder(order: Order) {
+    if (order.playerId === state.thisPlayerId) {
+      debugLog(`player order: ${JSON.stringify(order)}`);
+    }
     const move = orderToMove(order);
     if (move) {
       this.makeMove(move);
@@ -84,6 +88,9 @@ export abstract class GameManager {
   }
 
   makeMove(move: Move) {
+    if (move.playerId === state.thisPlayerId) {
+      debugLog(`player move: ${JSON.stringify(move)}`);
+    }
     const from = state.world.systemMap.get(move.fromId)!;
     const to = state.world.systemMap.get(move.toId)!;
     moveShips(from, to, move.ships);
