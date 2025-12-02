@@ -2,6 +2,12 @@ import * as d3 from 'd3';
 
 import { state } from '../game/state.ts';
 
+export function updateUI() {
+  updateInfoBox();
+  updateLeaderbox();
+  updateMessageBox();
+}
+
 export function updateInfoBox() {
   const div = d3
     .select('#app')
@@ -75,7 +81,7 @@ export function setupDialogs() {
 
   restartButton.addEventListener('click', () => {
     endDialog.close();
-    window.gameManager.connect();
+    globalThis.gameManager.connect();
   });
 
   const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
@@ -109,7 +115,7 @@ export function showStartGame() {
   startDialog.showModal();
   startButton.addEventListener('click', () => {
     startDialog.close();
-    window.gameManager.startGame();
+    globalThis.gameManager.startGame();
   });
 
   return startDialog;

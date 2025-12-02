@@ -43,13 +43,14 @@ export const PERSONALITIES = {
   } // 5, Orange
 } as const satisfies Record<string, BotPersonality>;
 
-export type BotPersonalities = keyof typeof PERSONALITIES;
+export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
 export function botQueue() {
   state.players.forEach((p) => p.bot?.makeMoves());
 }
 
 export interface BotOptions {
+  id?: string;
   playerIndex?: number;
   personality?: BotPersonalities;
 }
@@ -68,7 +69,7 @@ export class Bot implements BotInterface {
 
   constructor(botParams: BotOptions = {}) {
     const index = botParams.playerIndex ?? botId++;
-    this.id = `${index}`;
+    this.id = botParams.id ?? `${index}`;
 
     let personality = botParams.personality as BotPersonalities | undefined;
 
@@ -78,10 +79,15 @@ export class Bot implements BotInterface {
     }
 
     this.name = personality;
-    this.personality = PERSONALITIES[personality];
+    this.personality =
+      personality === 'idle'
+        ? PERSONALITIES.balanced
+        : PERSONALITIES[personality];
   }
 
   makeMoves() {
+    if (this.name === 'idle') return;
+
     this.botSystems = state.world.systems.filter(
       (system) => system.ownerId === this.id
     );
@@ -433,7 +439,6 @@ export class Bot implements BotInterface {
     return balancedMove;
   }
 
-  // @eslint-disable-next-line @typescript-eslint/no-unused-vars
   chooseMoves(moves: BotMove[][], weight = 1) {
     if (moves.length === 0) return;
 
@@ -441,6 +446,7 @@ export class Bot implements BotInterface {
       // For each system's possible moves, pick one
       if (systemMoves.length === 0) return;
       const sortedMoves = [...systemMoves].sort(scoreSort);
+
       for (let i = 0; i < sortedMoves.length; i++) {
         const move = sortedMoves[i];
         if (Math.random() < weight) {

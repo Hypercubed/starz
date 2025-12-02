@@ -9,11 +9,6 @@ import {
 import { addMessage, state } from '../game/state.ts';
 import { rerender } from '../render/render.ts';
 import { doQueuedMoves } from '../game/actions.ts';
-import {
-  updateInfoBox,
-  updateLeaderbox,
-  updateMessageBox
-} from '../render/ui.ts';
 import { botQueue } from '../game/bots.ts';
 import { GAME_STATE } from '../managers/types.ts';
 
@@ -62,7 +57,7 @@ export function roundUpdate() {
 
 export function checkVictory() {
   if (state.players.length === 1) return;
-  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
+  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   // TODO: Use stats from state
   const homeworlds = state.world.systems.filter(
@@ -75,14 +70,15 @@ export function checkVictory() {
 
     addMessage(`Player ${winner.name} has conquered The Bubble!`);
 
-    window.gameManager.stopGame();
+    globalThis.gameManager.stopGame();
 
     if (winnerId === state.thisPlayerId) {
-      window.gameManager.playerWin();
+      globalThis.gameManager.playerWin();
     } else {
-      window.gameManager.playerLose(winnerId);
+      globalThis.gameManager.playerLose(winnerId);
     }
 
+    // Move this outside of engine
     rerender();
   }
 }
@@ -96,9 +92,4 @@ export function gameTick() {
   botQueue();
   doQueuedMoves();
   updateStats();
-
-  rerender();
-  updateInfoBox();
-  updateLeaderbox();
-  updateMessageBox();
 }

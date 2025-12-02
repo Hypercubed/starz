@@ -1,101 +1,68 @@
 
-import { state, resetState } from '../src/game/state.ts';
-import { generateMap } from '../src/game/generate.ts';
-import { botQueue } from '../src/game/bots.ts';
-import { doQueuedMoves } from '../src/game/actions.ts';
-import { turnUpdate, roundUpdate, updateStats } from '../src/core/engine.ts';
-import { TICKS_PER_TURN, TICKS_PER_ROUND } from '../src/core/constants.ts';
+import { state } from '../src/game/state.ts';
+import { type BotPersonalities, PERSONALITIES } from '../src/game/bots.ts';
 import { Bot } from '../src/game/bots.ts';
+import { SimGameManager } from '../src/managers/simulation.ts';
+import type {} from '../src/globals.d.ts';
 
-// Mock constants to override NumHumanPlayers
-// Since we can't easily override const exports, we'll rely on the fact that
-// generateMap uses the imported constant, but we can filter players afterwards if needed.
-// Actually, generateMap assigns players.
-// Let's just modify the state after generation to remove human players if any?
-// Or better, we can just treat Player 1 as a bot in our simulation logic if we can attach a bot to it.
-
-// Wait, `bots.ts` has `botQueue` which iterates `state.players`.
-// If we can attach a bot to Player 1, it will act as a bot.
+const N = 1000; // Number of simulations
+const T = 5000; // Max ticks per simulation
 
 async function runSimulation(gameId: number) {
-  resetState();
-  generateMap();
+  const manager = new SimGameManager();
+  globalThis.gameManager = manager;
 
-  // Initialize players manually since startGame is not called
-  state.players = [];
-  const personalities = ['territory', 'rusher', 'turtle', 'balanced'];
-  const totalPlayers = personalities.length;
+  manager.connect();
 
-  for (let i = 1; i <= totalPlayers; i++) {
-    state.players.push({
-      id: i,
-      isHuman: false, // Force all to be bots
-      bot: new Bot({}),
-      stats: { player: i, systems: 0, ships: 0, homeworld: 0 }
-    });
+  const personalities = Object.keys(PERSONALITIES) as BotPersonalities[];
+  for (let i = 1; i <= personalities.length; i++) {
+    const id = `${i}`;
+    const bot = new Bot({ id, personality: personalities[i - 1] });
+
+    manager.addPlayer(
+      `${personalities[i - 1]}`,
+      id,
+      bot,
+      `red`
+    );
   }
+  
+  // Add specific personalities
+  const id = `${state.players.length + 1}`;
+  const bot = new Bot({ id, personality: 'idle' });
+  manager.addPlayer(
+    `idle`,
+    id,
+    bot,
+    `red`
+  );
 
-  // Also ensure other players are bots (they should be by default)
+  let winner = '-1';
+  let running = true;
 
-  state.running = true;
-  let ticks = 0;
-  let winner = -1;
-
-  while (ticks < 5000 && state.running) {
-    // Game Loop Logic (simplified from engine.ts)
-    // engine.ts `runGameLoop` calls `processTurn` every tick?
-    // No, `runGameLoop` uses `requestAnimationFrame`.
-    // We need to manually call the update steps.
-
-    // `processTurn` handles production.
-    // We need to call `botQueue` and `doQueuedMoves`.
-
-    // Let's look at `engine.ts` to be sure.
-    // I'll assume standard loop:
-
-    // 1. Bot Moves
-    botQueue();
-
-    // 2. Execute Moves
-    doQueuedMoves();
-
-    // If Player 1 dies, the game engine stops the game. We want to continue until 1 bot remains.
-    if (!state.running) {
-      const active = state.players.filter(p => p.stats.systems > 0);
-      if (active.length > 1) {
-        state.running = true;
-      }
-    }
-
-    // 3. Production / Game Logic
-    state.tick++;
-    if (state.tick % TICKS_PER_TURN === 0) turnUpdate();
-    if (state.tick % TICKS_PER_ROUND === 0) roundUpdate();
-
-    ticks++;
-
-    updateStats();
+  while (state.tick < T && running) {
+    manager.gameTick();
 
     // Check for winner
     const activePlayers = state.players.filter(p => p.stats.systems > 0);
 
     if (activePlayers.length === 1) {
       winner = activePlayers[0].id;
-      state.running = false;
+      running = false;
     } else if (activePlayers.length === 0) {
       // Draw?
-      state.running = false;
+      running = false;
     }
   }
 
-  return { gameId, winner, ticks };
+  return { gameId, winner, ticks: state.tick };
 }
 
 async function main() {
   console.log("Starting Simulations...");
   const results = [];
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < N; i++) {
     const result = await runSimulation(i + 1);
     console.log(`Game ${result.gameId}: Winner=${result.winner}, Ticks=${result.ticks}`);
     results.push(result);
@@ -104,12 +71,12 @@ async function main() {
   console.log("\n=== Simulation Summary ===");
   console.log(`Total Games: ${results.length}`);
 
-  const wins: Record<number, number> = {};
-  const winTicks: Record<number, number[]> = {};
+  const wins: Record<string, number> = {};
+  const winTicks: Record<string, number[]> = {};
   let timeouts = 0;
 
   results.forEach(r => {
-    if (r.winner === -1) {
+    if (r.winner === '-1') {
       timeouts++;
     } else {
       wins[r.winner] = (wins[r.winner] || 0) + 1;

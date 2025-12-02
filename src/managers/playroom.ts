@@ -3,7 +3,6 @@ import * as PR from 'playroomkit';
 import { assignSystem, generateMap } from '../game/generate';
 import { rerender } from '../render/render';
 import { Bot } from '../game/bots';
-import { GameManager } from './manager';
 import type { Move, Order, Player, PlayerStats, System } from '../types';
 import { Graph, type GraphJSON } from '../classes/graph';
 import { updateInfoBox, updateLeaderbox, updateMessageBox } from '../render/ui';
@@ -15,6 +14,7 @@ import {
 } from '../game/state';
 import { GAME_STATE } from './types';
 import { COLORS } from '../core/constants';
+import { LocalGameManager } from './local';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -49,11 +49,11 @@ type PlayerEliminatedEventData = {
   winnerId: string;
 };
 
-export class PlayroomGameManager extends GameManager {
+export class PlayroomGameManager extends LocalGameManager {
   playerStates = new Map<string, PR.PlayerState>();
 
   async connect() {
-    this.#registerEvents();
+    this.registerPlayroomEvents();
 
     this.stopGame();
     this.gameState = GAME_STATE.WAITING;
@@ -119,7 +119,7 @@ export class PlayroomGameManager extends GameManager {
     //   Object.assign(localPlayer, p);
     // }
 
-    super.setupGame();
+    this.setupUI();
 
     // Adjust colors as needed
     const colorsAvailable = new Set<string>(COLORS);
@@ -139,14 +139,12 @@ export class PlayroomGameManager extends GameManager {
     rerender();
   }
 
-  protected runGameLoop() {
+  gameTick() {
     this.syncState();
-    super.runGameLoop();
+    super.gameTick();
   }
 
   private syncState() {
-    console.log('Syncing game state with Playroom.');
-
     PR.myPlayer().setState(
       PLAYER_STATES.PLAYER,
       playersToJson(state.players),
@@ -260,7 +258,7 @@ export class PlayroomGameManager extends GameManager {
     }
   }
 
-  #registerEvents() {
+  private registerPlayroomEvents() {
     PR.RPC.register(PLAYROOM_EVENTS.UPDATE_SYSTEM, async (system: System) => {
       const from = state.world.systemMap.get(system.id)!;
       Object.assign(from, system);

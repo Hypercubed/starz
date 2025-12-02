@@ -1,53 +1,46 @@
-import { checkVictory, gameTick } from '../core/engine';
-import {
-  addMessage,
-  addPlayer,
-  getPlayersHomeworld,
-  revealSystem,
-  state
-} from '../game/state';
-import { TICK_DURATION_MS } from '../core/constants';
-import {
-  onClickLane,
-  onClickSystem,
-  setupKeboardControls
-} from '../input/controls';
-import {
-  setupDialogs,
-  showEndGame,
-  updateInfoBox,
-  updateLeaderbox,
-  updateMessageBox
-} from '../render/ui';
-import { trackEvent } from '../utils/logging';
-import { centerOnHome, drawMap, rerender } from '../render/render';
+import { gameTick } from '../core/engine.ts';
+import { addPlayer, state } from '../game/state.ts';
+import { TICK_DURATION_MS } from '../core/constants.ts';
 import {
   type Lane,
   type Move,
   type Order,
   type Player,
   type System
-} from '../types';
-import { eliminatePlayer, moveShips, orderToMove } from '../game/actions';
-import type { Bot } from '../game/bots';
-import { GAME_STATE, type GameState } from './types';
+} from '../types.ts';
+import { eliminatePlayer, moveShips, orderToMove } from '../game/actions.ts';
+import type { Bot } from '../game/bots.ts';
+import { GAME_STATE, type GameState } from './types.ts';
 
 export abstract class GameManager {
   gameState: GameState = GAME_STATE.WAITING;
 
   protected runningInterval: number | null = null;
 
-  constructor() {
-    this.#registerEvents();
-  }
-
   abstract connect(): Promise<void>;
 
-  protected setupGame() {
-    drawMap();
-    updateInfoBox();
-    updateLeaderbox();
-    updateMessageBox();
+  quit() {
+    throw new Error('Method not implemented.');
+  }
+
+  playerWin() {
+    // Override in subclass if needed
+  }
+
+  playerLose(_winner: string | null) {
+    // Override in subclass if needed
+  }
+
+  eliminatePlayer(loserId: string, winnerId: string | null) {
+    eliminatePlayer(loserId, winnerId);
+  }
+
+  onSystemClick(_event: PointerEvent, _system: System) {
+    // Override in subclass if needed
+  }
+
+  onLaneClick(_event: PointerEvent, _lane: Lane) {
+    // Override in subclass if needed
   }
 
   addPlayer(
@@ -55,7 +48,7 @@ export abstract class GameManager {
     playerId: string,
     bot: Bot | undefined,
     color: string
-  ) {
+  ): Player | undefined {
     if (state.playerMap.has(playerId)) return;
 
     const player = {
@@ -70,43 +63,17 @@ export abstract class GameManager {
     } satisfies Player;
     addPlayer(player);
 
-    if (bot) {
-      bot.id = player.id;
-    }
-
-    document.documentElement.style.setProperty(`--player-${player.id}`, color);
-  }
-
-  protected setupThisPlayer(playerId: string) {
-    state.thisPlayerId = playerId;
-    const homeworld = getPlayersHomeworld()!;
-    revealSystem(homeworld);
-    centerOnHome();
-    state.selectedSystems.clear();
-    state.selectedSystems.add(homeworld.id);
-    state.lastSelectedSystem = homeworld.id;
+    return player;
   }
 
   startGame() {
-    trackEvent('starz_gamesStarted');
-    addMessage(`Game started.`);
-
-    const player = state.playerMap.get(state.thisPlayerId!);
-    if (player) {
-      addMessage(`You are Player ${player.name}.`);
-    }
-
     this.gameState = GAME_STATE.PLAYING;
-    this.runGameLoop();
+    this.#runGameLoop();
   }
 
   stopGame() {
     this.gameState = GAME_STATE.FINISHED;
     this.stopGameLoop();
-
-    state.selectedSystems.clear();
-    state.lastSelectedSystem = null;
-    rerender();
   }
 
   takeOrder(order: Order) {
@@ -123,80 +90,30 @@ export abstract class GameManager {
     from.lastMove = move;
   }
 
-  onSystemClick(event: PointerEvent, system: System) {
-    onClickSystem(event, system);
-    rerender();
+  gameTick() {
+    gameTick();
   }
 
-  onLaneClick(event: PointerEvent, lane: Lane) {
-    onClickLane(event, lane);
-    rerender();
-  }
-
-  playerWin() {
-    this.stopGame();
-    this.gameState = GAME_STATE.FINISHED;
-
-    state.world.systems.forEach(revealSystem);
-    state.selectedSystems.clear();
-    state.lastSelectedSystem = null;
-
-    trackEvent('starz_gamesWon');
-    return showEndGame(`You have conquered The Bubble!`);
-  }
-
-  quit() {
-    return showEndGame('Quit?');
-  }
-
-  eliminatePlayer(loserId: string, winnerId: string) {
-    const loser = state.playerMap.get(loserId)!;
-    const winner = state.playerMap.get(winnerId);
-
-    const message =
-      winnerId === null
-        ? `Player ${loser.name} has been eliminated!`
-        : `Player ${winner!.name} has eliminated Player ${loser.name}!`;
-
-    addMessage(message);
-    eliminatePlayer(loserId, winnerId);
-  }
-
-  playerLose(winner: string | null) {
-    this.stopGame();
-    this.gameState = GAME_STATE.FINISHED;
-
-    state.world.systems.forEach(revealSystem);
-    state.lastSelectedSystem = null;
-    state.selectedSystems.clear();
-
-    trackEvent('starz_gamesLost', { winner });
-    return showEndGame(`You have lost your homeworld! Game Over.`);
-  }
-
-  #registerEvents() {
-    setupDialogs();
-    setupKeboardControls();
-  }
-
-  protected runGameLoop() {
+  #runGameLoop() {
     if (this.gameState !== GAME_STATE.PLAYING) {
       this.stopGame();
       return;
     }
 
     this.stopGameLoop();
-
-    gameTick();
-    checkVictory();
+    this.gameTick();
 
     this.runningInterval = setTimeout(
-      () => this.runGameLoop(),
+      () => this.#runGameLoop(),
       TICK_DURATION_MS / state.timeScale
     );
   }
 
-  protected stopGameLoop() {
+  startGameLoop() {
+    this.#runGameLoop();
+  }
+
+  stopGameLoop() {
     if (this.runningInterval) {
       clearTimeout(this.runningInterval);
       this.runningInterval = null;

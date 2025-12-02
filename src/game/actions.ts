@@ -40,7 +40,7 @@ function takeSystem(playerId: string, system: System) {
   if (playerId === state.thisPlayerId) revealSystem(system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    window.gameManager.eliminatePlayer(system.homeworld, playerId);
+    globalThis.gameManager.eliminatePlayer(system.homeworld, playerId);
   }
 }
 
@@ -69,7 +69,7 @@ export function eliminatePlayer(
   }
 
   if (loserId === state.thisPlayerId) {
-    window.gameManager.playerLose(winnerId);
+    globalThis.gameManager.playerLose(winnerId);
   }
 }
 
@@ -84,7 +84,7 @@ export function doQueuedMoves() {
   state.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      window.gameManager.makeMove(move);
+      globalThis.gameManager.makeMove(move);
     }
   });
 }

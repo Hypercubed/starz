@@ -317,11 +317,11 @@ function drawSystems() {
         .attr('class', 'system')
         .attr('id', (d) => `system-${d.id}`)
         .on('click', (ev: PointerEvent, d: System) =>
-          window.gameManager.onSystemClick(ev, d)
+          globalThis.gameManager.onSystemClick(ev, d)
         )
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
-          window.gameManager.onSystemClick(ev, d);
+          globalThis.gameManager.onSystemClick(ev, d);
         });
 
       group
@@ -414,11 +414,11 @@ function drawRegions() {
         .append('path')
         .classed('region', true)
         .on('click', (ev: PointerEvent, d: System) =>
-          window.gameManager.onSystemClick(ev, d)
+          globalThis.gameManager.onSystemClick(ev, d)
         )
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
-          window.gameManager.onSystemClick(ev, d);
+          globalThis.gameManager.onSystemClick(ev, d);
         })
     );
 
@@ -465,11 +465,11 @@ function drawLanes() {
         .attr('stroke', 'orange')
         .attr('id', (_, i) => `lane-${i}`)
         .on('click', (ev: PointerEvent, d: Lane) =>
-          window.gameManager.onLaneClick(ev, d)
+          globalThis.gameManager.onLaneClick(ev, d)
         )
         .on('contextmenu', (ev: PointerEvent, d: Lane) => {
           ev.preventDefault();
-          window.gameManager.onLaneClick(ev, d);
+          globalThis.gameManager.onLaneClick(ev, d);
         })
     )
     .style('--owner-color', (d) => {

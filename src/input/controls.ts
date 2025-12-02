@@ -75,7 +75,7 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        window.gameManager.quit();
+        globalThis.gameManager.quit();
         return;
       }
     }
@@ -86,8 +86,8 @@ export function setupKeboardControls() {
 
     switch (event.code) {
       case 'Space':
-        if (!('pauseToggle' in window.gameManager)) return;
-        (window.gameManager as any).pauseToggle();
+        if (!('pauseToggle' in globalThis.gameManager)) return;
+        (globalThis.gameManager as any).pauseToggle();
         return;
       case 'Equal':
       case 'NumpadAdd':
@@ -173,7 +173,7 @@ function selectPath(systemId: string) {
 }
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
-  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
+  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   switch (event.button) {
     case 0: // Left click
@@ -212,7 +212,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 }
 
 export function onClickSystem(event: PointerEvent, system: System) {
-  if (window.gameManager.gameState !== GAME_STATE.PLAYING) return;
+  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(
@@ -269,7 +269,7 @@ export function orderBalancedMove(fromId: string, toId: string) {
     playerId: state.thisPlayerId!
   } satisfies Order;
 
-  window.gameManager.takeOrder(order);
+  globalThis.gameManager.takeOrder(order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
@@ -283,5 +283,5 @@ export function orderMassMove(fromId: string, toId: string) {
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  window.gameManager.takeOrder(order);
+  globalThis.gameManager.takeOrder(order);
 }
