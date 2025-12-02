@@ -1,5 +1,9 @@
+import { version } from '../package.json';
+
 import { LocalGameManager } from './managers/local.ts';
 // import { PlayroomGameManager } from './managers/playroom.ts';
+
+console.log(`starz.io version ${version}`);
 
 globalThis.onload = async () => {
   const gameManager = new LocalGameManager();
