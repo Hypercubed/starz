@@ -1,11 +1,10 @@
 
-import { state } from '../src/game/state.ts';
 import { type BotPersonalities, PERSONALITIES } from '../src/game/bots.ts';
 import { Bot } from '../src/game/bots.ts';
 import { SimGameManager } from '../src/managers/simulation.ts';
 import type {} from '../src/globals.d.ts';
 
-const N = 5000; // Number of simulations
+const N = 10; // Number of simulations
 const T = 5000; // Max ticks per simulation
 
 async function runSimulation(gameId: number) {
@@ -13,6 +12,8 @@ async function runSimulation(gameId: number) {
   globalThis.gameManager = manager;
 
   manager.connect();
+
+  let ctx = manager.getContext();
 
   const personalities = Object.keys(PERSONALITIES) as BotPersonalities[];
   for (let i = 1; i <= personalities.length; i++) {
@@ -28,7 +29,7 @@ async function runSimulation(gameId: number) {
   }
   
   // Add specific personalities
-  const id = `${state.players.length + 1}`;
+  const id = `${ctx.G.players.length + 1}`;
   const bot = new Bot({ id, personality: 'idle' });
   manager.addPlayer(
     `idle`,
@@ -40,11 +41,11 @@ async function runSimulation(gameId: number) {
   let winner = '-1';
   let running = true;
 
-  while (state.tick < T && running) {
-    manager.gameTick();
+  while (ctx.G.tick < T && running) {
+    ctx.E.gameTick();
 
     // Check for winner
-    const activePlayers = state.players.filter(p => p.stats.systems > 0);
+    const activePlayers = ctx.G.players.filter(p => p.stats.systems > 0);
 
     if (activePlayers.length === 1) {
       winner = activePlayers[0].id;
@@ -53,9 +54,11 @@ async function runSimulation(gameId: number) {
       // Draw?
       running = false;
     }
-  }
 
-  return { gameId, winner, ticks: state.tick };
+    ctx = manager.getContext();
+  }
+``
+  return { gameId, winner, ticks: ctx.G.tick };
 }
 
 async function main() {

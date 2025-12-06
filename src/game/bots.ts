@@ -1,5 +1,5 @@
-import { queueMove, state } from './state.ts';
 import { type BotInterface, type System } from '../types.ts';
+import { queueMove } from './state.ts';
 
 interface BotMove {
   message: string;
@@ -46,6 +46,7 @@ export const PERSONALITIES = {
 export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
 export function botQueue() {
+  const state = gameManager.getState();
   state.players.forEach((p) => p.bot?.makeMoves());
 }
 
@@ -88,6 +89,8 @@ export class Bot implements BotInterface {
   makeMoves() {
     if (this.name === 'idle') return;
 
+    const state = gameManager.getState();
+
     this.botSystems = state.world.systems.filter(
       (system) => system.ownerId === this.id
     );
@@ -120,6 +123,8 @@ export class Bot implements BotInterface {
     this.frontline.clear();
     this.backline.clear();
 
+    const state = gameManager.getState();
+
     this.botSystems.forEach((system) => {
       const neighbors = state.world.getAdjacentSystems(system.id);
       const enemyNeighbors = neighbors.filter(
@@ -144,6 +149,8 @@ export class Bot implements BotInterface {
   }
 
   private getDefensiveMoves(): BotMove[][] {
+    const state = gameManager.getState();
+
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
 
@@ -206,6 +213,8 @@ export class Bot implements BotInterface {
   }
 
   private getCoordinatedAttackMoves(): BotMove[][] {
+    const state = gameManager.getState();
+
     const targets = new Map<string, { target: System; attackers: System[] }>();
 
     // Identify potential targets
@@ -286,6 +295,8 @@ export class Bot implements BotInterface {
   }
 
   private getExterminateMoves(): BotMove[][] {
+    const state = gameManager.getState();
+
     // Opportunistic attacks on weak neighbors
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
@@ -314,6 +325,8 @@ export class Bot implements BotInterface {
   }
 
   private getExploreMoves(): BotMove[][] {
+    const state = gameManager.getState();
+
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
@@ -337,6 +350,8 @@ export class Bot implements BotInterface {
   }
 
   private getLogisticsMoves(): BotMove[][] {
+    const state = gameManager.getState();
+
     return this.botSystems.map((from) => {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];

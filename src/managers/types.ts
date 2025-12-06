@@ -1,8 +1,20 @@
-export const GAME_STATE = {
+import type { GameEvents, GameState } from '../game/types';
+
+export const GAME_STATUS = {
   WAITING: 'WAITING',
   PLAYING: 'PLAYING',
   FINISHED: 'FINISHED',
   PAUSED: 'PAUSED'
 } as const;
 
-export type GameState = (typeof GAME_STATE)[keyof typeof GAME_STATE];
+export type GameStatus = (typeof GAME_STATUS)[keyof typeof GAME_STATUS];
+
+export interface GameContext {
+  gameState: GameStatus;
+}
+
+export interface FnContext {
+  G: GameState;
+  E: GameEvents;
+  C: GameContext;
+}

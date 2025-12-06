@@ -1,8 +1,4 @@
-import {
-  DEBUG_LOGGING_ENABLED,
-  EVENT_TRACKING_ENABLED
-} from '../core/constants.ts';
-import { state } from '../game/state.ts';
+import { DEBUG_LOGGING_ENABLED, EVENT_TRACKING_ENABLED } from '../constants.ts';
 
 declare global {
   interface Window {
@@ -11,6 +7,8 @@ declare global {
 }
 
 export function debugLog(message: string, ...optionalParams: any[]) {
+  const state = globalThis.gameManager?.getState();
+
   if (DEBUG_LOGGING_ENABLED) {
     console.log(`[DEBUG][Tick ${state.tick}] ${message}`, ...optionalParams);
   }
@@ -18,6 +16,8 @@ export function debugLog(message: string, ...optionalParams: any[]) {
 
 export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
   if (!EVENT_TRACKING_ENABLED) return;
+
+  const state = globalThis.gameManager?.getState();
 
   let count = 1;
   try {

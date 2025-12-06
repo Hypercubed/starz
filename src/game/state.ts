@@ -1,34 +1,23 @@
 import { Graph } from '../classes/graph.ts';
 import type { Messages, Player, System } from '../types.ts';
+import type { GameState } from './types.ts';
 
-export const state = {
-  tick: 0,
-  timeScale: 1,
-  running: false,
-  thisPlayerId: null as string | null,
-  selectedSystems: new Set<string>(),
-  lastSelectedSystem: null as string | null, // TODO: Make this an id
-  world: new Graph(),
-  players: [] as Player[],
-  playerMap: new Map<string, Player>(),
-  messages: [] as Messages[]
-};
-
-export function resetState() {
-  state.tick = 0;
-  state.thisPlayerId = null;
-  state.selectedSystems = new Set<string>();
-  state.lastSelectedSystem = null;
-  state.timeScale = 1;
-  state.world = new Graph();
-  state.players = [];
-  state.messages = [] as Messages[];
-  state.playerMap.clear();
+export function initalState(): GameState {
+  return {
+    tick: 0,
+    timeScale: 1,
+    running: false,
+    thisPlayerId: null as string | null,
+    world: new Graph(),
+    players: [] as Player[],
+    playerMap: new Map<string, Player>(),
+    messages: [] as Messages[]
+  };
 }
 
 let messageIdCounter = 0;
 
-export function addMessage(message: string) {
+export function addMessage(state: GameState, message: string) {
   const html = `${message} <small>${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}</small>`;
   state.messages.push({
     id: messageIdCounter++,
@@ -36,25 +25,33 @@ export function addMessage(message: string) {
     tick: state.tick,
     html
   });
+
+  return state;
 }
 
-export function thisPlayer(): Player | undefined {
+export function clearMessages(state: GameState) {
+  state.messages = [];
+  return state;
+}
+
+export function thisPlayer(state: GameState): Player | undefined {
   return state.playerMap.get(state.thisPlayerId!);
 }
 
-export function addPlayer(player: Player) {
+export function addPlayer(state: GameState, player: Player) {
   state.players.push(player);
   state.playerMap.set(player.id, player);
+  return state;
 }
 
-export function getPlayersHomeworld() {
+export function getPlayersHomeworld(state: GameState) {
   if (!state.thisPlayerId) return null;
   return state.world.systems.find(
     (system) => system.homeworld === state.thisPlayerId
   );
 }
 
-export function revealSystem(system: System) {
+export function revealSystem(state: GameState, system: System) {
   const playerId = state.thisPlayerId;
   if (!playerId) return;
 
@@ -71,6 +68,12 @@ export function revealSystem(system: System) {
     player.revealedSystems.add(neighbor.id);
     player.visitedSystems.add(neighbor.id);
   });
+
+  return state;
+}
+
+export function revealAllSystems(state: GameState) {
+  state.world.systems.forEach((system) => revealSystem(state, system));
 }
 
 export function queueMove(
@@ -87,42 +90,4 @@ export function queueMove(
     playerId,
     message
   });
-}
-
-export function clearSelection() {
-  state.selectedSystems.clear();
-  state.lastSelectedSystem = null;
-}
-
-export function toggleSingleSystemSelect(systemId: string) {
-  if (state.selectedSystems.size === 1 && state.selectedSystems.has(systemId)) {
-    clearSelection();
-  } else {
-    // Select only this system
-    state.selectedSystems.clear();
-    state.selectedSystems.add(systemId);
-    state.lastSelectedSystem = systemId;
-  }
-}
-
-export function toggleSystemSelect(systemId: string) {
-  if (state.selectedSystems.has(systemId)) {
-    removeSystemSelect(systemId);
-  } else {
-    addSystemSelect(systemId);
-  }
-}
-
-export function addSystemSelect(systemId: string) {
-  if (!state.selectedSystems.has(systemId)) {
-    state.selectedSystems.add(systemId);
-    state.lastSelectedSystem = systemId;
-  }
-}
-
-export function removeSystemSelect(systemId: string) {
-  state.selectedSystems.delete(systemId);
-  if (state.lastSelectedSystem === systemId) {
-    state.lastSelectedSystem = null;
-  }
 }

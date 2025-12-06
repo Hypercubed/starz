@@ -1,17 +1,15 @@
 import type { Bot } from '../game/bots.ts';
-import { assignSystem, generateMap } from '../game/generate.ts';
-import { resetState } from '../game/state.ts';
 import type { Player } from '../types.ts';
 import { GameManager } from './manager.ts';
-import { GAME_STATE } from './types.ts';
+import { GAME_STATUS } from './types.ts';
 
 export class SimGameManager extends GameManager {
   async connect() {
     this.stopGame();
-    this.gameState = GAME_STATE.WAITING;
+    this.gameState = GAME_STATUS.WAITING;
 
-    resetState();
-    generateMap();
+    this.state = this.game.initalState();
+    this.game.generateMap(this.state);
   }
 
   addPlayer(
@@ -21,7 +19,7 @@ export class SimGameManager extends GameManager {
     color: string
   ): Player | undefined {
     const player = super.addPlayer(name, playerId, bot, color);
-    assignSystem(playerId);
+    this.game.assignSystem(this.state, playerId);
     return player;
   }
 }

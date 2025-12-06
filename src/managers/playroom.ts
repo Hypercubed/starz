@@ -1,20 +1,17 @@
 import * as PR from 'playroomkit';
 
-import { assignSystem, generateMap } from '../game/generate';
-import { rerender } from '../render/render';
 import { Bot } from '../game/bots';
-import type { Move, Order, Player, PlayerStats, System } from '../types';
+import type { Lane, Move, Order, Player, PlayerStats, System } from '../types';
 import { Graph, type GraphJSON } from '../classes/graph';
-import { updateInfoBox, updateLeaderbox, updateMessageBox } from '../render/ui';
-import {
-  removeSystemSelect,
-  resetState,
-  revealSystem,
-  state
-} from '../game/state';
-import { GAME_STATE } from './types';
-import { COLORS } from '../core/constants';
-import { LocalGameManager } from './local';
+
+import * as game from '../game/index.ts';
+import * as renderer from '../render/index.ts';
+
+import { GAME_STATUS } from './types';
+import { COLORS } from '../constants.ts';
+import { trackEvent } from '../utils/logging.ts';
+import { GameManager } from './manager.ts';
+import { clearSelection, deselect, select } from '../render/selection.ts';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -49,16 +46,21 @@ type PlayerEliminatedEventData = {
   winnerId: string;
 };
 
-export class PlayroomGameManager extends LocalGameManager {
-  playerStates = new Map<string, PR.PlayerState>();
+export class PlayroomGameManager extends GameManager {
+  private playerStates = new Map<string, PR.PlayerState>();
+
+  constructor() {
+    super();
+    this.registerUIEvents();
+  }
 
   async connect() {
     this.registerPlayroomEvents();
 
     this.stopGame();
-    this.gameState = GAME_STATE.WAITING;
+    this.gameState = GAME_STATUS.WAITING;
 
-    resetState();
+    this.state = game.initalState();
     PR.resetStates();
 
     await PR.insertCoin({
@@ -71,7 +73,7 @@ export class PlayroomGameManager extends LocalGameManager {
       },
       maxPlayersPerRoom: 5,
       defaultStates: {
-        [PLAYROOM_STATES.GAME_STATE]: GAME_STATE.WAITING
+        [PLAYROOM_STATES.GAME_STATE]: GAME_STATUS.WAITING
       }
     });
 
@@ -80,28 +82,34 @@ export class PlayroomGameManager extends LocalGameManager {
     console.log('Is Host:', PR.isHost());
 
     // For some reason sometimes host is not added
-    if (!state.playerMap.has(PR.myPlayer().id)) {
+    if (!this.state.playerMap.has(PR.myPlayer().id)) {
       this.addPlayerProfile(PR.myPlayer());
     }
 
     if (PR.isHost()) {
-      generateMap();
+      game.generateMap(this.state);
 
-      state.players.forEach((player) => assignSystem(player.id));
+      this.state.players.forEach((player) =>
+        game.assignSystem(this.state, player.id)
+      );
 
       console.log('Generated world and players as host.');
 
-      PR.setState(PLAYROOM_STATES.WORLD, state.world.toJSON(), true);
-      PR.setState(PLAYROOM_STATES.PLAYERS, playersToJson(state.players), true);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), true);
+      PR.setState(
+        PLAYROOM_STATES.PLAYERS,
+        playersToJson(this.state.players),
+        true
+      );
     } else {
       const world = await PR.waitForState<GraphJSON>(PLAYROOM_STATES.WORLD);
       const players = await PR.waitForState<Player[]>(PLAYROOM_STATES.PLAYERS);
 
       console.log('Received world and players from host.');
 
-      state.world = Graph.fromJSON(world);
+      this.state.world = Graph.fromJSON(world);
       players.forEach((stats) => {
-        super.addPlayer(stats.name, stats.id, undefined, stats.color);
+        this.addPlayer(stats.name, stats.id, undefined, stats.color);
       });
     }
 
@@ -109,7 +117,7 @@ export class PlayroomGameManager extends LocalGameManager {
       'Restoring player state from Playroom state.',
       PR.myPlayer().id
     );
-    super.setupThisPlayer(PR.myPlayer().id);
+    this.setupThisPlayer(PR.myPlayer().id);
 
     // const playerJson = PR.myPlayer().getState(PLAYER_STATES.PLAYER) as any;
     // if (playerJson) {
@@ -119,13 +127,13 @@ export class PlayroomGameManager extends LocalGameManager {
     //   Object.assign(localPlayer, p);
     // }
 
-    this.setupUI();
+    renderer.setupUI(this.getContext());
 
     // Adjust colors as needed
     const colorsAvailable = new Set<string>(COLORS);
     const colorsUsed = new Set<string>();
 
-    state.players.forEach((player) => {
+    this.state.players.forEach((player) => {
       if (colorsUsed.has(player.color)) {
         player.color =
           colorsAvailable.values().next().value || getRandomColor();
@@ -135,40 +143,70 @@ export class PlayroomGameManager extends LocalGameManager {
       colorsUsed.add(player.color);
     });
 
-    super.startGame();
-    rerender();
+    this.startGame();
+    renderer.rerender(this.getContext());
   }
 
-  gameTick() {
+  protected setupThisPlayer(playerId: string) {
+    this.state.thisPlayerId = playerId;
+    const homeworld = game.getPlayersHomeworld(this.state)!;
+    game.revealSystem(this.state, homeworld);
+    renderer.centerOnHome(this.getContext());
+    clearSelection();
+    select(homeworld.id);
+  }
+
+  protected startGame() {
+    trackEvent('starz_gamesStarted');
+    game.addMessage(this.state, `Game started.`);
+
+    const player = this.state.playerMap.get(this.state.thisPlayerId!);
+    if (player) {
+      game.addMessage(this.state, `You are Player ${player.name}.`);
+    }
+
+    super.startGame();
+  }
+
+  protected gameTick() {
     this.syncState();
+
     super.gameTick();
+    game.checkVictory(this.getContext());
+
+    renderer.rerender(this.getContext());
+    renderer.updateUI(this.state);
   }
 
   private syncState() {
     PR.myPlayer().setState(
       PLAYER_STATES.PLAYER,
-      playersToJson(state.players),
+      playersToJson(this.state.players),
       false
     );
 
     if (PR.isHost()) {
-      PR.setState(PLAYROOM_STATES.TICK, state.tick, false);
+      PR.setState(PLAYROOM_STATES.TICK, this.state.tick, false);
       PR.setState(
         PLAYROOM_STATES.PLAYER_STATS,
-        state.players.map((p) => p.stats),
+        this.state.players.map((p) => p.stats),
         false
       );
       PR.setState(PLAYROOM_STATES.GAME_STATE, this.gameState, false);
-      PR.setState(PLAYROOM_STATES.WORLD, state.world.toJSON(), false);
-      PR.setState(PLAYROOM_STATES.PLAYERS, playersToJson(state.players), false);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), false);
+      PR.setState(
+        PLAYROOM_STATES.PLAYERS,
+        playersToJson(this.state.players),
+        false
+      );
     } else {
-      state.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
+      this.state.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
       // this.gameState = PR.getState(PLAYROOM_STATES.GAME_STATE) as GameState;
 
-      if (state.tick % 10 === 0) {
+      if (this.state.tick % 10 === 0) {
         const world = PR.getState(PLAYROOM_STATES.WORLD) as GraphJSON;
         if (world) {
-          state.world = Graph.fromJSON(world);
+          this.state.world = Graph.fromJSON(world);
         }
       }
 
@@ -176,7 +214,7 @@ export class PlayroomGameManager extends LocalGameManager {
         PLAYROOM_STATES.PLAYER_STATS
       ) as PlayerStats[];
       if (playerStats) {
-        state.players.forEach((p) => {
+        this.state.players.forEach((p) => {
           const stats = playerStats.find((s) => s.playerId === p.id);
           if (stats) {
             p.stats = stats;
@@ -184,10 +222,8 @@ export class PlayroomGameManager extends LocalGameManager {
         });
       }
 
-      rerender();
-      updateInfoBox();
-      updateLeaderbox();
-      updateMessageBox();
+      renderer.rerender(this.getContext());
+      renderer.updateUI(this.state);
     }
   }
 
@@ -205,18 +241,32 @@ export class PlayroomGameManager extends LocalGameManager {
     });
   }
 
+  protected addPlayer(
+    name: string,
+    playerId: string,
+    bot: Bot | undefined,
+    color: string
+  ) {
+    const player = super.addPlayer(name, playerId, bot, color);
+    if (!player) return;
+
+    document.documentElement.style.setProperty(`--player-${player.id}`, color);
+    return player;
+  }
+
   private addPlayerProfile(playerState: PR.PlayerState) {
-    if (state.playerMap.has(playerState.id)) return;
+    if (this.state.playerMap.has(playerState.id)) return;
 
     const profile = playerState.getProfile();
     const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
-    const color = profile.color?.hexString ?? COLORS[state.players.length];
-    super.addPlayer(profile.name || playerState.id, playerState.id, bot, color);
+    const color = profile.color?.hexString ?? COLORS[this.state.players.length];
+    this.addPlayer(profile.name || playerState.id, playerState.id, bot, color);
   }
 
-  takeOrder(order: Order) {
+  protected takeOrder(order: Order) {
     // Optimistically apply the order immediately.
     super.takeOrder(order);
+    renderer.rerender(this.getContext());
 
     // Notify the host of the order.
     if (!PR.isHost()) {
@@ -224,31 +274,43 @@ export class PlayroomGameManager extends LocalGameManager {
     }
   }
 
-  makeMove(move: Move) {
+  protected makeMove(move: Move) {
+    console.log('Applied move:', move);
+
     // Apply the move locally.
     super.makeMove(move);
+    renderer.rerender(this.getContext());
 
     // Notify other players of the updated systems.
     if (PR.isHost()) {
       PR.RPC.call(
         PLAYROOM_EVENTS.UPDATE_SYSTEM,
-        state.world.systemMap.get(move.fromId),
+        this.state.world.systemMap.get(move.fromId),
         PR.RPC.Mode.OTHERS
       );
 
       PR.RPC.call(
         PLAYROOM_EVENTS.UPDATE_SYSTEM,
-        state.world.systemMap.get(move.toId),
+        this.state.world.systemMap.get(move.toId),
         PR.RPC.Mode.OTHERS
       );
     }
   }
 
-  eliminatePlayer(loserId: string, winnerId: string) {
+  protected eliminatePlayer(loserId: string, winnerId: string | null) {
     if (PR.isHost()) {
+      const loser = this.state.playerMap.get(loserId)!;
+      const winner = this.state.playerMap.get(winnerId as any);
+
+      const message =
+        winnerId === null
+          ? `Player ${loser.name} has been eliminated!`
+          : `Player ${winner!.name} has eliminated Player ${loser.name}!`;
+
+      game.addMessage(this.state, message);
       super.eliminatePlayer(loserId, winnerId);
 
-      PR.setState(PLAYROOM_STATES.WORLD, state.world.toJSON(), false);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), false);
 
       PR.RPC.call(
         PLAYROOM_EVENTS.PLAYER_ELIMINATED,
@@ -260,62 +322,90 @@ export class PlayroomGameManager extends LocalGameManager {
 
   private registerPlayroomEvents() {
     PR.RPC.register(PLAYROOM_EVENTS.UPDATE_SYSTEM, async (system: System) => {
-      const from = state.world.systemMap.get(system.id)!;
+      const from = this.state.world.systemMap.get(system.id)!;
       Object.assign(from, system);
 
-      if (from.ownerId === state.thisPlayerId) {
-        revealSystem(from);
+      if (from.ownerId === this.state.thisPlayerId) {
+        game.revealSystem(this.state, from);
       } else {
-        removeSystemSelect(from.id);
+        deselect(from.id);
       }
 
-      rerender();
+      renderer.rerender(this.getContext());
     });
 
     PR.RPC.register(PLAYROOM_EVENTS.ORDER_GIVEN, async (order: Order) => {
-      super.takeOrder(order);
+      this.events.takeOrder(order);
     });
 
     PR.RPC.register(
       PLAYROOM_EVENTS.PLAYER_ELIMINATED,
       async (data: PlayerEliminatedEventData) => {
-        super.eliminatePlayer(data.loserId, data.winnerId);
-
+        this.events.eliminatePlayer(data.loserId, data.winnerId);
         const world = PR.getState(PLAYROOM_STATES.WORLD) as GraphJSON;
         if (world) {
-          state.world = Graph.fromJSON(world);
+          this.state.world = Graph.fromJSON(world);
         }
 
-        rerender();
+        renderer.rerender(this.getContext());
       }
     );
 
     PR.onPlayerJoin((playerState) => this.playerJoin(playerState));
   }
 
-  async quit() {
-    const restart = await super.quit();
+  protected async quit() {
+    const restart = await renderer.showEndGame('Quit?');
     if (!restart) return false;
     this.reload();
     return true;
   }
 
-  async playerWin() {
-    await super.playerWin();
+  protected async playerWin() {
+    this.stopGame();
+
+    game.revealAllSystems(this.state);
+    clearSelection();
+
+    trackEvent('starz_gamesWon');
+    await renderer.showEndGame(`You have conquered The Bubble!`);
+
     this.reload();
     return true;
   }
 
-  async playerLose(winner: string) {
-    await super.playerLose(winner);
+  protected async playerLose(winner: string) {
+    this.stopGame();
+
+    game.revealAllSystems(this.state);
+    clearSelection();
+
+    trackEvent('starz_gamesLost', { winner });
+    await renderer.showEndGame(`You have lost your homeworld! Game Over.`);
+
     this.reload();
     return true;
+  }
+
+  protected onSystemClick(event: PointerEvent, system: System) {
+    renderer.onClickSystem(event, this.getContext(), system);
+    renderer.rerender(this.getContext());
+  }
+
+  protected onLaneClick(event: PointerEvent, lane: Lane) {
+    renderer.onClickLane(event, this.getContext(), lane);
+    renderer.rerender(this.getContext());
   }
 
   private reload() {
     const newURL = window.location.href.split('#')[0];
     window.history.replaceState(null, '', newURL);
     window.location.reload();
+  }
+
+  private registerUIEvents() {
+    renderer.setupDialogs();
+    renderer.setupKeboardControls();
   }
 }
 

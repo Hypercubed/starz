@@ -1,4 +1,5 @@
 import * as d3 from 'd3';
+import { init } from '@paralleldrive/cuid2';
 
 import {
   NumInhabited,
@@ -8,13 +9,15 @@ import {
   NumHumanPlayers,
   MinDistanceBetweenSystems,
   MAX_SHIPS_PER_SYSTEM
-} from '../core/constants.ts';
-import { state } from './state.ts';
+} from '../constants.ts';
 import { SystemTypes, type Coordinates, type System } from '../types.ts';
 import { debugLog } from '../utils/logging.ts';
 import { findClosestSystem, Graph } from '../classes/graph.ts';
+import type { GameState } from './types.ts';
 
-export function generateMap() {
+const createId = init({ length: 5 });
+
+export function generateMap(state: GameState) {
   state.world = new Graph();
 
   const dz = HEIGHT / (NumOfSystems - 1);
@@ -95,7 +98,7 @@ export function generateMap() {
   }
 }
 
-export function assignSystem(playerId: string) {
+export function assignSystem(state: GameState, playerId: string) {
   const systems = state.world.systems.filter(
     (system) => !system.ownerId && system.type === SystemTypes.INHABITED
   );
@@ -114,9 +117,8 @@ export function assignSystem(playerId: string) {
 }
 
 function createSystem(location: Coordinates): System {
-  const index = state.world.getNextNodeIndex();
   return {
-    id: `${index}`,
+    id: 's' + createId(),
     type: SystemTypes.UNINHABITED,
     location,
     ownerId: null,

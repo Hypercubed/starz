@@ -1,5 +1,18 @@
 import * as d3 from 'd3';
 
+import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
+import { debugLog } from '../utils/logging.ts';
+import { Orders, type Lane, type Order, type System } from '../types.ts';
+import { GAME_STATUS, type FnContext } from '../managers/types.ts';
+import {
+  clearSelection,
+  select,
+  selection,
+  selectOnly,
+  selectPath,
+  toggleSelection
+} from './selection.ts';
+import { revealSystem } from '../game/state.ts';
 import {
   centerOnHome,
   centerOnSystem,
@@ -7,20 +20,8 @@ import {
   rerender,
   rotateProjection,
   scaleZoom
-} from '../render/render.ts';
-import {
-  addSystemSelect,
-  clearSelection,
-  state,
-  toggleSingleSystemSelect,
-  toggleSystemSelect
-} from '../game/state.ts';
-import { revealSystem } from '../game/state.ts';
-import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../core/constants.ts';
-import { showHelp } from '../render/ui.ts';
-import { debugLog } from '../utils/logging.ts';
-import { Orders, type Lane, type Order, type System } from '../types.ts';
-import { GAME_STATE } from '../managers/types.ts';
+} from './render.ts';
+import { showHelp } from './ui.ts';
 
 const ROTATION_STEP = 5;
 
@@ -35,28 +36,32 @@ export function setupKeboardControls() {
       event.preventDefault();
       // debugLog("keyup:", event);
 
+      const ctx = globalThis.gameManager.getContext();
+
       switch (event.code) {
         case 'KeyC':
-          state.world.systems.forEach((system) => {
-            if (system.ownerId === state.thisPlayerId) {
+          ctx.G.world.systemMap.forEach((system) => {
+            if (system.ownerId === ctx.G.thisPlayerId) {
               system.ships *= 2;
             }
           });
-          rerender();
+          rerender(ctx);
           return;
         case 'KeyR':
-          state.world.systems.forEach(revealSystem);
-          rerender();
+          ctx.G.world.systemMap.forEach((system) =>
+            revealSystem(ctx.G, system)
+          );
+          rerender(ctx);
           return;
         case 'NumpadAdd':
         case 'Equal':
-          state.timeScale = Math.min(16, state.timeScale * 2);
-          debugLog(`Time scale increased to ${state.timeScale}x`);
+          ctx.G.timeScale = Math.min(16, ctx.G.timeScale * 2);
+          debugLog(`Time scale increased to ${ctx.G.timeScale}x`);
           return;
         case 'NumpadSubtract':
         case 'Minus':
-          state.timeScale = Math.max(0.25, state.timeScale / 2);
-          debugLog(`Time scale decreased to ${state.timeScale}x`);
+          ctx.G.timeScale = Math.max(0.25, ctx.G.timeScale / 2);
+          debugLog(`Time scale decreased to ${ctx.G.timeScale}x`);
           return;
       }
     });
@@ -65,17 +70,19 @@ export function setupKeboardControls() {
   d3.select('body').on('keyup.controls', (event) => {
     // debugLog("keyup:", event);
 
+    const ctx = globalThis.gameManager.getContext();
+
     switch (event.key) {
       case 'Escape':
         clearSelection();
-        rerender();
+        rerender(ctx);
         return;
       case '?':
         showHelp();
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        globalThis.gameManager.quit();
+        ctx.E.quit();
         return;
       }
     }
@@ -84,6 +91,8 @@ export function setupKeboardControls() {
   d3.select('body').on('keypress.controls', (event) => {
     // debugLog("Key pressed:", event);
 
+    const ctx = globalThis.gameManager.getContext();
+
     switch (event.code) {
       case 'Space':
         if (!('pauseToggle' in globalThis.gameManager)) return;
@@ -91,89 +100,63 @@ export function setupKeboardControls() {
         return;
       case 'Equal':
       case 'NumpadAdd':
-        scaleZoom(1.2);
-        rerender();
+        scaleZoom(ctx, 1.2);
+        rerender(ctx);
         return;
       case 'Minus':
       case 'NumpadSubtract':
-        scaleZoom(0.8);
-        rerender();
+        scaleZoom(ctx, 0.8);
+        rerender(ctx);
         return;
       case 'KeyW':
         rotateProjection([0, ROTATION_STEP]);
-        rerender();
+        rerender(ctx);
         return;
       case 'KeyA':
         rotateProjection([-ROTATION_STEP, 0]);
-        rerender();
+        rerender(ctx);
         return;
       case 'KeyS':
         rotateProjection([0, -ROTATION_STEP]);
-        rerender();
+        rerender(ctx);
         return;
       case 'KeyD':
         rotateProjection([ROTATION_STEP, 0]);
-        rerender();
+        rerender(ctx);
         return;
       case 'KeyQ':
         rotateProjection([0, 0, ROTATION_STEP]);
-        rerender();
+        rerender(ctx);
         break;
       case 'KeyE':
         rotateProjection([0, 0, -ROTATION_STEP]);
-        rerender();
+        rerender(ctx);
         break;
       case 'KeyH':
-        centerOnHome();
-        rerender();
+        centerOnHome(ctx);
+        rerender(ctx);
         return;
       case 'KeyC':
-        if (state.lastSelectedSystem) {
-          centerOnSystem(state.lastSelectedSystem);
-          rerender();
+        if (selection.last) {
+          centerOnSystem(ctx, selection.last);
+          rerender(ctx);
         }
         return;
       case 'KeyP':
         changeView();
-        centerOnHome();
-        rerender();
+        centerOnHome(ctx);
+        rerender(ctx);
         return;
     }
   });
 }
 
-function selectPath(systemId: string) {
-  if (state.lastSelectedSystem == null) return;
-
-  // Simple BFS to find shortest path
-  const queue: string[][] = [[state.lastSelectedSystem]];
-  const visited = new Set<string>();
-  visited.add(state.lastSelectedSystem);
-
-  while (queue.length > 0) {
-    const path = queue.shift()!;
-    const current = path[path.length - 1];
-
-    if (current === systemId) {
-      // Found path
-      state.selectedSystems = new Set([...state.selectedSystems, ...path]);
-      state.lastSelectedSystem = systemId;
-      return;
-    }
-    for (const neighbor of state.world.getAdjacentSystems(current)) {
-      if (
-        !visited.has(neighbor.id) &&
-        neighbor.ownerId === state.thisPlayerId
-      ) {
-        visited.add(neighbor.id);
-        queue.push([...path, neighbor.id]);
-      }
-    }
-  }
-}
-
-export function onClickLane(event: PointerEvent, lane: Lane) {
-  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
+export function onClickLane(
+  event: PointerEvent,
+  { G, C }: FnContext,
+  lane: Lane
+) {
+  if (C.gameState !== GAME_STATUS.PLAYING) return;
 
   switch (event.button) {
     case 0: // Left click
@@ -181,17 +164,17 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       break;
     case 2: {
       // Right click
-      let from = state.world.systemMap.get(lane.fromId)!;
-      let to = state.world.systemMap.get(lane.toId)!;
+      let from = G.world.systemMap.get(lane.fromId)!;
+      let to = G.world.systemMap.get(lane.toId)!;
 
       if (
-        from.ownerId !== state.thisPlayerId &&
-        to.ownerId !== state.thisPlayerId &&
+        from.ownerId !== G.thisPlayerId &&
+        to.ownerId !== G.thisPlayerId &&
         !ENABLE_BOT_CONTROL
       )
         return; // Can't move if neither side is owned by player
 
-      if (from.ownerId !== state.thisPlayerId) {
+      if (from.ownerId !== G.thisPlayerId) {
         // Make sure 'from' is owned by player
         const s = from;
         from = to;
@@ -206,20 +189,24 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       }
 
       orderBalancedMove(from.id, to.id);
-      if (to.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL) return;
+      if (to.ownerId !== G.thisPlayerId && !ENABLE_BOT_CONTROL) return;
 
       if (!event.altKey) {
         if (!event.ctrlKey && !event.shiftKey) clearSelection();
-        addSystemSelect(from.id);
-        if (to.ownerId === state.thisPlayerId) addSystemSelect(to.id);
+        select(from.id);
+        if (to.ownerId === G.thisPlayerId) select(to.id);
       }
       break;
     }
   }
 }
 
-export function onClickSystem(event: PointerEvent, system: System) {
-  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
+export function onClickSystem(
+  event: PointerEvent,
+  ctx: FnContext,
+  system: System
+) {
+  if (ctx.C.gameState !== GAME_STATUS.PLAYING) return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(
@@ -232,32 +219,31 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
   switch (event.button) {
     case 0: // Left click
-      if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL) return;
-
+      if (system.ownerId !== ctx.G.thisPlayerId && !ENABLE_BOT_CONTROL) return;
       if (event.ctrlKey || event.metaKey) {
-        toggleSystemSelect(system.id);
+        toggleSelection(system.id);
       } else if (event.shiftKey) {
-        selectPath(system.id);
+        selectPath(ctx, system.id);
       } else {
-        toggleSingleSystemSelect(system.id);
+        selectOnly(system.id);
       }
       break;
     case -1: // Long press (touch)
     case 2: {
       // Right click
-      const selectedSystems = Array.from(state.selectedSystems);
+      const selectedSystems = Array.from(selection.all);
       if (selectedSystems.length === 0) return;
 
       selectedSystems.forEach((fromId) => {
         orderMassMove(fromId, system.id);
-        if (system.ownerId !== state.thisPlayerId && !ENABLE_BOT_CONTROL)
+        if (system.ownerId !== ctx.G.thisPlayerId && !ENABLE_BOT_CONTROL)
           return;
 
         if (!event.altKey) {
           if (!event.ctrlKey && !event.shiftKey) {
             clearSelection();
           }
-          addSystemSelect(system.id);
+          select(system.id);
         }
       });
       break;
@@ -266,29 +252,31 @@ export function onClickSystem(event: PointerEvent, system: System) {
 }
 
 export function orderBalancedMove(fromId: string, toId: string) {
-  if (!state.world.hasLane(fromId, toId)) return;
+  const { G, E } = globalThis.gameManager.getContext();
+  if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
     type: Orders.BALANCED_MOVE,
     message: `Balanced move from ${fromId} to ${toId}`,
     toId,
     fromId,
-    playerId: state.thisPlayerId!
+    playerId: G.thisPlayerId!
   } satisfies Order;
 
-  globalThis.gameManager.takeOrder(order);
+  E.takeOrder(order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
-  if (!state.world.hasLane(fromId, toId)) return;
+  const { G, E } = globalThis.gameManager.getContext();
+  if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
     type: Orders.MASS_MOVE,
     toId,
     fromId,
-    playerId: state.thisPlayerId!,
+    playerId: G.thisPlayerId!,
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  globalThis.gameManager.takeOrder(order);
+  E.takeOrder(order);
 }

@@ -26,8 +26,7 @@ export class Graph {
 
   addLane(from: System, to: System): void {
     const id = [from.id, to.id].sort((a, b) => a.localeCompare(b)).join('-');
-    const existingLaneIndex = this.lanes.findIndex((lane) => lane.id === id);
-    if (existingLaneIndex !== -1) return;
+    if (this.laneMap.has(id)) return;
 
     const newLane = {
       id,
@@ -39,13 +38,9 @@ export class Graph {
     this.laneMap.set(id, newLane);
   }
 
-  getNextNodeIndex(): number {
-    return this.systems.length;
-  }
-
   buildNeighborMap() {
     const map = new Map<string, Array<string>>();
-    this.lanes.forEach((lane) => {
+    this.laneMap.forEach((lane) => {
       if (!map.has(lane.fromId)) {
         map.set(lane.fromId, []);
       }
@@ -91,17 +86,14 @@ export class Graph {
 
   static fromJSON(json: GraphJSON) {
     const graph = new Graph();
-    graph.systems = json.systems ?? [];
-    graph.lanes = json.lanes ?? [];
-
     graph.systemMap = new Map<string, System>();
     graph.laneMap = new Map<string, Lane>();
 
-    graph.systems.forEach((system) => {
+    json.systems.forEach((system) => {
       graph.systemMap.set(system.id, system);
     });
 
-    graph.lanes.forEach((lane) => {
+    json.lanes.forEach((lane) => {
       graph.laneMap.set(lane.id, lane);
     });
 

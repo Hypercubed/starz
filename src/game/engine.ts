@@ -4,15 +4,15 @@ import {
   SHIPS_PER_TURN,
   TICKS_PER_ROUND,
   TICKS_PER_TURN
-} from './constants.ts';
+} from '../constants.ts';
 
-import { addMessage, state } from '../game/state.ts';
-import { rerender } from '../render/render.ts';
-import { doQueuedMoves } from '../game/actions.ts';
-import { botQueue } from '../game/bots.ts';
-import { GAME_STATE } from '../managers/types.ts';
+import { doQueuedMoves } from './actions.ts';
+import { botQueue } from './bots.ts';
+import { GAME_STATUS, type FnContext } from '../managers/types.ts';
+import type { GameState } from './types.ts';
+import { addMessage } from './state.ts';
 
-export function updateStats() {
+export function updateStats(state: GameState) {
   state.players.forEach((player) => {
     const systems = state.world.systems.filter(
       (system) => system.ownerId === player.id
@@ -37,7 +37,7 @@ export function updateStats() {
   // }
 }
 
-export function turnUpdate() {
+export function turnUpdate(state: GameState) {
   state.world.systems.forEach((system) => {
     if (system.type === 'inhabited' && system.ownerId != null) {
       if (system.ownerId || system.ships < MAX_SHIPS_PER_SYSTEM) {
@@ -47,7 +47,7 @@ export function turnUpdate() {
   });
 }
 
-export function roundUpdate() {
+export function roundUpdate(state: GameState) {
   state.world.systems.forEach((system) => {
     if (system.ownerId != null) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;
@@ -55,41 +55,38 @@ export function roundUpdate() {
   });
 }
 
-export function checkVictory() {
-  if (state.players.length === 1) return;
-  if (globalThis.gameManager.gameState !== GAME_STATE.PLAYING) return;
+export function checkVictory({ G, C, E }: FnContext) {
+  if (G.players.length === 1) return;
+  if (C.gameState !== GAME_STATUS.PLAYING) return;
 
   // TODO: Use stats from state
-  const homeworlds = state.world.systems.filter(
+  const homeworlds = G.world.systems.filter(
     (system) => system.homeworld && system.ownerId === system.homeworld
   );
 
   if (homeworlds.length === 1) {
     const winnerId = homeworlds[0].ownerId!;
-    const winner = state.playerMap.get(winnerId)!;
+    const winner = G.playerMap.get(winnerId)!;
 
-    addMessage(`Player ${winner.name} has conquered The Bubble!`);
+    addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
 
-    globalThis.gameManager.stopGame();
+    E.stopGame();
 
-    if (winnerId === state.thisPlayerId) {
-      globalThis.gameManager.playerWin();
+    if (winnerId === G.thisPlayerId) {
+      E.playerWin();
     } else {
-      globalThis.gameManager.playerLose(winnerId);
+      E.playerLose(winnerId);
     }
-
-    // Move this outside of engine
-    rerender();
   }
 }
 
-export function gameTick() {
-  state.tick++;
+export function gameTick({ G, E, C }: FnContext) {
+  G.tick++;
 
-  if (state.tick % TICKS_PER_TURN === 0) turnUpdate();
-  if (state.tick % TICKS_PER_ROUND === 0) roundUpdate();
+  if (G.tick % TICKS_PER_TURN === 0) turnUpdate(G);
+  if (G.tick % TICKS_PER_ROUND === 0) roundUpdate(G);
 
   botQueue();
-  doQueuedMoves();
-  updateStats();
+  doQueuedMoves({ G, E, C });
+  updateStats(G);
 }

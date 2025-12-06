@@ -1,14 +1,7 @@
 import * as d3 from 'd3';
+import type { GameState } from '../game/types';
 
-import { state } from '../game/state.ts';
-
-export function updateUI() {
-  updateInfoBox();
-  updateLeaderbox();
-  updateMessageBox();
-}
-
-export function updateInfoBox() {
+export function updateInfoBox(state: GameState) {
   const div = d3
     .select('#app')
     .selectAll('#infobox')
@@ -22,7 +15,7 @@ export function updateInfoBox() {
     .text(`${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}`);
 }
 
-export function updateLeaderbox() {
+export function updateLeaderbox(state: GameState) {
   const table = d3
     .select('#app')
     .selectAll('#leaderbox')
@@ -58,7 +51,7 @@ export function updateLeaderbox() {
     .text((d) => ` ${d} `);
 }
 
-export function updateMessageBox() {
+export function updateMessageBox(state: GameState) {
   const box = d3
     .select('#app')
     .selectAll('#messagebox')
@@ -108,15 +101,10 @@ export function showStartGame() {
   const startDialog = document.getElementById(
     'startDialog'
   ) as HTMLDialogElement;
-  const startButton = document.getElementById(
-    'startButton'
-  ) as HTMLButtonElement;
-
   startDialog.showModal();
-  startButton.addEventListener('click', () => {
-    startDialog.close();
-    globalThis.gameManager.startGame();
-  });
 
-  return startDialog;
+  return new Promise<boolean>((resolve) => {
+    startDialog.addEventListener('close', () => resolve(true));
+    startDialog.addEventListener('cancel', () => resolve(false));
+  });
 }
