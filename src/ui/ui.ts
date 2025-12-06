@@ -1,7 +1,8 @@
 import * as d3 from 'd3';
-import type { GameState } from '../game/types';
 
-export function updateInfoBox(state: GameState) {
+export function updateInfoBox() {
+  const state = globalThis.gameManager.getState();
+
   const div = d3
     .select('#app')
     .selectAll('#infobox')
@@ -15,7 +16,9 @@ export function updateInfoBox(state: GameState) {
     .text(`${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}`);
 }
 
-export function updateLeaderbox(state: GameState) {
+export function updateLeaderbox() {
+  const state = globalThis.gameManager.getState();
+
   const table = d3
     .select('#app')
     .selectAll('#leaderbox')
@@ -51,7 +54,9 @@ export function updateLeaderbox(state: GameState) {
     .text((d) => ` ${d} `);
 }
 
-export function updateMessageBox(state: GameState) {
+export function updateMessageBox() {
+  const state = globalThis.gameManager.getState();
+
   const box = d3
     .select('#app')
     .selectAll('#messagebox')
@@ -103,7 +108,9 @@ async function openOptions() {
 }
 
 function showOptions() {
-  const optionsDialog = document.getElementById('optionsDialog') as HTMLDialogElement;
+  const optionsDialog = document.getElementById(
+    'optionsDialog'
+  ) as HTMLDialogElement;
   optionsDialog.showModal();
 
   return new Promise<boolean>((resolve) => {

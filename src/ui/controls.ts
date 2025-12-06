@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
 import { debugLog } from '../utils/logging.ts';
 import { Orders, type Lane, type Order, type System } from '../types.ts';
-import { GAME_STATUS, type FnContext } from '../managers/types.ts';
+import { GAME_STATUS } from '../managers/types.ts';
 import {
   clearSelection,
   select,
@@ -22,6 +22,7 @@ import {
   scaleZoom
 } from './render.ts';
 import { showHelp } from './ui.ts';
+import { eventBus } from '../events/index.ts';
 
 const ROTATION_STEP = 5;
 
@@ -36,32 +37,32 @@ export function setupKeboardControls() {
       event.preventDefault();
       // debugLog("keyup:", event);
 
-      const ctx = globalThis.gameManager.getContext();
+      const { G } = globalThis.gameManager.getContext();
 
       switch (event.code) {
         case 'KeyC':
-          ctx.G.world.systemMap.forEach((system) => {
-            if (system.ownerId === ctx.G.thisPlayerId) {
+          G.world.systemMap.forEach((system) => {
+            if (system.ownerId === G.thisPlayerId) {
               system.ships *= 2;
             }
           });
-          rerender(ctx);
+          rerender();
           return;
         case 'KeyR':
-          ctx.G.world.systemMap.forEach((system) =>
-            revealSystem(ctx.G, system)
+          G.world.systemMap.forEach((system) =>
+            revealSystem(G, system)
           );
-          rerender(ctx);
+          rerender();
           return;
         case 'NumpadAdd':
         case 'Equal':
-          ctx.G.timeScale = Math.min(16, ctx.G.timeScale * 2);
-          debugLog(`Time scale increased to ${ctx.G.timeScale}x`);
+          G.timeScale = Math.min(16, G.timeScale * 2);
+          debugLog(`Time scale increased to ${G.timeScale}x`);
           return;
         case 'NumpadSubtract':
         case 'Minus':
-          ctx.G.timeScale = Math.max(0.25, ctx.G.timeScale / 2);
-          debugLog(`Time scale decreased to ${ctx.G.timeScale}x`);
+          G.timeScale = Math.max(0.25, G.timeScale / 2);
+          debugLog(`Time scale decreased to ${G.timeScale}x`);
           return;
       }
     });
@@ -70,19 +71,17 @@ export function setupKeboardControls() {
   d3.select('body').on('keyup.controls', (event) => {
     // debugLog("keyup:", event);
 
-    const ctx = globalThis.gameManager.getContext();
-
     switch (event.key) {
       case 'Escape':
         clearSelection();
-        rerender(ctx);
+        rerender();
         return;
       case '?':
         showHelp();
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        ctx.E.quit();
+        eventBus.emit('UI_QUIT', undefined);
         return;
       }
     }
@@ -91,61 +90,58 @@ export function setupKeboardControls() {
   d3.select('body').on('keypress.controls', (event) => {
     // debugLog("Key pressed:", event);
 
-    const ctx = globalThis.gameManager.getContext();
-
     switch (event.code) {
       case 'Space':
-        if (!('pauseToggle' in globalThis.gameManager)) return;
-        (globalThis.gameManager as any).pauseToggle();
+        eventBus.emit('UI_PAUSE_TOGGLE', undefined);
         return;
       case 'Equal':
       case 'NumpadAdd':
-        scaleZoom(ctx, 1.2);
-        rerender(ctx);
+        scaleZoom(1.2);
+        rerender();
         return;
       case 'Minus':
       case 'NumpadSubtract':
-        scaleZoom(ctx, 0.8);
-        rerender(ctx);
+        scaleZoom(0.8);
+        rerender();
         return;
       case 'KeyW':
         rotateProjection([0, ROTATION_STEP]);
-        rerender(ctx);
+        rerender();
         return;
       case 'KeyA':
         rotateProjection([-ROTATION_STEP, 0]);
-        rerender(ctx);
+        rerender();
         return;
       case 'KeyS':
         rotateProjection([0, -ROTATION_STEP]);
-        rerender(ctx);
+        rerender();
         return;
       case 'KeyD':
         rotateProjection([ROTATION_STEP, 0]);
-        rerender(ctx);
+        rerender();
         return;
       case 'KeyQ':
         rotateProjection([0, 0, ROTATION_STEP]);
-        rerender(ctx);
+        rerender();
         break;
       case 'KeyE':
         rotateProjection([0, 0, -ROTATION_STEP]);
-        rerender(ctx);
+        rerender();
         break;
       case 'KeyH':
-        centerOnHome(ctx);
-        rerender(ctx);
+        centerOnHome();
+        rerender();
         return;
       case 'KeyC':
         if (selection.last) {
-          centerOnSystem(ctx, selection.last);
-          rerender(ctx);
+          centerOnSystem(selection.last);
+          rerender();
         }
         return;
       case 'KeyP':
         changeView();
-        centerOnHome(ctx);
-        rerender(ctx);
+        centerOnHome();
+        rerender();
         return;
     }
   });
@@ -153,9 +149,9 @@ export function setupKeboardControls() {
 
 export function onClickLane(
   event: PointerEvent,
-  { G, C }: FnContext,
   lane: Lane
 ) {
+  const { G, C } = globalThis.gameManager.getContext();
   if (C.gameState !== GAME_STATUS.PLAYING) return;
 
   switch (event.button) {
@@ -203,9 +199,9 @@ export function onClickLane(
 
 export function onClickSystem(
   event: PointerEvent,
-  ctx: FnContext,
   system: System
 ) {
+  const ctx = globalThis.gameManager.getContext();
   if (ctx.C.gameState !== GAME_STATUS.PLAYING) return;
 
   if (ENABLE_CHEATS && event.altKey) {
@@ -252,7 +248,7 @@ export function onClickSystem(
 }
 
 export function orderBalancedMove(fromId: string, toId: string) {
-  const { G, E } = globalThis.gameManager.getContext();
+  const { G } = globalThis.gameManager.getContext();
   if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
@@ -263,11 +259,11 @@ export function orderBalancedMove(fromId: string, toId: string) {
     playerId: G.thisPlayerId!
   } satisfies Order;
 
-  E.takeOrder(order);
+  eventBus.emit('TAKE_ORDER', order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
-  const { G, E } = globalThis.gameManager.getContext();
+  const { G } = globalThis.gameManager.getContext();
   if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
@@ -278,5 +274,5 @@ export function orderMassMove(fromId: string, toId: string) {
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  E.takeOrder(order);
+  eventBus.emit('TAKE_ORDER', order);
 }

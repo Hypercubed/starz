@@ -1,3 +1,4 @@
+import type { FnContext } from '../managers/types.ts';
 import { type BotInterface, type System } from '../types.ts';
 import { queueMove } from './state.ts';
 
@@ -45,9 +46,8 @@ export const PERSONALITIES = {
 
 export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
-export function botQueue() {
-  const state = gameManager.getState();
-  state.players.forEach((p) => p.bot?.makeMoves());
+export function botQueue({ G }: FnContext) {
+  G.players.forEach((p) => p.bot?.makeMoves());
 }
 
 export interface BotOptions {
@@ -304,7 +304,8 @@ export class Bot implements BotInterface {
 
       const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
-        if (to.ownerId === this.id || to.ownerId === null) return [];
+        if (to.ownerId === this.id) return [];
+        if (to.ownerId === null && to.type === 'uninhabited') return [];
 
         // Check if we can win easily
         if (from.ships > to.ships * 1.5 + 5) {
@@ -334,6 +335,7 @@ export class Bot implements BotInterface {
       const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId !== null) return [];
+        if (to.type === 'inhabited') return [];
 
         const units = Math.max(1, Math.floor(from.ships * 0.3));
         return [

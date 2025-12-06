@@ -5,11 +5,11 @@ import { GAME_STATUS } from './types.ts';
 
 export class SimGameManager extends GameManager {
   async connect() {
-    this.stopGame();
+    this.gameStop();
     this.gameState = GAME_STATUS.WAITING;
 
     this.state = this.game.initalState();
-    this.game.generateMap(this.state);
+    this.game.generateMap(this.getContext());
   }
 
   addPlayer(

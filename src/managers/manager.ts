@@ -1,16 +1,15 @@
 import { TICK_DURATION_MS } from '../constants.ts';
 import {
-  type Lane,
   type Move,
   type Order,
   type Player,
-  type System
 } from '../types.ts';
 import type { Bot } from '../game/bots.ts';
-import { GAME_STATUS, type GameStatus } from './types.ts';
+import { GAME_STATUS, type FnContext, type GameStatus } from './types.ts';
+import { eventBus } from '../events/index.ts';
 
 import * as game from '../game/index.ts';
-import type { GameEvents, GameState } from '../game/types.ts';
+import type { GameState } from '../game/types.ts';
 
 export abstract class GameManager {
   protected game = game;
@@ -18,41 +17,9 @@ export abstract class GameManager {
   public config = game.gameConfig();
   protected gameState: GameStatus = GAME_STATUS.WAITING;
 
-  protected events: GameEvents = {
-    eliminatePlayer: (loserId: string, winnerId: string | null) => {
-      this.eliminatePlayer(loserId, winnerId);
-    },
-    makeMove: (move: Move) => {
-      this.makeMove(move);
-    },
-    takeOrder: (order: Order) => {
-      this.takeOrder(order);
-    },
-    playerLose: (winner: string | null) => {
-      this.playerLose(winner);
-    },
-    playerWin: () => {
-      this.playerWin();
-    },
-    stopGame: () => {
-      this.stopGame();
-    },
-    onSystemClick: (_event: PointerEvent, _system: System) => {
-      this.onSystemClick(_event, _system);
-    },
-    onLaneClick: (_event: PointerEvent, _lane: Lane) => {
-      this.onLaneClick(_event, _lane);
-    },
-    quit: async () => {
-      return this.quit();
-    },
-    startGame: () => {
-      this.startGame();
-    },
-    gameTick: () => {
-      this.gameTick();
-    }
-  };
+  constructor() {
+    this.#registerEventListeners();
+  }
 
   private runningInterval: number | null = null;
 
@@ -62,27 +29,15 @@ export abstract class GameManager {
     return Object.freeze({ ...this.state });
   }
 
-  getContext() {
+  getContext(): FnContext {
     return {
-      G: this.state, // TODO: Rename S
-      E: this.events,
+      G: this.state,
+      // E: this.events,
       C: {
         gameState: this.gameState,
         gameConfig: this.config
       }
     };
-  }
-
-  protected async quit(): Promise<boolean> {
-    throw new Error('Method not implemented.');
-  }
-
-  protected playerLose(_winner: string | null) {
-    throw new Error('Method not implemented.');
-  }
-
-  protected playerWin() {
-    throw new Error('Method not implemented.');
   }
 
   protected addPlayer(
@@ -108,46 +63,47 @@ export abstract class GameManager {
     return player;
   }
 
-  protected startGame() {
+  protected gameStart() {
     this.gameState = GAME_STATUS.PLAYING;
     this.#runGameLoop();
   }
 
-  protected stopGame() {
+  protected gameStop() {
     this.gameState = GAME_STATUS.FINISHED;
     this.stopGameLoop();
   }
 
-  protected gameTick() {
+  public gameTick() {
     this.game.gameTick(this.getContext());
+    eventBus.emit('STATE_UPDATED', {
+      state: this.state,
+      status: this.gameState
+    });
   }
 
-  protected eliminatePlayer(loserId: string, winnerId: string | null) {
+  protected onEliminatePlayer(loserId: string, winnerId: string | null) {
     this.game.eliminatePlayer(this.getContext(), loserId, winnerId);
   }
 
-  protected makeMove(move: Move) {
+  protected onMakeMove(move: Move) {
     this.game.moves.makeMove(this.getContext(), move);
+
+    eventBus.emit('STATE_UPDATED', {
+      state: this.state,
+      status: this.gameState
+    });
   }
 
-  protected takeOrder(order: Order) {
+  protected onTakeOrder(order: Order) {
     const move = this.game.utilities.takeOrder(this.getContext(), order);
     if (move) {
-      this.events.makeMove(move);
+      this.onMakeMove(move);
     }
-  }
-
-  protected onSystemClick(event: PointerEvent, system: System) {
-    this.events.onSystemClick(event, system);
-  }
-
-  protected onLaneClick(event: PointerEvent, lane: Lane) {
-    this.events.onLaneClick(event, lane);
   }
 
   #runGameLoop() {
     if (this.gameState !== GAME_STATUS.PLAYING) {
-      this.stopGame();
+      this.gameStop();
       return;
     }
 
@@ -169,5 +125,27 @@ export abstract class GameManager {
       clearTimeout(this.runningInterval);
       this.runningInterval = null;
     }
+  }
+
+  #registerEventListeners() {
+    eventBus.on('GAME_STOP', () => {
+      this.gameStop();
+    });
+
+    eventBus.on('GAME_START', () => {
+      this.gameStart();
+    });
+
+    eventBus.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
+      this.onEliminatePlayer(playerId, winnerId);
+    });
+
+    eventBus.on('MAKE_MOVE', (move) => {
+      this.onMakeMove(move);
+    });
+
+    eventBus.on('TAKE_ORDER', (order) => {
+      this.onTakeOrder(order);
+    });
   }
 }

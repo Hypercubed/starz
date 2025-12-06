@@ -11,6 +11,7 @@ import { botQueue } from './bots.ts';
 import { GAME_STATUS, type FnContext } from '../managers/types.ts';
 import type { GameState } from './types.ts';
 import { addMessage } from './state.ts';
+import { eventBus } from '../events/index.ts';
 
 export function updateStats(state: GameState) {
   state.players.forEach((player) => {
@@ -55,38 +56,58 @@ export function roundUpdate(state: GameState) {
   });
 }
 
-export function checkVictory({ G, C, E }: FnContext) {
-  if (G.players.length === 1) return;
+export function checkVictory({ G, C }: FnContext) {
   if (C.gameState !== GAME_STATUS.PLAYING) return;
 
-  // TODO: Use stats from state
-  const homeworlds = G.world.systems.filter(
-    (system) => system.homeworld && system.ownerId === system.homeworld
-  );
+  let isWin = false;
+  let isLoss = false;
 
-  if (homeworlds.length === 1) {
-    const winnerId = homeworlds[0].ownerId!;
-    const winner = G.playerMap.get(winnerId)!;
+  if (G.players.length > 1) {
+    // Check for conquest victory
+    const homeworlds = G.world.systems.filter(
+      (system) => system.homeworld && system.ownerId === system.homeworld
+    );
 
-    addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
+    if (homeworlds.length === 1) {
+      const winnerId = homeworlds[0].ownerId!;
+      const winner = G.playerMap.get(winnerId)!;
 
-    E.stopGame();
+      addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
 
-    if (winnerId === G.thisPlayerId) {
-      E.playerWin();
-    } else {
-      E.playerLose(winnerId);
+      isWin = winnerId === G.thisPlayerId;
+      isLoss = !isWin;
     }
+  } else {
+    // Check for domination victory
+    const systems = G.world.systems.filter(
+      (system) => system.ownerId !== G.thisPlayerId
+    );
+    
+    if (systems.length === 0) {
+      const winner = G.playerMap.get(G.thisPlayerId!)!;
+      addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
+      isWin = true;
+      isLoss = false;
+    }
+  }
+
+  if (isWin) {
+    eventBus.emit('GAME_STOP', undefined);
+    eventBus.emit('PLAYER_WIN', { playerId: G.thisPlayerId! });
+  } else if (isLoss) {
+    eventBus.emit('GAME_STOP', undefined);
+    eventBus.emit('PLAYER_LOSE', { playerId: G.thisPlayerId!, winnerId: null });
   }
 }
 
-export function gameTick({ G, E, C }: FnContext) {
-  G.tick++;
+export function gameTick(ctx: FnContext) {
+  const { G } = ctx;
 
+  G.tick++;
   if (G.tick % TICKS_PER_TURN === 0) turnUpdate(G);
   if (G.tick % TICKS_PER_ROUND === 0) roundUpdate(G);
 
-  botQueue();
-  doQueuedMoves({ G, E, C });
+  botQueue(ctx);
+  doQueuedMoves(ctx);
   updateStats(G);
 }

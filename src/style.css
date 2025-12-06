@@ -270,6 +270,23 @@ dialog {
   }
 }
 
+#optionsDialog {
+  margin: 9vh auto;
+  width: 71vw;
+  height: 80vh;
+
+  label {
+    display: block;
+    margin: 10px 0 5px 0;
+  }
+
+  input {
+    width: 160px;
+    margin: 0 10px 20px 10px;
+    height: 25px;
+  }
+}
+
 datalist {
   display: flex;
   flex-direction: column;

@@ -22,10 +22,14 @@ export const NumBots = 4; // Total number of players (must be < N * fracOccupied
 export const FracInhabited = 0.1; // Fraction of systems that are occupied at start
 
 const env = (import.meta as any).env || {};
-export const EVENT_TRACKING_ENABLED = env.PROD ?? false;
-export const DEBUG_LOGGING_ENABLED = env.DEV ?? true;
+
+export const DEV_MODE = env.DEV ?? true;
+export const PROD_MODE = env.PROD ?? false;
+
+export const EVENT_TRACKING_ENABLED = PROD_MODE;
+export const DEBUG_LOGGING_ENABLED = DEV_MODE;
 export const START_PAUSED = true;
-export const ENABLE_CHEATS = env.DEV ?? true;
+export const ENABLE_CHEATS = DEV_MODE;
 export const ENABLE_BOT_CONTROL = false;
 export const ENABLE_GRATICULE = true;
 

@@ -17,28 +17,31 @@ import {
   showEndGame,
   setupDialogs
 } from './ui.ts';
-import type { FnContext } from '../managers/types.ts';
-import type { GameState } from '../game/types.ts';
 import {
   onClickLane,
   onClickSystem,
   setupKeboardControls
 } from './controls.ts';
 
-export function setupUI(ctx: FnContext) {
-  drawMap(ctx);
-  updateInfoBox(ctx.G);
-  updateLeaderbox(ctx.G);
-  updateMessageBox(ctx.G);
-}
-
-export function updateUI(state: GameState) {
-  updateInfoBox(state);
-  updateLeaderbox(state);
-  updateMessageBox(state);
-}
+import { eventBus } from '../events/index.ts';
 
 export const rerender = debounce(_rerender, 16);
+
+export function setupUI() {
+  drawMap();
+  updateInfoBox();
+  updateLeaderbox();
+  updateMessageBox();
+
+  // Subscribe to updates
+  eventBus.on('STATE_UPDATED', () => {
+    rerender();
+    updateInfoBox();
+    updateLeaderbox();
+    updateMessageBox();
+  });
+}
+
 
 export {
   showHelp,

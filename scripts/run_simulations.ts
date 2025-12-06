@@ -3,11 +3,14 @@ import { type BotPersonalities, PERSONALITIES } from '../src/game/bots.ts';
 import { Bot } from '../src/game/bots.ts';
 import { SimGameManager } from '../src/managers/simulation.ts';
 import type {} from '../src/globals.d.ts';
+import { eventBus } from '../src/events/index.ts';
 
-const N = 10; // Number of simulations
+const N = 1000; // Number of simulations
 const T = 5000; // Max ticks per simulation
 
 async function runSimulation(gameId: number) {
+  eventBus.clear();
+
   const manager = new SimGameManager();
   globalThis.gameManager = manager;
 
@@ -29,20 +32,20 @@ async function runSimulation(gameId: number) {
   }
   
   // Add specific personalities
-  const id = `${ctx.G.players.length + 1}`;
-  const bot = new Bot({ id, personality: 'idle' });
-  manager.addPlayer(
-    `idle`,
-    id,
-    bot,
-    `red`
-  );
+  // const id = `${ctx.G.players.length + 1}`;
+  // const bot = new Bot({ id, personality: 'idle' });
+  // manager.addPlayer(
+  //   `idle`,
+  //   id,
+  //   bot,
+  //   `red`
+  // );
 
   let winner = '-1';
   let running = true;
 
   while (ctx.G.tick < T && running) {
-    ctx.E.gameTick();
+    manager.gameTick();
 
     // Check for winner
     const activePlayers = ctx.G.players.filter(p => p.stats.systems > 0);
@@ -57,7 +60,7 @@ async function runSimulation(gameId: number) {
 
     ctx = manager.getContext();
   }
-``
+
   return { gameId, winner, ticks: ctx.G.tick };
 }
 

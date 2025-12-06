@@ -19,6 +19,7 @@ import type { FnContext } from '../managers/types.ts';
 import type { GameState } from '../game/types.ts';
 import { isSelected } from './selection.ts';
 import { getPlayersHomeworld, thisPlayer } from '../game/state.ts';
+import { onClickLane, onClickSystem } from './controls.ts';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;
@@ -77,7 +78,9 @@ export function rotateProjection(
   geoProjection.rotate(rotation);
 }
 
-export function drawMap(ctx: FnContext) {
+export function drawMap() {
+  const ctx = globalThis.gameManager.getContext();
+
   d3.select('#app').select('svg').remove();
 
   svg = d3
@@ -98,8 +101,8 @@ export function drawMap(ctx: FnContext) {
 
   function createDrag() {
     return drag()
-      .on('drag.render', () => rerender(ctx))
-      .on('end.render', () => rerender(ctx));
+      .on('drag.render', () => rerender())
+      .on('end.render', () => rerender());
   }
 
   function createZoom(): d3.ZoomBehavior<Element, unknown> {
@@ -112,7 +115,7 @@ export function drawMap(ctx: FnContext) {
         if (event.transform.k > ZOOM_SENSITIVITY) {
           const newScale = initialScale * event.transform.k;
           geoProjection.scale(newScale);
-          rerender(ctx);
+          rerender();
         } else {
           event.transform.k = ZOOM_SENSITIVITY;
         }
@@ -238,15 +241,16 @@ function drawGraticule(state: GameState) {
     .attr('d', geoPathGenerator);
 }
 
-export function scaleZoom(ctx: FnContext, scale: number) {
+export function scaleZoom(scale: number) {
   const newScale = geoProjection.scale() * scale;
   if (newScale < initialScale * MIN_ZOOM_SCALE) return;
   if (newScale > initialScale * MAX_ZOOM_SCALE) return;
   geoProjection.scale(newScale);
-  rerender(ctx);
+  rerender();
 }
 
-export function centerOnHome(ctx: FnContext) {
+export function centerOnHome() {
+  const ctx = globalThis.gameManager.getContext();
   const home = getPlayersHomeworld(ctx.G);
   if (!home) return;
 
@@ -254,36 +258,39 @@ export function centerOnHome(ctx: FnContext) {
 
   const location = home.location;
   if (selectedProjectionType === projections['Orthographic']) {
-    centerOnCoordinates(ctx, [location[0], location[1] - 45]);
+    centerOnCoordinates([location[0], location[1] - 45]);
   } else {
-    centerOnCoordinates(ctx, location);
+    centerOnCoordinates(location);
   }
   geoProjection.scale(initialScale);
 }
 
-export function centerOnSystem(ctx: FnContext, systemId: string) {
+export function centerOnSystem(systemId: string) {
+  const ctx = globalThis.gameManager.getContext();
+
   const system = ctx.G.world.systemMap.get(systemId);
   if (!system) return;
-  centerOnCoordinates(ctx, system.location);
+  centerOnCoordinates(system.location);
   geoProjection.scale(initialScale);
 }
 
-export function centerOnCoordinates(ctx: FnContext, coords: Coordinates) {
+export function centerOnCoordinates(coords: Coordinates) {
   geoProjection.rotate([-coords[0], -coords[1], 0]);
-  rerender(ctx);
+  rerender();
 }
 
-export function rerender(ctx: FnContext) {
+export function rerender() {
   if (!svg) return;
-
+  
+  const ctx = globalThis.gameManager.getContext();
   if (ENABLE_GRATICULE) drawGraticule(ctx.G);
   if (ENABLE_MESH) drawRegions(ctx);
-  
+
   drawSystems(ctx);
   drawLanes(ctx);
 }
 
-function drawSystems({ G, E, C }: FnContext) {
+function drawSystems({ G, C }: FnContext) {
   const currentScale = geoProjection.scale();
   const reducedSize = currentScale / initialScale < 1;
 
@@ -311,10 +318,14 @@ function drawSystems({ G, E, C }: FnContext) {
         .append('g')
         .attr('class', 'system')
         .attr('id', (d) => `system-${d.id}`)
-        .on('click', (ev: PointerEvent, d: System) => E.onSystemClick(ev, d))
+        .on('click', (ev: PointerEvent, d: System) => {
+          onClickSystem(ev, d);
+          rerender();
+        })
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
-          E.onSystemClick(ev, d);
+          onClickSystem(ev, d);
+          rerender();
         });
 
       group
@@ -379,7 +390,7 @@ const getFeatures = (() => {
   };
 })();
 
-function drawRegions({ G, E, C }: FnContext) {
+function drawRegions({ G, C }: FnContext) {
   let features = getFeatures(G);
 
   const player = thisPlayer(G);
@@ -403,10 +414,14 @@ function drawRegions({ G, E, C }: FnContext) {
       enter
         .append('path')
         .classed('region', true)
-        .on('click', (ev: PointerEvent, d: System) => E.onSystemClick(ev, d))
+        .on('click', (ev: PointerEvent, d: System) => {
+          onClickSystem(ev, d);
+          rerender();
+        })
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
-          E.onSystemClick(ev, d);
+          onClickSystem(ev, d);
+          rerender();
         })
     );
 
@@ -419,7 +434,7 @@ function drawRegions({ G, E, C }: FnContext) {
     .style('--owner-color', (d) => G.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
-function drawLanes({ G, E, C }: FnContext) {
+function drawLanes({ G, C }: FnContext) {
   let visibleLanes = G.world.lanes;
 
   const playerId = G.thisPlayerId;
@@ -449,10 +464,14 @@ function drawLanes({ G, E, C }: FnContext) {
         .attr('stroke-width', 2)
         .attr('stroke', 'orange')
         .attr('id', (_, i) => `lane-${i}`)
-        .on('click', (ev: PointerEvent, d: Lane) => E.onLaneClick(ev, d))
+        .on('click', (ev: PointerEvent, d: Lane) => {
+          onClickLane(ev, d);
+          rerender();
+        })
         .on('contextmenu', (ev: PointerEvent, d: Lane) => {
           ev.preventDefault();
-          E.onLaneClick(ev, d);
+          onClickLane(ev, d);
+          rerender();
         })
     )
     .style('--owner-color', (d) => {

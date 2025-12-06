@@ -41,10 +41,7 @@ export function generateMap({ G, C }: FnContext) {
 
     if (closestSystem) {
       // Enforce minimum distance
-      if (
-        d3.geoDistance(thisLocation, closestSystem.location) <
-        minDistance
-      ) {
+      if (d3.geoDistance(thisLocation, closestSystem.location) < minDistance) {
         z -= dz;
         continue;
       }
@@ -79,7 +76,10 @@ export function generateMap({ G, C }: FnContext) {
 
   // Setup inhabited systems (neutral + potential homeworlds)
   // We need enough for all players plus some neutrals
-  const totalInhabited = Math.max(FracInhabited * C.gameConfig.numSystems, NumHumanPlayers + C.gameConfig.numBots);
+  const totalInhabited = Math.max(
+    FracInhabited * C.gameConfig.numSystems,
+    NumHumanPlayers + C.gameConfig.numBots
+  );
 
   for (let i = 0; i < totalInhabited; i++) {
     if (unoccupied.length === 0) break;

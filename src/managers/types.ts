@@ -16,6 +16,6 @@ export interface GameContext {
 
 export interface FnContext {
   G: GameState;
-  E: GameEvents;
+  // E: Readonly<GameEvents>;
   C: GameContext;
 }

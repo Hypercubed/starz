@@ -1,3 +1,4 @@
+import { eventBus } from '../events/index.ts';
 import type { FnContext } from '../managers/types.ts';
 
 import { Orders, type Move, type Order, type System } from '../types.ts';
@@ -47,18 +48,18 @@ function attackSystem(
   }
 }
 
-function takeSystem({ G, E }: FnContext, playerId: string, system: System) {
+function takeSystem({ G }: FnContext, playerId: string, system: System) {
   system.ownerId = playerId;
   system.moveQueue = [];
   if (playerId === G.thisPlayerId) revealSystem(G, system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    E.eliminatePlayer(system.homeworld, playerId);
+    eventBus.emit('PLAYER_ELIMINATED', { playerId: system.homeworld, winnerId: playerId });
   }
 }
 
 export function eliminatePlayer(
-  { G, E }: FnContext,
+  { G }: FnContext,
   loserId: string,
   winnerId: string | null = null
 ) {
@@ -83,7 +84,7 @@ export function eliminatePlayer(
   }
 
   if (loserId === G.thisPlayerId) {
-    E.playerLose(winnerId);
+    eventBus.emit('PLAYER_LOSE', { playerId: G.thisPlayerId!, winnerId: winnerId });
   }
 }
 
@@ -99,11 +100,11 @@ function transferShips(
   if (to.ownerId === G.thisPlayerId) revealSystem(G, to);
 }
 
-export function doQueuedMoves({ G, E }: FnContext) {
+export function doQueuedMoves({ G }: FnContext) {
   G.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      E.makeMove(move);
+      eventBus.emit('MAKE_MOVE', move);
     }
   });
 }
