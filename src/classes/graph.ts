@@ -1,5 +1,5 @@
-import { geoDistance } from 'd3';
 import { init } from '@paralleldrive/cuid2';
+import { geoDistance } from 'd3';
 
 import type { Coordinates, Lane, System } from '../types';
 

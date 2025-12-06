@@ -1,15 +1,12 @@
 import { init } from '@paralleldrive/cuid2';
 
 import { COLORS, NumHumanPlayers, START_PAUSED } from '../constants.ts';
-
-import * as renderer from '../ui/index.ts';
-
 import { Bot } from '../game/bots.ts';
-import { GameManager } from './manager.ts';
-import { GAME_STATUS } from './types.ts';
-import { trackEvent } from '../utils/logging.ts';
+import * as renderer from '../ui/index.ts';
 import { clearSelection, select } from '../ui/selection.ts';
-import { eventBus } from '../events/index.ts';
+import { trackEvent } from '../utils/logging.ts';
+
+import { GameManager } from './manager.ts';
 
 const createId = init({ length: 5 });
 
@@ -21,7 +18,7 @@ export class LocalGameManager extends GameManager {
 
   async connect() {
     this.gameStop();
-    this.gameState = GAME_STATUS.WAITING;
+    this.gameState = 'WAITING';
 
     if (START_PAUSED) {
       await renderer.showStartGame();
@@ -80,11 +77,11 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPauseToggle() {
-    if (this.gameState === GAME_STATUS.PAUSED) {
-      this.gameState = GAME_STATUS.PLAYING;
+    if (this.gameState === 'PAUSED') {
+      this.gameState = 'PLAYING';
       super.startGameLoop();
-    } else if (this.gameState === GAME_STATUS.PLAYING) {
-      this.gameState = GAME_STATUS.PAUSED;
+    } else if (this.gameState === 'PLAYING') {
+      this.gameState = 'PAUSED';
       super.stopGameLoop();
     }
   }
@@ -156,19 +153,19 @@ export class LocalGameManager extends GameManager {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
 
-    eventBus.on('UI_QUIT', () => {
+    this.events.on('UI_QUIT', () => {
       this.onQuit();
     });
 
-    eventBus.on('PLAYER_LOSE', (move) => {
+    this.events.on('PLAYER_LOSE', (move) => {
       this.onThisPlayerLose(move.winnerId);
     });
-    
-    eventBus.on('PLAYER_WIN', () => {
+
+    this.events.on('PLAYER_WIN', () => {
       this.onThisPlayerWin();
     });
 
-    eventBus.on('UI_PAUSE_TOGGLE', () => {
+    this.events.on('UI_PAUSE_TOGGLE', () => {
       this.onPauseToggle();
     });
   }

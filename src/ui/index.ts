@@ -1,4 +1,10 @@
 import { debounce } from 'ts-debounce';
+
+import {
+  onClickLane,
+  onClickSystem,
+  setupKeboardControls
+} from './controls.ts';
 import {
   drawMap,
   rerender as _rerender,
@@ -17,13 +23,6 @@ import {
   showEndGame,
   setupDialogs
 } from './ui.ts';
-import {
-  onClickLane,
-  onClickSystem,
-  setupKeboardControls
-} from './controls.ts';
-
-import { eventBus } from '../events/index.ts';
 
 export const rerender = debounce(_rerender, 16);
 
@@ -34,14 +33,13 @@ export function setupUI() {
   updateMessageBox();
 
   // Subscribe to updates
-  eventBus.on('STATE_UPDATED', () => {
+  globalThis.gameManager.events.on('STATE_UPDATED', () => {
     rerender();
     updateInfoBox();
     updateLeaderbox();
     updateMessageBox();
   });
 }
-
 
 export {
   showHelp,

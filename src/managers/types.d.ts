@@ -1,0 +1,13 @@
+import type { GameConfig, GameState } from '../game/types';
+
+export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
+
+export interface GameContext {
+  gameState: Readonly<GameStatus>;
+  gameConfig: GameConfig; // TODO: make readonly
+}
+
+export interface FnContext {
+  G: GameState; // TODO: make readonly
+  C: GameContext;
+}

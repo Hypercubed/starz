@@ -3,14 +3,11 @@ import { type BotPersonalities, PERSONALITIES } from '../src/game/bots.ts';
 import { Bot } from '../src/game/bots.ts';
 import { SimGameManager } from '../src/managers/simulation.ts';
 import type {} from '../src/globals.d.ts';
-import { eventBus } from '../src/events/index.ts';
 
 const N = 1000; // Number of simulations
 const T = 5000; // Max ticks per simulation
 
 async function runSimulation(gameId: number) {
-  eventBus.clear();
-
   const manager = new SimGameManager();
   globalThis.gameManager = manager;
 

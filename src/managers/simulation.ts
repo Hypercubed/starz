@@ -1,12 +1,12 @@
+import { GameManager } from './manager.ts';
+
 import type { Bot } from '../game/bots.ts';
 import type { Player } from '../types.ts';
-import { GameManager } from './manager.ts';
-import { GAME_STATUS } from './types.ts';
 
 export class SimGameManager extends GameManager {
   async connect() {
     this.gameStop();
-    this.gameState = GAME_STATUS.WAITING;
+    this.gameState = 'WAITING';
 
     this.state = this.game.initalState();
     this.game.generateMap(this.getContext());

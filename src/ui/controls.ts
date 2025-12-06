@@ -1,18 +1,9 @@
 import * as d3 from 'd3';
 
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
-import { debugLog } from '../utils/logging.ts';
-import { Orders, type Lane, type Order, type System } from '../types.ts';
-import { GAME_STATUS } from '../managers/types.ts';
-import {
-  clearSelection,
-  select,
-  selection,
-  selectOnly,
-  selectPath,
-  toggleSelection
-} from './selection.ts';
 import { revealSystem } from '../game/state.ts';
+import { debugLog } from '../utils/logging.ts';
+
 import {
   centerOnHome,
   centerOnSystem,
@@ -21,8 +12,17 @@ import {
   rotateProjection,
   scaleZoom
 } from './render.ts';
+import {
+  clearSelection,
+  select,
+  selection,
+  selectOnly,
+  selectPath,
+  toggleSelection
+} from './selection.ts';
 import { showHelp } from './ui.ts';
-import { eventBus } from '../events/index.ts';
+
+import type { Lane, Order, System } from '../types.d.ts';
 
 const ROTATION_STEP = 5;
 
@@ -37,7 +37,7 @@ export function setupKeboardControls() {
       event.preventDefault();
       // debugLog("keyup:", event);
 
-      const { G } = globalThis.gameManager.getContext();
+      const { G, C } = globalThis.gameManager.getContext();
 
       switch (event.code) {
         case 'KeyC':
@@ -49,20 +49,18 @@ export function setupKeboardControls() {
           rerender();
           return;
         case 'KeyR':
-          G.world.systemMap.forEach((system) =>
-            revealSystem(G, system)
-          );
+          G.world.systemMap.forEach((system) => revealSystem(G, system));
           rerender();
           return;
         case 'NumpadAdd':
         case 'Equal':
-          G.timeScale = Math.min(16, G.timeScale * 2);
-          debugLog(`Time scale increased to ${G.timeScale}x`);
+          C.gameConfig.timeScale = Math.min(16, C.gameConfig.timeScale * 2);
+          debugLog(`Time scale increased to ${C.gameConfig.timeScale}x`);
           return;
         case 'NumpadSubtract':
         case 'Minus':
-          G.timeScale = Math.max(0.25, G.timeScale / 2);
-          debugLog(`Time scale decreased to ${G.timeScale}x`);
+          C.gameConfig.timeScale = Math.max(0.25, C.gameConfig.timeScale / 2);
+          debugLog(`Time scale decreased to ${C.gameConfig.timeScale}x`);
           return;
       }
     });
@@ -81,7 +79,7 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        eventBus.emit('UI_QUIT', undefined);
+        globalThis.gameManager.events.emit('UI_QUIT', undefined);
         return;
       }
     }
@@ -92,7 +90,7 @@ export function setupKeboardControls() {
 
     switch (event.code) {
       case 'Space':
-        eventBus.emit('UI_PAUSE_TOGGLE', undefined);
+        globalThis.gameManager.events.emit('UI_PAUSE_TOGGLE', undefined);
         return;
       case 'Equal':
       case 'NumpadAdd':
@@ -147,12 +145,9 @@ export function setupKeboardControls() {
   });
 }
 
-export function onClickLane(
-  event: PointerEvent,
-  lane: Lane
-) {
+export function onClickLane(event: PointerEvent, lane: Lane) {
   const { G, C } = globalThis.gameManager.getContext();
-  if (C.gameState !== GAME_STATUS.PLAYING) return;
+  if (C.gameState !== 'PLAYING') return;
 
   switch (event.button) {
     case 0: // Left click
@@ -197,12 +192,9 @@ export function onClickLane(
   }
 }
 
-export function onClickSystem(
-  event: PointerEvent,
-  system: System
-) {
+export function onClickSystem(event: PointerEvent, system: System) {
   const ctx = globalThis.gameManager.getContext();
-  if (ctx.C.gameState !== GAME_STATUS.PLAYING) return;
+  if (ctx.C.gameState !== 'PLAYING') return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(
@@ -252,14 +244,14 @@ export function orderBalancedMove(fromId: string, toId: string) {
   if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
-    type: Orders.BALANCED_MOVE,
+    type: 'BALANCED_MOVE',
     message: `Balanced move from ${fromId} to ${toId}`,
     toId,
     fromId,
     playerId: G.thisPlayerId!
   } satisfies Order;
 
-  eventBus.emit('TAKE_ORDER', order);
+  globalThis.gameManager.events.emit('TAKE_ORDER', order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
@@ -267,12 +259,12 @@ export function orderMassMove(fromId: string, toId: string) {
   if (!G.world.hasLane(fromId, toId)) return;
 
   const order = {
-    type: Orders.MASS_MOVE,
+    type: 'MASS_MOVE',
     toId,
     fromId,
     playerId: G.thisPlayerId!,
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  eventBus.emit('TAKE_ORDER', order);
+  globalThis.gameManager.events.emit('TAKE_ORDER', order);
 }

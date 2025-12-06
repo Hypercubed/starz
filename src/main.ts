@@ -1,5 +1,6 @@
 import { version } from '../package.json';
 
+// import { BGIOGameManager } from './managers/boardgameio.ts';
 import { LocalGameManager } from './managers/local.ts';
 // import { PlayroomGameManager } from './managers/playroom.ts';
 

@@ -1,118 +1,86 @@
 # Module Dependency Map
 
-This map shows the import relationships between modules in the `src` directory after all refactoring.
-Arrows (->) indicate that the module on the left imports the module on the right.
+This map shows the runtime import relationships between modules in the `src` directory. Arrows (->) indicate that the module on the left imports the module on the right. Type-only imports are excluded.
 
-
-# Dependency Graph (runtime imports only, grouped by primary folder)
+# Dependency Graph (runtime imports only
+- grouped by primary folder)
 
 ## constants
-src/constants.ts
-  (No internal dependencies)
-
-## types
-src/types.ts
-  (No internal dependencies)
+- src/constants.ts
+  - (No internal dependencies)
 
 ## classes
-src/classes/graph.ts
-  (No internal dependencies)
+- src/classes/graph.ts
+  - (No internal dependencies)
 
 ## game
-src/game/state.ts
-  -> src/classes/graph.ts
-  -> src/constants.ts
-src/game/actions.ts
-  -> src/game/state.ts
-  -> src/events/index.ts
-src/game/bots.ts
-  -> src/game/state.ts
-src/game/generate.ts
-  -> src/constants.ts
-  -> src/utils/logging.ts
-  -> src/classes/graph.ts
-src/game/engine.ts
-  -> src/constants.ts
-  -> src/game/actions.ts
-  -> src/game/bots.ts
-  -> src/game/state.ts
-  -> src/events/index.ts
-src/game/index.ts
-  -> src/game/state.ts
-  -> src/game/generate.ts
-  -> src/game/engine.ts
-  -> src/game/actions.ts
-  -> src/utils/logging.ts
+- src/game/state.ts
+  - ../classes/graph.ts
+  - ../constants.ts
+- src/game/actions.ts
+  - ./state.ts
+- src/game/bots.ts
+  - ./state.ts
+- src/game/generate.ts
+  - ../utils/logging.ts
+  - ../classes/graph.ts
+- src/game/engine.ts
+  - ./actions.ts
+  - ./bots.ts
+  - ./state.ts
+- src/game/index.ts
+  - ./generate.ts
+  - ./engine.ts
+  - ./actions.ts
+  - ../utils/logging.ts
+  - ./state.ts
 
 ## utils
-src/utils/logging.ts
-  -> src/constants.ts
+- src/utils/logging.ts
+  - ../constants.ts
 
 ## managers
-src/managers/manager.ts
-  -> src/constants.ts
-  -> src/game/bots.ts
-  -> src/events/index.ts
-  -> src/game/index.ts
-src/managers/local.ts
-  -> src/constants.ts
-  -> src/ui/index.ts
-  -> src/game/bots.ts
-  -> src/managers/manager.ts
-  -> src/utils/logging.ts
-  -> src/ui/selection.ts
-  -> src/events/index.ts
-src/managers/playroom.ts
-  -> src/game/bots.ts
-  -> src/classes/graph.ts
-  -> src/game/index.ts
-  -> src/ui/index.ts
-  -> src/game/generate.ts
-  -> src/managers/manager.ts
-  -> src/utils/logging.ts
-  -> src/ui/selection.ts
-  -> src/events/index.ts
-src/managers/simulation.ts
-  -> src/game/bots.ts
-  -> src/managers/manager.ts
-
-## events
-src/events/index.ts
-  -> src/events/EventBus.ts
-src/events/EventBus.ts
-  (No internal dependencies)
+- src/managers/manager.ts
+  - ../constants.ts
+  - ../game/index.ts
+  - ../classes/EventBus.ts
+- src/managers/local.ts
+  - ../constants.ts
+  - ../ui/index.ts
+  - ../game/bots.ts
+  - ./manager.ts
+  - ../utils/logging.ts
+  - ../ui/selection.ts
+- src/managers/playroom.ts
+  - ../game/bots.ts
+  - ../classes/graph.ts
+  - ../game/index.ts
+  - ../ui/index.ts
+  - ../game/generate.ts
+  - ./manager.ts
+  - ../utils/logging.ts
+  - ../ui/selection.ts
+- src/managers/simulation.ts
+  - ./manager.ts
 
 ## ui
-src/ui/index.ts
-  -> src/ui/render.ts
-  -> src/ui/ui.ts
-  -> src/ui/controls.ts
-  -> src/events/index.ts
-src/ui/controls.ts
-  -> src/constants.ts
-  -> src/utils/logging.ts
-  -> src/ui/selection.ts
-  -> src/game/state.ts
-  -> src/ui/render.ts
-  -> src/ui/ui.ts
-  -> src/events/index.ts
-src/ui/render.ts
-  -> src/constants.ts
-  -> src/ui/selection.ts
-  -> src/game/state.ts
-src/ui/ui.ts
-  (No internal dependencies)
-src/ui/selection.ts
-  (No internal dependencies)
-  -> src/ui/ui.ts
-
-src/ui/render.ts
-  -> src/constants.ts
-  -> src/ui/selection.ts
-  -> src/game/state.ts
-
-src/ui/ui.ts
-  (No internal dependencies)
-
-src/ui/selection.ts
-  (No internal dependencies)
+- src/ui/index.ts
+  - ./render.ts
+  - ./ui.ts
+  - ./controls.ts
+- src/ui/controls.ts
+  - ../constants.ts
+  - ../utils/logging.ts
+  - ./selection.ts
+  - ../game/state.ts
+  - ./render.ts
+  - ./ui.ts
+- src/ui/render.ts
+  - ../constants.ts
+  - ./selection.ts
+  - ../game/state.ts
+  - ./controls.ts
+- src/ui/selection.ts
+  - (No internal dependencies)
+- src/ui/ui.ts
+  - (No internal dependencies)

@@ -1,21 +1,20 @@
+import { EventBus } from '../classes/EventBus.ts';
 import { TICK_DURATION_MS } from '../constants.ts';
-import {
-  type Move,
-  type Order,
-  type Player,
-} from '../types.ts';
-import type { Bot } from '../game/bots.ts';
-import { GAME_STATUS, type FnContext, type GameStatus } from './types.ts';
-import { eventBus } from '../events/index.ts';
-
 import * as game from '../game/index.ts';
-import type { GameState } from '../game/types.ts';
+
+import type { FnContext, GameStatus } from './types.d.ts';
+import type { Bot } from '../game/bots.ts';
+import type { GameEventMap, GameState } from '../game/types.d.ts';
+import type { Move, Order, Player } from '../types.d.ts';
 
 export abstract class GameManager {
+  events = new EventBus<GameEventMap>();
+
   protected game = game;
   protected state = game.initalState();
-  public config = game.gameConfig();
-  protected gameState: GameStatus = GAME_STATUS.WAITING;
+  public config = game.defaultConfig();
+
+  protected gameState: GameStatus = 'WAITING';
 
   constructor() {
     this.#registerEventListeners();
@@ -64,18 +63,18 @@ export abstract class GameManager {
   }
 
   protected gameStart() {
-    this.gameState = GAME_STATUS.PLAYING;
+    this.gameState = 'PLAYING';
     this.#runGameLoop();
   }
 
   protected gameStop() {
-    this.gameState = GAME_STATUS.FINISHED;
+    this.gameState = 'FINISHED';
     this.stopGameLoop();
   }
 
   public gameTick() {
     this.game.gameTick(this.getContext());
-    eventBus.emit('STATE_UPDATED', {
+    this.events.emit('STATE_UPDATED', {
       state: this.state,
       status: this.gameState
     });
@@ -88,7 +87,7 @@ export abstract class GameManager {
   protected onMakeMove(move: Move) {
     this.game.moves.makeMove(this.getContext(), move);
 
-    eventBus.emit('STATE_UPDATED', {
+    this.events.emit('STATE_UPDATED', {
       state: this.state,
       status: this.gameState
     });
@@ -102,7 +101,7 @@ export abstract class GameManager {
   }
 
   #runGameLoop() {
-    if (this.gameState !== GAME_STATUS.PLAYING) {
+    if (this.gameState !== 'PLAYING') {
       this.gameStop();
       return;
     }
@@ -112,7 +111,7 @@ export abstract class GameManager {
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
-      TICK_DURATION_MS / this.state.timeScale
+      TICK_DURATION_MS / this.config.timeScale
     );
   }
 
@@ -128,23 +127,23 @@ export abstract class GameManager {
   }
 
   #registerEventListeners() {
-    eventBus.on('GAME_STOP', () => {
+    this.events.on('GAME_STOP', () => {
       this.gameStop();
     });
 
-    eventBus.on('GAME_START', () => {
+    this.events.on('GAME_START', () => {
       this.gameStart();
     });
 
-    eventBus.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
+    this.events.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
       this.onEliminatePlayer(playerId, winnerId);
     });
 
-    eventBus.on('MAKE_MOVE', (move) => {
+    this.events.on('MAKE_MOVE', (move) => {
       this.onMakeMove(move);
     });
 
-    eventBus.on('TAKE_ORDER', (order) => {
+    this.events.on('TAKE_ORDER', (order) => {
       this.onTakeOrder(order);
     });
   }

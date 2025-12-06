@@ -20,8 +20,11 @@ export class EventBus<Events extends Record<string, any>> {
     };
   }
 
-  emit<K extends keyof Events>(event: K, data: Events[K] extends undefined ? void : Events[K]): void {
-    const listeners = this.listeners[event];  
+  emit<K extends keyof Events>(
+    event: K,
+    data: Events[K] extends undefined ? void : Events[K]
+  ): void {
+    const listeners = this.listeners[event];
     if (listeners) {
       listeners.forEach((listener) => {
         try {

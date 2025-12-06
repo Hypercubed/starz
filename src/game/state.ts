@@ -1,35 +1,28 @@
 import { Graph } from '../classes/graph.ts';
 import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
+
 import type { Messages, Player, System } from '../types.ts';
 import type { GameConfig, GameState } from './types.ts';
 
-export function gameConfig(): GameConfig {
+export function defaultConfig(): GameConfig {
   return {
     playerName: 'Player',
     numBots: NumBots,
     fow: ENABLE_FOG_OF_WAR,
-    numSystems: NumOfSystems
-    // maxPlayers: 4,
-    // startingShips: 50,
-    // systemsPerPlayer: 5,
-    // lanesPerSystem: 3,
-    // initialResources: 100,
-    // shipBuildCost: 10,
-    // shipBuildTime: 2, // in ticks
-    // tickDurationMs: 500 // duration of a tick in milliseconds
+    numSystems: NumOfSystems,
+    timeScale: 1
   };
 }
 
 export function initalState(): GameState {
   return {
     tick: 0,
-    timeScale: 1,
-    running: false,
+    running: false, // TODO: rmove this
     thisPlayerId: null as string | null,
-    world: new Graph(),
+    world: new Graph(), // TODO: don't use classes in state
     players: [] as Player[],
     playerMap: new Map<string, Player>(),
-    messages: [] as Messages[]
+    messages: [] as Messages[] // TODO: Move out of state
   };
 }
 

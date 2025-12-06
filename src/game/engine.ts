@@ -8,10 +8,10 @@ import {
 
 import { doQueuedMoves } from './actions.ts';
 import { botQueue } from './bots.ts';
-import { GAME_STATUS, type FnContext } from '../managers/types.ts';
-import type { GameState } from './types.ts';
 import { addMessage } from './state.ts';
-import { eventBus } from '../events/index.ts';
+
+import type { GameState } from './types.ts';
+import type { FnContext } from '../managers/types.d.ts';
 
 export function updateStats(state: GameState) {
   state.players.forEach((player) => {
@@ -40,7 +40,7 @@ export function updateStats(state: GameState) {
 
 export function turnUpdate(state: GameState) {
   state.world.systems.forEach((system) => {
-    if (system.type === 'inhabited' && system.ownerId != null) {
+    if (system.type === 'INHABITED' && system.ownerId != null) {
       if (system.ownerId || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
       }
@@ -57,7 +57,7 @@ export function roundUpdate(state: GameState) {
 }
 
 export function checkVictory({ G, C }: FnContext) {
-  if (C.gameState !== GAME_STATUS.PLAYING) return;
+  if (C.gameState !== 'PLAYING') return;
 
   let isWin = false;
   let isLoss = false;
@@ -82,7 +82,7 @@ export function checkVictory({ G, C }: FnContext) {
     const systems = G.world.systems.filter(
       (system) => system.ownerId !== G.thisPlayerId
     );
-    
+
     if (systems.length === 0) {
       const winner = G.playerMap.get(G.thisPlayerId!)!;
       addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
@@ -92,11 +92,16 @@ export function checkVictory({ G, C }: FnContext) {
   }
 
   if (isWin) {
-    eventBus.emit('GAME_STOP', undefined);
-    eventBus.emit('PLAYER_WIN', { playerId: G.thisPlayerId! });
+    globalThis.gameManager.events.emit('GAME_STOP', undefined);
+    globalThis.gameManager.events.emit('PLAYER_WIN', {
+      playerId: G.thisPlayerId!
+    });
   } else if (isLoss) {
-    eventBus.emit('GAME_STOP', undefined);
-    eventBus.emit('PLAYER_LOSE', { playerId: G.thisPlayerId!, winnerId: null });
+    globalThis.gameManager.events.emit('GAME_STOP', undefined);
+    globalThis.gameManager.events.emit('PLAYER_LOSE', {
+      playerId: G.thisPlayerId!,
+      winnerId: null
+    });
   }
 }
 

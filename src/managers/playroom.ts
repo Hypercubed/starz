@@ -1,24 +1,16 @@
 import * as PR from 'playroomkit';
 
-import { Bot } from '../game/bots.ts';
-import type {
-  Move,
-  Order,
-  Player,
-  PlayerStats,
-  System
-} from '../types.ts';
 import { Graph, type GraphJSON } from '../classes/graph.ts';
-
+import { COLORS } from '../constants.ts';
+import { Bot } from '../game/bots.ts';
 import * as game from '../game/index.ts';
 import * as renderer from '../ui/index.ts';
-
-import { GAME_STATUS } from './types.ts';
-import { COLORS } from '../constants.ts';
-import { trackEvent } from '../utils/logging.ts';
-import { GameManager } from './manager.ts';
 import { clearSelection, deselect, select } from '../ui/selection.ts';
-import { eventBus } from '../events/index.ts';
+import { trackEvent } from '../utils/logging.ts';
+
+import { GameManager } from './manager.ts';
+
+import type { Move, Order, Player, PlayerStats, System } from '../types.ts';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -65,7 +57,7 @@ export class PlayroomGameManager extends GameManager {
     this.registerPlayroomEvents();
 
     this.gameStop();
-    this.gameState = GAME_STATUS.WAITING;
+    this.gameState = 'WAITING';
 
     this.state = game.initalState();
     PR.resetStates();
@@ -80,7 +72,7 @@ export class PlayroomGameManager extends GameManager {
       },
       maxPlayersPerRoom: 5,
       defaultStates: {
-        [PLAYROOM_STATES.GAME_STATE]: GAME_STATUS.WAITING
+        [PLAYROOM_STATES.GAME_STATE]: 'WAITING'
       }
     });
 
@@ -226,7 +218,7 @@ export class PlayroomGameManager extends GameManager {
         });
       }
 
-      eventBus.emit('STATE_UPDATED', {
+      this.events.emit('STATE_UPDATED', {
         state: this.state,
         status: this.gameState
       });
@@ -333,7 +325,7 @@ export class PlayroomGameManager extends GameManager {
         deselect(from.id);
       }
 
-      eventBus.emit('STATE_UPDATED', {
+      this.events.emit('STATE_UPDATED', {
         state: this.state,
         status: this.gameState
       });
@@ -352,7 +344,7 @@ export class PlayroomGameManager extends GameManager {
           this.state.world = Graph.fromJSON(world);
         }
 
-        eventBus.emit('STATE_UPDATED', {
+        this.events.emit('STATE_UPDATED', {
           state: this.state,
           status: this.gameState
         });
@@ -405,15 +397,15 @@ export class PlayroomGameManager extends GameManager {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
 
-    eventBus.on('UI_QUIT', () => {
+    this.events.on('UI_QUIT', () => {
       this.onQuit();
     });
 
-    eventBus.on('PLAYER_LOSE', ({ winnerId }) => {
+    this.events.on('PLAYER_LOSE', ({ winnerId }) => {
       this.onThisPlayerLose(winnerId!);
     });
-    
-    eventBus.on('PLAYER_WIN', () => {
+
+    this.events.on('PLAYER_WIN', () => {
       this.onThisPlayerWin();
     });
   }

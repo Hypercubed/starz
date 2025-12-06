@@ -1,17 +1,18 @@
-import * as d3 from 'd3';
 import { init } from '@paralleldrive/cuid2';
+import * as d3 from 'd3';
 
+import { findClosestSystem, Graph } from '../classes/graph.ts';
 import {
   HEIGHT,
   NumHumanPlayers,
   MAX_SHIPS_PER_SYSTEM,
   FracInhabited
 } from '../constants.ts';
-import { SystemTypes, type Coordinates, type System } from '../types.ts';
 import { debugLog } from '../utils/logging.ts';
-import { findClosestSystem, Graph } from '../classes/graph.ts';
+
+import type { Coordinates, System } from '../types.d.ts';
 import type { GameState } from './types.ts';
-import type { FnContext } from '../managers/types.ts';
+import type { FnContext } from '../managers/types';
 
 const createId = init({ length: 5 });
 
@@ -94,7 +95,7 @@ export function generateMap({ G, C }: FnContext) {
     // TODO: Enforce minimum distance between inhabited systems
 
     system.ownerId = null;
-    system.type = SystemTypes.INHABITED;
+    system.type = 'INHABITED';
     system.ships = MAX_SHIPS_PER_SYSTEM + Math.floor(Math.random() * 10);
     system.homeworld = null;
 
@@ -105,7 +106,7 @@ export function generateMap({ G, C }: FnContext) {
 
 export function assignSystem(state: GameState, playerId: string) {
   const systems = state.world.systems.filter(
-    (system) => !system.ownerId && system.type === SystemTypes.INHABITED
+    (system) => !system.ownerId && system.type === 'INHABITED'
   );
   if (systems.length === 0) {
     throw 'No available homeworlds to join.';
@@ -116,7 +117,7 @@ export function assignSystem(state: GameState, playerId: string) {
 
   system.ships = 1;
   system.ownerId = system.homeworld = playerId;
-  system.type = SystemTypes.INHABITED;
+  system.type = 'INHABITED';
 
   return system;
 }
@@ -124,7 +125,7 @@ export function assignSystem(state: GameState, playerId: string) {
 function createSystem(location: Coordinates): System {
   return {
     id: 's' + createId(),
-    type: SystemTypes.UNINHABITED,
+    type: 'UNINHABITED',
     location,
     ownerId: null,
     ships: 0,

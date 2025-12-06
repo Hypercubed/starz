@@ -1,3 +1,5 @@
+import { checkVictory, gameTick } from '../game/engine.ts';
+import { generateMap, assignSystem } from '../game/generate.ts';
 import {
   getPlayersHomeworld,
   revealAllSystems,
@@ -5,16 +7,14 @@ import {
   addMessage,
   addPlayer,
   initalState,
-  gameConfig
+  defaultConfig
 } from '../game/state.ts';
-import { generateMap, assignSystem } from '../game/generate.ts';
-import { checkVictory, gameTick } from '../game/engine.ts';
-import { eliminatePlayer, moveShips, orderToMove } from './actions.ts';
-
 import { debugLog } from '../utils/logging.ts';
 
+import { eliminatePlayer, moveShips, orderToMove } from './actions.ts';
+
+import type { FnContext } from '../managers/types';
 import type { Move, Order } from '../types.ts';
-import type { FnContext } from '../managers/types.ts';
 import type { GameState } from './types.ts';
 
 export function setup(ctx: FnContext): GameState {
@@ -48,7 +48,7 @@ export const utilities = {
 
 export {
   initalState,
-  gameConfig,
+  defaultConfig,
   gameTick,
   generateMap,
   getPlayersHomeworld,

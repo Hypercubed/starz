@@ -1,25 +1,16 @@
 import * as d3 from 'd3';
-// import { smoothPath } from "svg-smoother";
-
-// @ts-ignore
 import { geoVoronoi } from 'd3-geo-voronoi';
-
-// @ts-ignore
 import versor from 'versor';
 
 import { ENABLE_GRATICULE, HEIGHT, PROJECTION, WIDTH } from '../constants.ts';
-
-import {
-  SystemTypes,
-  type Coordinates,
-  type Lane,
-  type System
-} from '../types.ts';
-import type { FnContext } from '../managers/types.ts';
-import type { GameState } from '../game/types.ts';
-import { isSelected } from './selection.ts';
 import { getPlayersHomeworld, thisPlayer } from '../game/state.ts';
+
 import { onClickLane, onClickSystem } from './controls.ts';
+import { isSelected } from './selection.ts';
+
+import type { GameState } from '../game/types.ts';
+import type { FnContext } from '../managers/types';
+import type { Coordinates, Lane, System } from '../types.d.ts';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;
@@ -281,7 +272,7 @@ export function centerOnCoordinates(coords: Coordinates) {
 
 export function rerender() {
   if (!svg) return;
-  
+
   const ctx = globalThis.gameManager.getContext();
   if (ENABLE_GRATICULE) drawGraticule(ctx.G);
   if (ENABLE_MESH) drawRegions(ctx);
@@ -354,7 +345,7 @@ function drawSystems({ G, C }: FnContext) {
   join
     .style('--owner-color', (d) => G.playerMap.get(d.ownerId!)?.color ?? null)
     .classed('selected', (d) => isSelected(d.id))
-    .classed('inhabited', (d) => d.type === SystemTypes.INHABITED)
+    .classed('inhabited', (d) => d.type === 'INHABITED')
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
     .classed('visited', (d) => player?.visitedSystems.has(d.id) ?? false)
     .classed(
@@ -365,13 +356,13 @@ function drawSystems({ G, C }: FnContext) {
 
   join.select('.system-icon').text((d) => {
     if (d.homeworld && d.ownerId === d.homeworld) return '✶';
-    if (d.type === 'inhabited') return '✦';
+    if (d.type === 'INHABITED') return '✦';
     return '●'; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
   join.select('.ship-count').text((d) => {
     if (reducedSize) return '';
-    const icon = d.type === SystemTypes.INHABITED ? '▴' : '';
+    const icon = d.type === 'INHABITED' ? '▴' : '';
     return icon + (d.ships ? d.ships.toString() : '');
   });
 }

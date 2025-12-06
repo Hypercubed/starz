@@ -14,6 +14,14 @@ export default defineConfig([
       importPlugin.flatConfigs.typescript
     ],
     languageOptions: { globals: globals.browser },
+      rules: {
+        // Enforce a consistent import order
+        "import/order": ["error", {
+          "groups": ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"],
+          "newlines-between": "always",
+          "alphabetize": { "order": "asc", "caseInsensitive": true }
+        }],
+      },
   },
   tseslint.configs.recommended,
   {

@@ -1,18 +1,8 @@
 export type Coordinates = [number, number];
 
-export const SystemTypes = {
-  INHABITED: 'inhabited',
-  UNINHABITED: 'uninhabited'
-} as const;
+export type SystemType = 'INHABITED' | 'UNINHABITED';
 
-export type SystemType = (typeof SystemTypes)[keyof typeof SystemTypes];
-
-export const Orders = {
-  MASS_MOVE: 'MASS_MOVE',
-  BALANCED_MOVE: 'BALANCED_MOVE'
-};
-
-export type OrderType = (typeof Orders)[keyof typeof Orders];
+export type OrderType = 'MASS_MOVE' | 'BALANCED_MOVE';
 
 export interface System {
   id: string;

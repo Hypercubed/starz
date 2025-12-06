@@ -1,6 +1,7 @@
-import type { FnContext } from '../managers/types.ts';
-import { type BotInterface, type System } from '../types.ts';
 import { queueMove } from './state.ts';
+
+import type { FnContext } from '../managers/types';
+import type { BotInterface, System } from '../types.d.ts';
 
 interface BotMove {
   message: string;
@@ -305,7 +306,7 @@ export class Bot implements BotInterface {
       const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId === this.id) return [];
-        if (to.ownerId === null && to.type === 'uninhabited') return [];
+        if (to.ownerId === null && to.type === 'UNINHABITED') return [];
 
         // Check if we can win easily
         if (from.ships > to.ships * 1.5 + 5) {
@@ -335,7 +336,7 @@ export class Bot implements BotInterface {
       const neighbors = state.world.getAdjacentSystems(from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId !== null) return [];
-        if (to.type === 'inhabited') return [];
+        if (to.type === 'INHABITED') return [];
 
         const units = Math.max(1, Math.floor(from.ships * 0.3));
         return [
