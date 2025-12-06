@@ -15,6 +15,7 @@ import type { GameEvents, GameState } from '../game/types.ts';
 export abstract class GameManager {
   protected game = game;
   protected state = game.initalState();
+  public config = game.gameConfig();
   protected gameState: GameStatus = GAME_STATUS.WAITING;
 
   protected events: GameEvents = {
@@ -66,8 +67,8 @@ export abstract class GameManager {
       G: this.state, // TODO: Rename S
       E: this.events,
       C: {
-        // TODO: Rename M
-        gameState: this.gameState // TODO: return this?
+        gameState: this.gameState,
+        gameConfig: this.config
       }
     };
   }

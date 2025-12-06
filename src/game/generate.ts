@@ -2,29 +2,34 @@ import * as d3 from 'd3';
 import { init } from '@paralleldrive/cuid2';
 
 import {
-  NumInhabited,
   HEIGHT,
-  NumOfSystems,
-  NumBots,
   NumHumanPlayers,
-  MinDistanceBetweenSystems,
-  MAX_SHIPS_PER_SYSTEM
+  MAX_SHIPS_PER_SYSTEM,
+  FracInhabited
 } from '../constants.ts';
 import { SystemTypes, type Coordinates, type System } from '../types.ts';
 import { debugLog } from '../utils/logging.ts';
 import { findClosestSystem, Graph } from '../classes/graph.ts';
 import type { GameState } from './types.ts';
+import type { FnContext } from '../managers/types.ts';
 
 const createId = init({ length: 5 });
 
-export function generateMap(state: GameState) {
-  state.world = new Graph();
+export function generateMap({ G, C }: FnContext) {
+  G.world = new Graph();
 
-  const dz = HEIGHT / (NumOfSystems - 1);
+  const dz = HEIGHT / (C.gameConfig.numSystems - 1);
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
   debugLog('Generating map...');
+
+  // Minimum distance between systems
+  // Should be < SQRT(PI/NumOfSystems) to ensure spacing
+  const minDistance = Math.min(
+    0.08,
+    Math.sqrt(Math.PI / C.gameConfig.numSystems)
+  );
 
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
@@ -32,49 +37,49 @@ export function generateMap(state: GameState) {
 
     const thisLocation = [longitude, latitude] as Coordinates;
     const thisSystem = createSystem(thisLocation);
-    const closestSystem = state.world.findClosestSystem(thisSystem);
+    const closestSystem = G.world.findClosestSystem(thisSystem);
 
     if (closestSystem) {
       // Enforce minimum distance
       if (
         d3.geoDistance(thisLocation, closestSystem.location) <
-        MinDistanceBetweenSystems
+        minDistance
       ) {
         z -= dz;
         continue;
       }
 
-      state.world.addLane(thisSystem, closestSystem);
+      G.world.addLane(thisSystem, closestSystem);
     }
 
-    state.world.addSystem(thisSystem);
+    G.world.addSystem(thisSystem);
   }
 
   // Now in reverse
-  const s = [state.world.systems[state.world.systems.length - 1]];
-  for (let i = state.world.systems.length - 2; i >= 0; i--) {
-    const system = state.world.systems[i];
+  const s = [G.world.systems[G.world.systems.length - 1]];
+  for (let i = G.world.systems.length - 2; i >= 0; i--) {
+    const system = G.world.systems[i];
 
     // Add a lane to the closest system that is not itself
     const closestSystem = findClosestSystem(system.location, s);
     if (closestSystem) {
-      state.world.addLane(system, closestSystem);
+      G.world.addLane(system, closestSystem);
     }
     s.push(system);
   }
 
-  state.world.buildNeighborMap();
+  G.world.buildNeighborMap();
 
   debugLog(
-    `Generated ${state.world.systems.length} systems and ${state.world.lanes.length} lanes.`
+    `Generated ${G.world.systems.length} systems and ${G.world.lanes.length} lanes.`
   );
 
-  const unoccupied = state.world.systems.slice(0); // Copy all systems
+  const unoccupied = G.world.systems.slice(0); // Copy all systems
   const occupied = [] as System[];
 
   // Setup inhabited systems (neutral + potential homeworlds)
   // We need enough for all players plus some neutrals
-  const totalInhabited = Math.max(NumInhabited, NumHumanPlayers + NumBots);
+  const totalInhabited = Math.max(FracInhabited * C.gameConfig.numSystems, NumHumanPlayers + C.gameConfig.numBots);
 
   for (let i = 0; i < totalInhabited; i++) {
     if (unoccupied.length === 0) break;

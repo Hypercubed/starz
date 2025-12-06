@@ -4,7 +4,8 @@ import {
   revealSystem,
   addMessage,
   addPlayer,
-  initalState
+  initalState,
+  gameConfig
 } from '../game/state.ts';
 import { generateMap, assignSystem } from '../game/generate.ts';
 import { checkVictory, gameTick } from '../game/engine.ts';
@@ -16,9 +17,9 @@ import type { Move, Order } from '../types.ts';
 import type { FnContext } from '../managers/types.ts';
 import type { GameState } from './types.ts';
 
-export function setup() {
+export function setup(ctx: FnContext): GameState {
   const state = initalState();
-  generateMap(state);
+  generateMap({ ...ctx, G: state });
   return state;
 }
 
@@ -47,6 +48,7 @@ export const utilities = {
 
 export {
   initalState,
+  gameConfig,
   gameTick,
   generateMap,
   getPlayersHomeworld,

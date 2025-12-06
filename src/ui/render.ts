@@ -7,7 +7,7 @@ import { geoVoronoi } from 'd3-geo-voronoi';
 // @ts-ignore
 import versor from 'versor';
 
-import { ENABLE_FOG_OF_WAR, HEIGHT, PROJECTION, WIDTH } from '../constants.ts';
+import { ENABLE_GRATICULE, HEIGHT, PROJECTION, WIDTH } from '../constants.ts';
 
 import {
   SystemTypes,
@@ -26,7 +26,6 @@ const MAX_ZOOM_SCALE = 100;
 const SYSTEM_SIZE = 20;
 
 const ENABLE_MESH = true;
-const ENABLE_GRATICULE = true;
 
 const projections = {
   Orthographic: d3.geoOrthographic,
@@ -277,14 +276,14 @@ export function centerOnCoordinates(ctx: FnContext, coords: Coordinates) {
 export function rerender(ctx: FnContext) {
   if (!svg) return;
 
-  drawGraticule(ctx.G);
-
+  if (ENABLE_GRATICULE) drawGraticule(ctx.G);
   if (ENABLE_MESH) drawRegions(ctx);
+  
   drawSystems(ctx);
   drawLanes(ctx);
 }
 
-function drawSystems({ G, E }: FnContext) {
+function drawSystems({ G, E, C }: FnContext) {
   const currentScale = geoProjection.scale();
   const reducedSize = currentScale / initialScale < 1;
 
@@ -292,7 +291,7 @@ function drawSystems({ G, E }: FnContext) {
 
   const player = thisPlayer(G);
 
-  if (ENABLE_FOG_OF_WAR) {
+  if (C.gameConfig.fow) {
     visibleSystems = visibleSystems.filter((system) =>
       player ? player.revealedSystems.has(system.id) : false
     );
@@ -380,12 +379,12 @@ const getFeatures = (() => {
   };
 })();
 
-function drawRegions({ G, E }: FnContext) {
+function drawRegions({ G, E, C }: FnContext) {
   let features = getFeatures(G);
 
   const player = thisPlayer(G);
 
-  if (ENABLE_FOG_OF_WAR) {
+  if (C.gameConfig.fow) {
     features = features.filter((feature) => {
       const system = feature.properties?.site as System;
       return player ? player.visitedSystems.has(system.id) : false;
@@ -420,13 +419,13 @@ function drawRegions({ G, E }: FnContext) {
     .style('--owner-color', (d) => G.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
-function drawLanes({ G, E }: FnContext) {
+function drawLanes({ G, E, C }: FnContext) {
   let visibleLanes = G.world.lanes;
 
   const playerId = G.thisPlayerId;
   const player = G.playerMap.get(playerId!);
 
-  if (ENABLE_FOG_OF_WAR) {
+  if (C.gameConfig.fow) {
     visibleLanes = visibleLanes.filter(
       (lane) =>
         !!player &&

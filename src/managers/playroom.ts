@@ -5,13 +5,13 @@ import type { Lane, Move, Order, Player, PlayerStats, System } from '../types';
 import { Graph, type GraphJSON } from '../classes/graph';
 
 import * as game from '../game/index.ts';
-import * as renderer from '../render/index.ts';
+import * as renderer from '../ui/index.ts';
 
 import { GAME_STATUS } from './types';
 import { COLORS } from '../constants.ts';
 import { trackEvent } from '../utils/logging.ts';
 import { GameManager } from './manager.ts';
-import { clearSelection, deselect, select } from '../render/selection.ts';
+import { clearSelection, deselect, select } from '../ui/selection.ts';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;

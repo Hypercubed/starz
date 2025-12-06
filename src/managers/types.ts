@@ -1,4 +1,4 @@
-import type { GameEvents, GameState } from '../game/types';
+import type { GameConfig, GameEvents, GameState } from '../game/types';
 
 export const GAME_STATUS = {
   WAITING: 'WAITING',
@@ -10,7 +10,8 @@ export const GAME_STATUS = {
 export type GameStatus = (typeof GAME_STATUS)[keyof typeof GAME_STATUS];
 
 export interface GameContext {
-  gameState: GameStatus;
+  gameState: Readonly<GameStatus>;
+  gameConfig: Readonly<GameConfig>;
 }
 
 export interface FnContext {

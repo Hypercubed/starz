@@ -1,6 +1,24 @@
 import { Graph } from '../classes/graph.ts';
+import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
 import type { Messages, Player, System } from '../types.ts';
-import type { GameState } from './types.ts';
+import type { GameConfig, GameState } from './types.ts';
+
+export function gameConfig(): GameConfig {
+  return {
+    playerName: 'Player',
+    numBots: NumBots,
+    fow: ENABLE_FOG_OF_WAR,
+    numSystems: NumOfSystems
+    // maxPlayers: 4,
+    // startingShips: 50,
+    // systemsPerPlayer: 5,
+    // lanesPerSystem: 3,
+    // initialResources: 100,
+    // shipBuildCost: 10,
+    // shipBuildTime: 2, // in ticks
+    // tickDurationMs: 500 // duration of a tick in milliseconds
+  };
+}
 
 export function initalState(): GameState {
   return {

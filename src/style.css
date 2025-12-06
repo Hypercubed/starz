@@ -269,3 +269,11 @@ dialog {
     list-style-type: none;
   }
 }
+
+datalist {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  writing-mode: vertical-lr;
+  width: 200px;
+}

@@ -19,13 +19,7 @@ export const ENABLE_FOG_OF_WAR = true; // Whether to enable fog of war
 export const NumOfSystems = 384; // Number of systems
 export const NumHumanPlayers = 1; // Number of human players (should be 1 or 0)
 export const NumBots = 4; // Total number of players (must be < N * fracOccupied)
-export const NumInhabited = Math.max(Math.floor(0.1 * NumOfSystems), NumBots); // Fraction of systems that are occupied at start
-
-// Should be < SQRT(PI/NumOfSystems) to ensure spacing
-export const MinDistanceBetweenSystems = Math.min(
-  0.08,
-  Math.sqrt(Math.PI / NumOfSystems)
-); // Minimum distance between systems
+export const FracInhabited = 0.1; // Fraction of systems that are occupied at start
 
 const env = (import.meta as any).env || {};
 export const EVENT_TRACKING_ENABLED = env.PROD ?? false;
@@ -33,6 +27,7 @@ export const DEBUG_LOGGING_ENABLED = env.DEV ?? true;
 export const START_PAUSED = true;
 export const ENABLE_CHEATS = env.DEV ?? true;
 export const ENABLE_BOT_CONTROL = false;
+export const ENABLE_GRATICULE = true;
 
 export const COLORS = [
   '#c0392b', // Red

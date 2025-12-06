@@ -2,12 +2,11 @@ import { init } from '@paralleldrive/cuid2';
 
 import {
   COLORS,
-  NumBots,
   NumHumanPlayers,
   START_PAUSED
 } from '../constants.ts';
 
-import * as renderer from '../render/index.ts';
+import * as renderer from '../ui/index.ts';
 
 import { Bot } from '../game/bots.ts';
 import { GameManager } from './manager.ts';
@@ -15,7 +14,7 @@ import { GAME_STATUS } from './types.ts';
 import { trackEvent } from '../utils/logging.ts';
 import type { Lane, System } from '../types.ts';
 import { assignSystem } from '../game/generate.ts';
-import { clearSelection, select } from '../render/selection.ts';
+import { clearSelection, select } from '../ui/selection.ts';
 
 const createId = init({ length: 5 });
 
@@ -29,23 +28,23 @@ export class LocalGameManager extends GameManager {
     this.stopGame();
     this.gameState = GAME_STATUS.WAITING;
 
-    this.state = this.game.setup();
+    if (START_PAUSED) {
+      await renderer.showStartGame();
+    }
 
-    const totalPlayers = NumHumanPlayers + NumBots;
+    const ctx = this.getContext();
+    this.state = this.game.setup(ctx);
+
+    const totalPlayers = NumHumanPlayers + +this.config.numBots;
 
     for (let i = 1; i <= totalPlayers; i++) {
       this.playerJoin(i);
       assignSystem(this.state, this.state.players[i - 1].id);
     }
-
+    
     const thisPlayer = this.state.players[0];
-
-    this.setupThisPlayer(thisPlayer.id);
+    this.setupThisPlayer(thisPlayer.id, this.config.playerName);
     renderer.setupUI(this.getContext());
-
-    if (START_PAUSED) {
-      await renderer.showStartGame();
-    }
 
     this.startGame();
     renderer.rerender(this.getContext());
@@ -158,8 +157,12 @@ export class LocalGameManager extends GameManager {
     renderer.rerender(this.getContext());
   }
 
-  private setupThisPlayer(playerId: string) {
+  private setupThisPlayer(playerId: string, name?: string) {
     this.state.thisPlayerId = playerId;
+    const player = this.state.playerMap.get(playerId)!;
+    if (name) {
+      player.name = name;
+    }
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
     this.game.revealSystem(this.state, homeworld);
     renderer.centerOnHome(this.getContext());

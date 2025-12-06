@@ -77,8 +77,39 @@ export function setupDialogs() {
     globalThis.gameManager.connect();
   });
 
+  const optionsButton = document.getElementById(
+    'optionsButton'
+  ) as HTMLButtonElement;
+
+  optionsButton.addEventListener('click', openOptions);
+
   const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
   helpButton.addEventListener('click', showHelp);
+}
+
+async function openOptions() {
+  const ret = await showOptions();
+  if (ret) {
+    const form = document.getElementById('optionsForm') as HTMLFormElement;
+    const formData = new FormData(form);
+
+    const gameManager = globalThis.gameManager;
+
+    gameManager.config.numBots = +formData.get('numBots')!;
+    gameManager.config.playerName = formData.get('playerName') as string;
+    gameManager.config.fow = formData.get('fow') === 'on';
+    gameManager.config.numSystems = +formData.get('numSystems')!;
+  }
+}
+
+function showOptions() {
+  const optionsDialog = document.getElementById('optionsDialog') as HTMLDialogElement;
+  optionsDialog.showModal();
+
+  return new Promise<boolean>((resolve) => {
+    optionsDialog.addEventListener('close', () => resolve(true));
+    optionsDialog.addEventListener('cancel', () => resolve(false));
+  });
 }
 
 export function showHelp() {

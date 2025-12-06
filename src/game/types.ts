@@ -1,6 +1,13 @@
 import type { Graph } from '../classes/graph';
 import type { Lane, Messages, Move, Order, Player, System } from '../types';
 
+export interface GameConfig {
+  playerName: string;
+  numBots: number;
+  fow: boolean;
+  numSystems: number;
+}
+
 export interface GameState {
   tick: number;
   timeScale: number;
