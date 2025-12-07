@@ -41,7 +41,8 @@ export function updateLeaderbox() {
     .data(stats)
     .join('tr')
     .style('--owner-color', (d) => {
-      return state.playerMap.get(d.id)?.color ?? null;
+      const player = state.playerMap.get(d.id);
+      return player ? player.color : null;
     })
     .attr('title', (d) => (d.bot ? d.bot.name : 'Human'))
     .classed('eliminated', (d) => !d.isAlive);

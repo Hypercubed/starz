@@ -14,7 +14,7 @@ export abstract class GameManager {
   protected state = game.initalState();
   public config = game.defaultConfig();
 
-  protected gameState: GameStatus = 'WAITING';
+  protected gameStatus: GameStatus = 'WAITING';
 
   constructor() {
     this.#registerEventListeners();
@@ -33,7 +33,7 @@ export abstract class GameManager {
       G: this.state,
       // E: this.events,
       C: {
-        gameState: this.gameState,
+        gameStatus: this.gameStatus,
         gameConfig: this.config
       }
     };
@@ -63,12 +63,12 @@ export abstract class GameManager {
   }
 
   protected gameStart() {
-    this.gameState = 'PLAYING';
+    this.gameStatus = 'PLAYING';
     this.#runGameLoop();
   }
 
   protected gameStop() {
-    this.gameState = 'FINISHED';
+    this.gameStatus = 'FINISHED';
     this.stopGameLoop();
   }
 
@@ -76,7 +76,7 @@ export abstract class GameManager {
     this.game.gameTick(this.getContext());
     this.events.emit('STATE_UPDATED', {
       state: this.state,
-      status: this.gameState
+      status: this.gameStatus
     });
   }
 
@@ -89,7 +89,7 @@ export abstract class GameManager {
 
     this.events.emit('STATE_UPDATED', {
       state: this.state,
-      status: this.gameState
+      status: this.gameStatus
     });
   }
 
@@ -101,7 +101,7 @@ export abstract class GameManager {
   }
 
   #runGameLoop() {
-    if (this.gameState !== 'PLAYING') {
+    if (this.gameStatus !== 'PLAYING') {
       this.gameStop();
       return;
     }
@@ -112,7 +112,7 @@ export abstract class GameManager {
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
       TICK_DURATION_MS / this.config.timeScale
-    );
+    ) as unknown as number;
   }
 
   protected startGameLoop() {

@@ -2,6 +2,7 @@ import * as d3 from 'd3';
 
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
 import { revealSystem } from '../game/state.ts';
+import { hasLane } from '../game/world.ts';
 import { debugLog } from '../utils/logging.ts';
 
 import {
@@ -147,7 +148,7 @@ export function setupKeboardControls() {
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
   const { G, C } = globalThis.gameManager.getContext();
-  if (C.gameState !== 'PLAYING') return;
+  if (C.gameStatus !== 'PLAYING') return;
 
   switch (event.button) {
     case 0: // Left click
@@ -194,7 +195,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 
 export function onClickSystem(event: PointerEvent, system: System) {
   const ctx = globalThis.gameManager.getContext();
-  if (ctx.C.gameState !== 'PLAYING') return;
+  if (ctx.C.gameStatus !== 'PLAYING') return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(
@@ -241,7 +242,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
 export function orderBalancedMove(fromId: string, toId: string) {
   const { G } = globalThis.gameManager.getContext();
-  if (!G.world.hasLane(fromId, toId)) return;
+  if (!hasLane(G.world, fromId, toId)) return;
 
   const order = {
     type: 'BALANCED_MOVE',
@@ -256,7 +257,7 @@ export function orderBalancedMove(fromId: string, toId: string) {
 
 export function orderMassMove(fromId: string, toId: string) {
   const { G } = globalThis.gameManager.getContext();
-  if (!G.world.hasLane(fromId, toId)) return;
+  if (!hasLane(G.world, fromId, toId)) return;
 
   const order = {
     type: 'MASS_MOVE',

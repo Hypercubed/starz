@@ -1,3 +1,5 @@
+import { getAdjacentSystems } from '../game/world.ts';
+
 import type { FnContext } from '../managers/types';
 
 export const selection = {
@@ -58,7 +60,7 @@ export function selectPath({ G }: FnContext, systemId: string) {
       selection.last = systemId;
       return;
     }
-    for (const neighbor of G.world.getAdjacentSystems(current)) {
+    for (const neighbor of getAdjacentSystems(G.world, current)) {
       if (!visited.has(neighbor.id) && neighbor.ownerId === G.thisPlayerId) {
         visited.add(neighbor.id);
         queue.push([...path, neighbor.id]);

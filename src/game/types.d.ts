@@ -1,4 +1,4 @@
-import type { Graph } from '../classes/graph';
+import type { World } from './world';
 import type { GameStatus } from '../managers/types';
 import type { Messages, Move, Order, Player } from '../types';
 
@@ -36,7 +36,7 @@ export interface GameState {
   tick: number;
   running: boolean;
   thisPlayerId: string | null;
-  world: Graph;
+  world: World;
   players: Player[];
   playerMap: Map<string, Player>;
   messages: Messages[];

@@ -1,9 +1,9 @@
 import * as PR from 'playroomkit';
 
-import { Graph, type GraphJSON } from '../classes/graph.ts';
 import { COLORS } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as game from '../game/index.ts';
+import { type WorldJSON } from '../game/world.ts';
 import * as renderer from '../ui/index.ts';
 import { clearSelection, deselect, select } from '../ui/selection.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -22,7 +22,7 @@ class PlayroomBot extends PR.Bot {
 }
 
 const PLAYROOM_STATES = {
-  GAME_STATE: 'GAME_STATE',
+  GAME_STATUS: 'GAME_STATUS',
   WORLD: 'WORLD',
   TICK: 'TICK',
   PLAYERS: 'PLAYERS',
@@ -57,7 +57,7 @@ export class PlayroomGameManager extends GameManager {
     this.registerPlayroomEvents();
 
     this.gameStop();
-    this.gameState = 'WAITING';
+    this.gameStatus = 'WAITING';
 
     this.state = game.initalState();
     PR.resetStates();
@@ -72,7 +72,7 @@ export class PlayroomGameManager extends GameManager {
       },
       maxPlayersPerRoom: 5,
       defaultStates: {
-        [PLAYROOM_STATES.GAME_STATE]: 'WAITING'
+        [PLAYROOM_STATES.GAME_STATUS]: 'WAITING'
       }
     });
 
@@ -94,19 +94,19 @@ export class PlayroomGameManager extends GameManager {
 
       console.log('Generated world and players as host.');
 
-      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), true);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world, true);
       PR.setState(
         PLAYROOM_STATES.PLAYERS,
         playersToJson(this.state.players),
         true
       );
     } else {
-      const world = await PR.waitForState<GraphJSON>(PLAYROOM_STATES.WORLD);
+      const world = await PR.waitForState<WorldJSON>(PLAYROOM_STATES.WORLD);
       const players = await PR.waitForState<Player[]>(PLAYROOM_STATES.PLAYERS);
 
       console.log('Received world and players from host.');
 
-      this.state.world = Graph.fromJSON(world);
+      this.state.world = world;
       players.forEach((stats) => {
         this.addPlayer(stats.name, stats.id, undefined, stats.color);
       });
@@ -188,8 +188,8 @@ export class PlayroomGameManager extends GameManager {
         this.state.players.map((p) => p.stats),
         false
       );
-      PR.setState(PLAYROOM_STATES.GAME_STATE, this.gameState, false);
-      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), false);
+      PR.setState(PLAYROOM_STATES.GAME_STATUS, this.gameStatus, false);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world, false);
       PR.setState(
         PLAYROOM_STATES.PLAYERS,
         playersToJson(this.state.players),
@@ -200,9 +200,9 @@ export class PlayroomGameManager extends GameManager {
       // this.gameState = PR.getState(PLAYROOM_STATES.GAME_STATE) as GameState;
 
       if (this.state.tick % 10 === 0) {
-        const world = PR.getState(PLAYROOM_STATES.WORLD) as GraphJSON;
+        const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
         if (world) {
-          this.state.world = Graph.fromJSON(world);
+          this.state.world = world;
         }
       }
 
@@ -220,7 +220,7 @@ export class PlayroomGameManager extends GameManager {
 
       this.events.emit('STATE_UPDATED', {
         state: this.state,
-        status: this.gameState
+        status: this.gameStatus
       });
     }
   }
@@ -304,7 +304,7 @@ export class PlayroomGameManager extends GameManager {
       game.addMessage(this.state, message);
       super.onEliminatePlayer(loserId, winnerId);
 
-      PR.setState(PLAYROOM_STATES.WORLD, this.state.world.toJSON(), false);
+      PR.setState(PLAYROOM_STATES.WORLD, this.state.world, false);
 
       PR.RPC.call(
         PLAYROOM_EVENTS.PLAYER_ELIMINATED,
@@ -327,7 +327,7 @@ export class PlayroomGameManager extends GameManager {
 
       this.events.emit('STATE_UPDATED', {
         state: this.state,
-        status: this.gameState
+        status: this.gameStatus
       });
     });
 
@@ -339,14 +339,14 @@ export class PlayroomGameManager extends GameManager {
       PLAYROOM_EVENTS.PLAYER_ELIMINATED,
       async (data: PlayerEliminatedEventData) => {
         this.onEliminatePlayer(data.loserId, data.winnerId);
-        const world = PR.getState(PLAYROOM_STATES.WORLD) as GraphJSON;
+        const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
         if (world) {
-          this.state.world = Graph.fromJSON(world);
+          this.state.world = world;
         }
 
         this.events.emit('STATE_UPDATED', {
           state: this.state,
-          status: this.gameState
+          status: this.gameStatus
         });
       }
     );
@@ -428,15 +428,15 @@ function playerToJson(player: Player) {
   return {
     ...player,
     bot: undefined,
-    visitedSystems: Array.from(player.visitedSystems),
-    revealedSystems: Array.from(player.revealedSystems)
+    visitedSystems: player.visitedSystems,
+    revealedSystems: player.revealedSystems
   };
 }
 
 // function playerFromJson(player: any) {
 //   return {
 //     ...player,
-//     visitedSystems: new Set<string>(player.visitedSystems),
-//     revealedSystems: new Set<string>(player.revealedSystems)
+//     visitedSystems: [],
+//     revealedSystems: []
 //   }
 // }

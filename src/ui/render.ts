@@ -428,8 +428,8 @@ function drawRegions({ G, C }: FnContext) {
 function drawLanes({ G, C }: FnContext) {
   let visibleLanes = G.world.lanes;
 
-  const playerId = G.thisPlayerId;
-  const player = G.playerMap.get(playerId!);
+  const playerId = G.thisPlayerId!;
+  const player = G.playerMap.get(playerId)!;
 
   if (C.gameConfig.fow) {
     visibleLanes = visibleLanes.filter(

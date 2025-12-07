@@ -6,7 +6,7 @@ import type { Player } from '../types.ts';
 export class SimGameManager extends GameManager {
   async connect() {
     this.gameStop();
-    this.gameState = 'WAITING';
+    this.gameStatus = 'WAITING';
 
     this.state = this.game.initalState();
     this.game.generateMap(this.getContext());

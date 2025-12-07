@@ -8,24 +8,58 @@ import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
+import { Client } from 'boardgame.io/client';
+import type { GameState } from '../game/types';
+import type { Move, Order } from '../types';
+import type { Game } from 'boardgame.io';
+
 const createId = init({ length: 5 });
 
-export class LocalGameManager extends GameManager {
+export class BGIOGameManager extends GameManager {
+  g = {
+    setup: () => {
+      const ctx = this.getContext();
+      this.state = this.game.setup(ctx);
+      return structuredClone(this.state);
+    },
+
+    moves: {
+      // takeOrder: (_ctx, order: Order) => {
+      //   const ctx = this.getContext();
+      //   this.game.utilities.takeOrder({ ...ctx, ..._ctx, G: _ctx.G }, order);
+      // },
+      makeMove: (_ctx, move: Move) => {
+        const ctx = this.getContext();
+        this.game.moves.makeMove({ ...ctx, G: _ctx.G }, move);
+
+        // setTimeout(() => {
+        //   // console.log(this.client.getState());
+        //   this.state = structuredClone(this.client.getState()!.G);
+        // }, 32)
+      }
+    },
+  } satisfies Game;
+
+  client = Client({ game: this.g });
+
   constructor() {
     super();
     this.registerUIEvents();
   }
 
+  getState(): Readonly<GameState> {
+    return this.client?.getState()?.G ?? {} as any;
+  }
+
   async connect() {
     this.gameStop();
-    this.gameStatus = 'WAITING';
+    this.gameState = 'WAITING';
 
     if (START_PAUSED) {
       await renderer.showStartGame();
     }
 
-    const ctx = this.getContext();
-    this.state = this.game.setup(ctx);
+    this.client.start();
 
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
 
@@ -46,12 +80,14 @@ export class LocalGameManager extends GameManager {
     trackEvent('starz_gamesStarted');
     this.game.addMessage(this.state, `Game started.`);
 
-    const player = this.state.playerMap.get(this.state.thisPlayerId!);
+    const player = this.state.playerMap[this.state.thisPlayerId!];
     if (player) {
       this.game.addMessage(this.state, `You are Player ${player.name}.`);
     }
 
     super.gameStart();
+
+    this.client.overrideGameState(this.state);
   }
 
   protected gameStop() {
@@ -66,6 +102,14 @@ export class LocalGameManager extends GameManager {
     this.game.checkVictory(this.getContext());
   }
 
+  protected onMakeMove(move: Move) {
+    this.client.moves.makeMove(move);
+  }
+
+  // protected onTakeOrder(order: Order) {
+  //   this.client.moves.takeOrder(order);
+  // }
+
   private onPlayerJoin(playerIndex: number) {
     const color = COLORS[playerIndex];
     const name = /* bot?.name ?? */ `${playerIndex}`;
@@ -77,11 +121,11 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPauseToggle() {
-    if (this.gameStatus === 'PAUSED') {
-      this.gameStatus = 'PLAYING';
+    if (this.gameState === 'PAUSED') {
+      this.gameState = 'PLAYING';
       super.startGameLoop();
-    } else if (this.gameStatus === 'PLAYING') {
-      this.gameStatus = 'PAUSED';
+    } else if (this.gameState === 'PLAYING') {
+      this.gameState = 'PAUSED';
       super.stopGameLoop();
     }
   }
@@ -101,8 +145,8 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onEliminatePlayer(loserId: string, winnerId: string | null) {
-    const loser = this.state.playerMap.get(loserId)!;
-    const winner = this.state.playerMap.get(winnerId as any);
+    const loser = this.state.playerMap[loserId]!;
+    const winner = this.state.playerMap[winnerId as any];
 
     const message =
       winnerId === null
@@ -138,7 +182,7 @@ export class LocalGameManager extends GameManager {
 
   private setupThisPlayer(playerId: string, name?: string) {
     this.state.thisPlayerId = playerId;
-    const player = this.state.playerMap.get(playerId)!;
+    const player = this.state.playerMap[playerId]!;
     if (name) {
       player.name = name;
     }

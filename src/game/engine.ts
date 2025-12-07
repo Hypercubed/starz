@@ -57,7 +57,7 @@ export function roundUpdate(state: GameState) {
 }
 
 export function checkVictory({ G, C }: FnContext) {
-  if (C.gameState !== 'PLAYING') return;
+  if (C.gameStatus !== 'PLAYING') return;
 
   let isWin = false;
   let isLoss = false;
@@ -70,7 +70,7 @@ export function checkVictory({ G, C }: FnContext) {
 
     if (homeworlds.length === 1) {
       const winnerId = homeworlds[0].ownerId!;
-      const winner = G.playerMap.get(winnerId)!;
+      const winner = G.playerMap[winnerId]!;
 
       addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
 
@@ -84,7 +84,7 @@ export function checkVictory({ G, C }: FnContext) {
     );
 
     if (systems.length === 0) {
-      const winner = G.playerMap.get(G.thisPlayerId!)!;
+      const winner = G.playerMap[G.thisPlayerId!]!;
       addMessage(G, `Player ${winner.name} has conquered The Bubble!`);
       isWin = true;
       isLoss = false;

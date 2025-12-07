@@ -10,7 +10,7 @@ export function debugLog(message: string, ...optionalParams: any[]) {
   const state = globalThis.gameManager?.getState();
 
   if (DEBUG_LOGGING_ENABLED) {
-    console.log(`[DEBUG][Tick ${state.tick}] ${message}`, ...optionalParams);
+    console.log(`[DEBUG][Tick ${state?.tick}] ${message}`, ...optionalParams);
   }
 }
 
@@ -31,7 +31,7 @@ export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
     try {
       window.sa_event(eventName, {
         [eventName]: count,
-        tick: state.tick,
+        tick: state?.tick,
         ...meta
       });
     } catch (e) {

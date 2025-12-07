@@ -1,5 +1,6 @@
-import { Graph } from '../classes/graph.ts';
 import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
+
+import { createWorld, getAdjacentSystems } from './world.ts';
 
 import type { Messages, Player, System } from '../types.ts';
 import type { GameConfig, GameState } from './types.ts';
@@ -19,7 +20,7 @@ export function initalState(): GameState {
     tick: 0,
     running: false, // TODO: rmove this
     thisPlayerId: null as string | null,
-    world: new Graph(), // TODO: don't use classes in state
+    world: createWorld(),
     players: [] as Player[],
     playerMap: new Map<string, Player>(),
     messages: [] as Messages[] // TODO: Move out of state
@@ -72,9 +73,9 @@ export function revealSystem(state: GameState, system: System) {
   player.revealedSystems.add(system.id);
   player.visitedSystems.add(system.id);
 
-  const neighbors = state.world.getAdjacentSystems(system.id);
-
+  const neighbors = getAdjacentSystems(state.world, system.id);
   if (!neighbors) return;
+
   neighbors.forEach((neighbor) => {
     player.revealedSystems.add(neighbor.id);
     player.visitedSystems.add(neighbor.id);

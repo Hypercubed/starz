@@ -24,7 +24,7 @@ export function setup(ctx: FnContext): GameState {
 }
 
 export const moves = {
-  makeMove(ctx: FnContext, move: Move): GameState {
+  makeMove(ctx: FnContext, move: Move) {
     if (move.playerId === ctx.G.thisPlayerId) {
       debugLog(`player move: ${JSON.stringify(move)}`);
     }
@@ -33,7 +33,7 @@ export const moves = {
     moveShips(ctx, from, to, move.ships);
     from.lastMove = move;
 
-    return ctx.G;
+    // return ctx.G;
   }
 };
 

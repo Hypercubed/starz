@@ -1,4 +1,5 @@
 import { queueMove } from './state.ts';
+import { getAdjacentSystems } from './world.ts';
 
 import type { FnContext } from '../managers/types';
 import type { BotInterface, System } from '../types.d.ts';
@@ -127,7 +128,7 @@ export class Bot implements BotInterface {
     const state = gameManager.getState();
 
     this.botSystems.forEach((system) => {
-      const neighbors = state.world.getAdjacentSystems(system.id);
+      const neighbors = getAdjacentSystems(state.world, system.id);
       const enemyNeighbors = neighbors.filter(
         (s) => s.ownerId && s.ownerId !== this.id
       );
@@ -167,8 +168,7 @@ export class Bot implements BotInterface {
 
           if (from.ships < fromThreatLevel * 0.5) {
             // Find safest neighbor
-            const bestRetreat = state.world
-              .getAdjacentSystems(from.id)
+            const bestRetreat = getAdjacentSystems(state.world, from.id)
               .filter((s) => s.ownerId === this.id)
               .sort(
                 (a, b) =>
@@ -223,18 +223,16 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return;
       if (from.ships < 5) return;
 
-      const neighbors = state.world.getAdjacentSystems(from.id);
+      const neighbors = getAdjacentSystems(state.world, from.id);
 
       if (!neighbors) return;
 
       neighbors.forEach((to) => {
         if (to.ownerId !== null && to.ownerId !== this.id) {
           // Don't attack if it exposes us to a DIFFERENT enemy
-          const otherEnemies = state.world
-            .getAdjacentSystems(from.id)
-            .filter(
-              (s) => s.ownerId && s.ownerId !== this.id && s.id !== to.id
-            );
+          const otherEnemies = getAdjacentSystems(state.world, from.id).filter(
+            (s) => s.ownerId && s.ownerId !== this.id && s.id !== to.id
+          );
           if (otherEnemies.length > 0) return;
 
           if (!targets.has(to.id)) {
@@ -249,9 +247,9 @@ export class Bot implements BotInterface {
 
     targets.forEach(({ target, attackers }) => {
       // Prioritize weak/isolated targets
-      const targetAllies = state.world
-        .getAdjacentSystems(target.id)
-        .filter((s) => s.ownerId === target.ownerId).length;
+      const targetAllies = getAdjacentSystems(state.world, target.id).filter(
+        (s) => s.ownerId === target.ownerId
+      ).length;
       const isolationBonus = targetAllies === 0 ? 1.5 : 1.0;
 
       const totalAttackPower = attackers.reduce((sum, s) => {
@@ -303,7 +301,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 3) return [];
 
-      const neighbors = state.world.getAdjacentSystems(from.id);
+      const neighbors = getAdjacentSystems(state.world, from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId === this.id) return [];
         if (to.ownerId === null && to.type === 'UNINHABITED') return [];
@@ -333,7 +331,7 @@ export class Bot implements BotInterface {
       if (from.moveQueue.length > 0) return [];
       if (from.ships < 2) return [];
 
-      const neighbors = state.world.getAdjacentSystems(from.id);
+      const neighbors = getAdjacentSystems(state.world, from.id);
       return neighbors.flatMap((to) => {
         if (to.ownerId !== null) return [];
         if (to.type === 'INHABITED') return [];
@@ -365,9 +363,10 @@ export class Bot implements BotInterface {
         // Just push to any neighbor that is closer to frontline or IS frontline.
         // Simple heuristic: Push to neighbor with FEWEST ships? No, that balances.
         // Push to neighbor that is Frontline.
-        const frontlineNeighbors = state.world
-          .getAdjacentSystems(from.id)
-          .filter((s) => this.frontline.has(s.id) && s.ownerId === this.id);
+        const frontlineNeighbors = getAdjacentSystems(
+          state.world,
+          from.id
+        ).filter((s) => this.frontline.has(s.id) && s.ownerId === this.id);
 
         if (frontlineNeighbors.length > 0) {
           // Push to the one with most need (highest threat or lowest ships?)
@@ -389,9 +388,9 @@ export class Bot implements BotInterface {
         // If no frontline neighbors, push to any backline neighbor?
         // Random walk towards front?
         // Let's just balance with neighbors for now if deep in backline.
-        const neighbors = state.world
-          .getAdjacentSystems(from.id)
-          .filter((s) => s.ownerId === this.id);
+        const neighbors = getAdjacentSystems(state.world, from.id).filter(
+          (s) => s.ownerId === this.id
+        );
         const target = neighbors.sort((a, b) => a.ships - b.ships)[0];
         if (target && target.ships < from.ships - 2) {
           return [
@@ -408,13 +407,14 @@ export class Bot implements BotInterface {
 
       // If we are frontline, maybe shift to a threatened neighbor?
       if (this.frontline.has(from.id)) {
-        const threatenedNeighbors = state.world
-          .getAdjacentSystems(from.id)
-          .filter(
-            (s) =>
-              s.ownerId === this.id &&
-              (this.threatLevels.get(s.id) || 0) > s.ships
-          );
+        const threatenedNeighbors = getAdjacentSystems(
+          state.world,
+          from.id
+        ).filter(
+          (s) =>
+            s.ownerId === this.id &&
+            (this.threatLevels.get(s.id) || 0) > s.ships
+        );
 
         if (
           threatenedNeighbors.length > 0 &&

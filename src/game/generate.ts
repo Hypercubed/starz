@@ -1,7 +1,6 @@
 import { init } from '@paralleldrive/cuid2';
 import * as d3 from 'd3';
 
-import { findClosestSystem, Graph } from '../classes/graph.ts';
 import {
   HEIGHT,
   NumHumanPlayers,
@@ -10,6 +9,15 @@ import {
 } from '../constants.ts';
 import { debugLog } from '../utils/logging.ts';
 
+import {
+  addLane,
+  addSystem,
+  buildNeighborMap,
+  createWorld,
+  findClosestSystem,
+  findClosestSystemInList
+} from './world.ts';
+
 import type { Coordinates, System } from '../types.d.ts';
 import type { GameState } from './types.ts';
 import type { FnContext } from '../managers/types';
@@ -17,7 +25,7 @@ import type { FnContext } from '../managers/types';
 const createId = init({ length: 5 });
 
 export function generateMap({ G, C }: FnContext) {
-  G.world = new Graph();
+  G.world = createWorld();
 
   const dz = HEIGHT / (C.gameConfig.numSystems - 1);
   const z0 = -HEIGHT / 2;
@@ -38,7 +46,7 @@ export function generateMap({ G, C }: FnContext) {
 
     const thisLocation = [longitude, latitude] as Coordinates;
     const thisSystem = createSystem(thisLocation);
-    const closestSystem = G.world.findClosestSystem(thisSystem);
+    const closestSystem = findClosestSystem(G.world, thisSystem.location);
 
     if (closestSystem) {
       // Enforce minimum distance
@@ -47,10 +55,10 @@ export function generateMap({ G, C }: FnContext) {
         continue;
       }
 
-      G.world.addLane(thisSystem, closestSystem);
+      addLane(G.world, thisSystem, closestSystem);
     }
 
-    G.world.addSystem(thisSystem);
+    addSystem(G.world, thisSystem);
   }
 
   // Now in reverse
@@ -59,14 +67,14 @@ export function generateMap({ G, C }: FnContext) {
     const system = G.world.systems[i];
 
     // Add a lane to the closest system that is not itself
-    const closestSystem = findClosestSystem(system.location, s);
+    const closestSystem = findClosestSystemInList(system.location, s);
     if (closestSystem) {
-      G.world.addLane(system, closestSystem);
+      addLane(G.world, system, closestSystem);
     }
     s.push(system);
   }
 
-  G.world.buildNeighborMap();
+  buildNeighborMap(G.world);
 
   debugLog(
     `Generated ${G.world.systems.length} systems and ${G.world.lanes.length} lanes.`

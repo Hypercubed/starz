@@ -1,4 +1,5 @@
 import { revealSystem } from './state.ts';
+import { hasLane } from './world.ts';
 
 import type { FnContext } from '../managers/types';
 import type { Move, Order, System } from '../types.d.ts';
@@ -80,7 +81,7 @@ export function eliminatePlayer(
     }
   });
 
-  const loser = G.playerMap.get(loserId);
+  const loser = G.playerMap[loserId];
   if (loser) {
     loser.isAlive = false;
   }
@@ -118,7 +119,7 @@ function validateOrder(state: GameState, order: Order): boolean {
   const fromSystem = state.world.systemMap.get(order.fromId)!;
 
   if (fromSystem.ownerId !== order.playerId) return false;
-  if (!state.world.hasLane(order.fromId, order.toId)) return false;
+  if (!hasLane(state.world, order.fromId, order.toId)) return false;
   if (fromSystem.ships <= 1) return false;
   return true;
 }

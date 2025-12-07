@@ -3,7 +3,7 @@ import type { GameConfig, GameState } from '../game/types';
 export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
 export interface GameContext {
-  gameState: Readonly<GameStatus>;
+  gameStatus: Readonly<GameStatus>;
   gameConfig: GameConfig; // TODO: make readonly
 }
 
