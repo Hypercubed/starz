@@ -23,7 +23,7 @@ import {
 } from './selection.ts';
 import { showHelp } from './ui.ts';
 
-import type { Lane, Order, System } from '../types.d.ts';
+import type { Lane, Order, System } from '../game/types';
 
 const ROTATION_STEP = 5;
 

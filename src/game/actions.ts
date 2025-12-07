@@ -1,9 +1,8 @@
 import { revealSystem } from './state.ts';
 import { hasLane } from './world.ts';
 
+import type { Move, Order, System, GameState } from './types.d.ts';
 import type { FnContext } from '../managers/types';
-import type { Move, Order, System } from '../types.d.ts';
-import type { GameState } from './types.ts';
 
 export function moveShips(
   ctx: FnContext,
@@ -81,7 +80,7 @@ export function eliminatePlayer(
     }
   });
 
-  const loser = G.playerMap[loserId];
+  const loser = G.playerMap.get(loserId);
   if (loser) {
     loser.isAlive = false;
   }

@@ -4,8 +4,8 @@ import * as game from '../game/index.ts';
 
 import type { FnContext, GameStatus } from './types.d.ts';
 import type { Bot } from '../game/bots.ts';
-import type { GameEventMap, GameState } from '../game/types.d.ts';
-import type { Move, Order, Player } from '../types.d.ts';
+import type { GameEventMap, GameState, Move, Order } from '../game/types.d.ts';
+import type { Player } from '../types.d.ts';
 
 export abstract class GameManager {
   events = new EventBus<GameEventMap>();

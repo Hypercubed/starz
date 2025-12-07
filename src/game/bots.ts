@@ -2,7 +2,8 @@ import { queueMove } from './state.ts';
 import { getAdjacentSystems } from './world.ts';
 
 import type { FnContext } from '../managers/types';
-import type { BotInterface, System } from '../types.d.ts';
+import type { BotInterface } from '../types.d.ts';
+import type { System } from './types.d.ts';
 
 interface BotMove {
   message: string;

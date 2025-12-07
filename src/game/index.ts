@@ -13,9 +13,8 @@ import { debugLog } from '../utils/logging.ts';
 
 import { eliminatePlayer, moveShips, orderToMove } from './actions.ts';
 
-import type { FnContext } from '../managers/types';
-import type { Move, Order } from '../types.ts';
-import type { GameState } from './types.ts';
+import type { GameState, Move, Order } from './types.d.ts';
+import type { FnContext } from '../managers/types.d.ts';
 
 export function setup(ctx: FnContext): GameState {
   const state = initalState();

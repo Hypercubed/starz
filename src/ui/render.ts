@@ -8,9 +8,8 @@ import { getPlayersHomeworld, thisPlayer } from '../game/state.ts';
 import { onClickLane, onClickSystem } from './controls.ts';
 import { isSelected } from './selection.ts';
 
-import type { GameState } from '../game/types.ts';
-import type { FnContext } from '../managers/types';
-import type { Coordinates, Lane, System } from '../types.d.ts';
+import type { Coordinates, GameState, Lane, System } from '../game/types.d.ts';
+import type { FnContext } from '../managers/types.d.ts';
 
 const ZOOM_SENSITIVITY = 0.5;
 const MIN_ZOOM_SCALE = 0.25;

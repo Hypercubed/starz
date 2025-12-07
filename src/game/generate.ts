@@ -18,8 +18,7 @@ import {
   findClosestSystemInList
 } from './world.ts';
 
-import type { Coordinates, System } from '../types.d.ts';
-import type { GameState } from './types.ts';
+import type { GameState, Coordinates, System } from './types.d.ts';
 import type { FnContext } from '../managers/types';
 
 const createId = init({ length: 5 });

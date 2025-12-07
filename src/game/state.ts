@@ -2,8 +2,8 @@ import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
 
 import { createWorld, getAdjacentSystems } from './world.ts';
 
-import type { Messages, Player, System } from '../types.ts';
-import type { GameConfig, GameState } from './types.ts';
+import type { Messages, Player } from '../types.d.ts';
+import type { GameConfig, GameState, System } from './types.d.ts';
 
 export function defaultConfig(): GameConfig {
   return {

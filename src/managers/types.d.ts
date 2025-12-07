@@ -11,3 +11,8 @@ export interface FnContext {
   G: GameState; // TODO: make readonly
   C: GameContext;
 }
+
+export interface WorldJSON {
+  systems: Array<System>;
+  lanes: Array<Lane>;
+}

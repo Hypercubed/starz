@@ -3,14 +3,16 @@ import * as PR from 'playroomkit';
 import { COLORS } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as game from '../game/index.ts';
-import { type WorldJSON } from '../game/world.ts';
+import { worldFromJson } from '../game/world.ts';
 import * as renderer from '../ui/index.ts';
 import { clearSelection, deselect, select } from '../ui/selection.ts';
 import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Move, Order, Player, PlayerStats, System } from '../types.ts';
+import type { Player, PlayerStats } from '../types.ts';
+import type { WorldJSON } from './types';
+import type { Move, Order, System } from '../game/types';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -106,7 +108,7 @@ export class PlayroomGameManager extends GameManager {
 
       console.log('Received world and players from host.');
 
-      this.state.world = world;
+      this.state.world = worldFromJson(world);
       players.forEach((stats) => {
         this.addPlayer(stats.name, stats.id, undefined, stats.color);
       });
@@ -189,7 +191,13 @@ export class PlayroomGameManager extends GameManager {
         false
       );
       PR.setState(PLAYROOM_STATES.GAME_STATUS, this.gameStatus, false);
-      PR.setState(PLAYROOM_STATES.WORLD, this.state.world, false);
+
+      const worldJSON = {
+        systems: this.state.world.systems,
+        lanes: this.state.world.lanes
+      } satisfies WorldJSON;
+
+      PR.setState(PLAYROOM_STATES.WORLD, worldJSON, false);
       PR.setState(
         PLAYROOM_STATES.PLAYERS,
         playersToJson(this.state.players),
@@ -202,7 +210,7 @@ export class PlayroomGameManager extends GameManager {
       if (this.state.tick % 10 === 0) {
         const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
         if (world) {
-          this.state.world = world;
+          this.state.world = worldFromJson(world);
         }
       }
 
@@ -341,7 +349,7 @@ export class PlayroomGameManager extends GameManager {
         this.onEliminatePlayer(data.loserId, data.winnerId);
         const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
         if (world) {
-          this.state.world = world;
+          this.state.world = worldFromJson(world);
         }
 
         this.events.emit('STATE_UPDATED', {
