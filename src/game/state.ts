@@ -19,7 +19,6 @@ export function initalState(): GameState {
   return {
     tick: 0,
     running: false, // TODO: rmove this
-    thisPlayerId: null as string | null,
     world: createWorld(),
     players: [] as Player[],
     playerMap: new Map<string, Player>(),
@@ -46,10 +45,6 @@ export function clearMessages(state: GameState) {
   return state;
 }
 
-export function thisPlayer(state: GameState): Player | undefined {
-  return state.playerMap.get(state.thisPlayerId!);
-}
-
 export function addPlayer(state: GameState, player: Player) {
   state.players.push(player);
   state.playerMap.set(player.id, player);
@@ -57,28 +52,23 @@ export function addPlayer(state: GameState, player: Player) {
 }
 
 export function getPlayersHomeworld(state: GameState) {
-  if (!state.thisPlayerId) return null;
-  return state.world.systems.find(
-    (system) => system.homeworld === state.thisPlayerId
-  );
+  const { C } = globalThis.gameManager!.getContext();
+  if (!C.playerId) return null;
+  return state.world.systems.find((system) => system.homeworld === C.playerId);
 }
 
 export function revealSystem(state: GameState, system: System) {
-  const playerId = state.thisPlayerId;
-  if (!playerId) return;
+  const { P } = globalThis.gameManager!.getContext();
 
-  const player = state.playerMap.get(playerId)!;
-  if (!player) return;
-
-  player.revealedSystems.add(system.id);
-  player.visitedSystems.add(system.id);
+  P.revealedSystems.add(system.id);
+  P.visitedSystems.add(system.id);
 
   const neighbors = getAdjacentSystems(state.world, system.id);
   if (!neighbors) return;
 
   neighbors.forEach((neighbor) => {
-    player.revealedSystems.add(neighbor.id);
-    player.visitedSystems.add(neighbor.id);
+    P.revealedSystems.add(neighbor.id);
+    P.visitedSystems.add(neighbor.id);
   });
 
   return state;

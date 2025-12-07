@@ -59,7 +59,7 @@ export class PlayroomGameManager extends GameManager {
     this.registerPlayroomEvents();
 
     this.gameStop();
-    this.gameStatus = 'WAITING';
+    this.status = 'WAITING';
 
     this.state = game.initalState();
     PR.resetStates();
@@ -149,7 +149,7 @@ export class PlayroomGameManager extends GameManager {
   }
 
   protected setupThisPlayer(playerId: string) {
-    this.state.thisPlayerId = playerId;
+    this.playerId = playerId;
     const homeworld = game.getPlayersHomeworld(this.state)!;
     game.revealSystem(this.state, homeworld);
     renderer.centerOnHome();
@@ -161,7 +161,7 @@ export class PlayroomGameManager extends GameManager {
     trackEvent('starz_gamesStarted');
     game.addMessage(this.state, `Game started.`);
 
-    const player = this.state.playerMap.get(this.state.thisPlayerId!);
+    const player = this.state.playerMap.get(this.playerId!);
     if (player) {
       game.addMessage(this.state, `You are Player ${player.name}.`);
     }
@@ -190,7 +190,7 @@ export class PlayroomGameManager extends GameManager {
         this.state.players.map((p) => p.stats),
         false
       );
-      PR.setState(PLAYROOM_STATES.GAME_STATUS, this.gameStatus, false);
+      PR.setState(PLAYROOM_STATES.GAME_STATUS, this.status, false);
 
       const worldJSON = {
         systems: this.state.world.systems,
@@ -228,7 +228,7 @@ export class PlayroomGameManager extends GameManager {
 
       this.events.emit('STATE_UPDATED', {
         state: this.state,
-        status: this.gameStatus
+        status: this.status
       });
     }
   }
@@ -327,7 +327,7 @@ export class PlayroomGameManager extends GameManager {
       const from = this.state.world.systemMap.get(system.id)!;
       Object.assign(from, system);
 
-      if (from.ownerId === this.state.thisPlayerId) {
+      if (from.ownerId === this.playerId) {
         game.revealSystem(this.state, from);
       } else {
         deselect(from.id);
@@ -335,7 +335,7 @@ export class PlayroomGameManager extends GameManager {
 
       this.events.emit('STATE_UPDATED', {
         state: this.state,
-        status: this.gameStatus
+        status: this.status
       });
     });
 
@@ -354,7 +354,7 @@ export class PlayroomGameManager extends GameManager {
 
         this.events.emit('STATE_UPDATED', {
           state: this.state,
-          status: this.gameStatus
+          status: this.status
         });
       }
     );

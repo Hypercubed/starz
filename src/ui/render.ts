@@ -3,7 +3,7 @@ import { geoVoronoi } from 'd3-geo-voronoi';
 import versor from 'versor';
 
 import { ENABLE_GRATICULE, HEIGHT, PROJECTION, WIDTH } from '../constants.ts';
-import { getPlayersHomeworld, thisPlayer } from '../game/state.ts';
+import { getPlayersHomeworld } from '../game/state.ts';
 
 import { onClickLane, onClickSystem } from './controls.ts';
 import { isSelected } from './selection.ts';
@@ -81,7 +81,7 @@ export function drawMap() {
     .attr('viewBox', `-${WIDTH / 2} -${HEIGHT / 2} ${WIDTH} ${HEIGHT}`)
     .on('contextmenu', (ev: PointerEvent) => ev.preventDefault());
 
-  if (ENABLE_GRATICULE) drawGraticule(ctx.G);
+  if (ENABLE_GRATICULE) drawGraticule(ctx.S);
   if (ENABLE_MESH) drawRegions(ctx);
   drawLanes(ctx);
   drawSystems(ctx);
@@ -241,7 +241,7 @@ export function scaleZoom(scale: number) {
 
 export function centerOnHome() {
   const ctx = globalThis.gameManager.getContext();
-  const home = getPlayersHomeworld(ctx.G);
+  const home = getPlayersHomeworld(ctx.S);
   if (!home) return;
 
   graticuleFeature = null;
@@ -258,7 +258,7 @@ export function centerOnHome() {
 export function centerOnSystem(systemId: string) {
   const ctx = globalThis.gameManager.getContext();
 
-  const system = ctx.G.world.systemMap.get(systemId);
+  const system = ctx.S.world.systemMap.get(systemId);
   if (!system) return;
   centerOnCoordinates(system.location);
   geoProjection.scale(initialScale);
@@ -273,24 +273,22 @@ export function rerender() {
   if (!svg) return;
 
   const ctx = globalThis.gameManager.getContext();
-  if (ENABLE_GRATICULE) drawGraticule(ctx.G);
+  if (ENABLE_GRATICULE) drawGraticule(ctx.S);
   if (ENABLE_MESH) drawRegions(ctx);
 
   drawSystems(ctx);
   drawLanes(ctx);
 }
 
-function drawSystems({ G, C }: FnContext) {
+function drawSystems({ S, C, P }: FnContext) {
   const currentScale = geoProjection.scale();
   const reducedSize = currentScale / initialScale < 1;
 
-  let visibleSystems = G.world.systems;
+  let visibleSystems = S.world.systems;
 
-  const player = thisPlayer(G);
-
-  if (C.gameConfig.fow) {
+  if (C.config.fow) {
     visibleSystems = visibleSystems.filter((system) =>
-      player ? player.revealedSystems.has(system.id) : false
+      P.revealedSystems.has(system.id)
     );
   }
 
@@ -342,11 +340,11 @@ function drawSystems({ G, C }: FnContext) {
     });
 
   join
-    .style('--owner-color', (d) => G.playerMap.get(d.ownerId!)?.color ?? null)
+    .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null)
     .classed('selected', (d) => isSelected(d.id))
     .classed('inhabited', (d) => d.type === 'INHABITED')
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
-    .classed('visited', (d) => player?.visitedSystems.has(d.id) ?? false)
+    .classed('visited', (d) => P.visitedSystems.has(d.id))
     .classed(
       'hidden',
       (d) => !geoPathGenerator({ type: 'Point', coordinates: d.location })
@@ -380,15 +378,13 @@ const getFeatures = (() => {
   };
 })();
 
-function drawRegions({ G, C }: FnContext) {
-  let features = getFeatures(G);
+function drawRegions({ S, C, P }: FnContext) {
+  let features = getFeatures(S);
 
-  const player = thisPlayer(G);
-
-  if (C.gameConfig.fow) {
+  if (C.config.fow) {
     features = features.filter((feature) => {
       const system = feature.properties?.site as System;
-      return player ? player.visitedSystems.has(system.id) : false;
+      return P.visitedSystems.has(system.id);
     });
   }
 
@@ -421,21 +417,16 @@ function drawRegions({ G, C }: FnContext) {
       return path; // ? smoothPath(path, { radius: 5 }) : path;
     })
     .datum((d: any) => d.properties.site as System)
-    .style('--owner-color', (d) => G.playerMap.get(d.ownerId!)?.color ?? null);
+    .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
-function drawLanes({ G, C }: FnContext) {
-  let visibleLanes = G.world.lanes;
+function drawLanes({ S, C, P }: FnContext) {
+  let visibleLanes = S.world.lanes;
 
-  const playerId = G.thisPlayerId!;
-  const player = G.playerMap.get(playerId)!;
-
-  if (C.gameConfig.fow) {
+  if (C.config.fow) {
     visibleLanes = visibleLanes.filter(
       (lane) =>
-        !!player &&
-        player.revealedSystems.has(lane.fromId) &&
-        player.revealedSystems.has(lane.toId)
+        P.revealedSystems.has(lane.fromId) && P.revealedSystems.has(lane.toId)
     );
   }
 
@@ -465,16 +456,16 @@ function drawLanes({ G, C }: FnContext) {
         })
     )
     .style('--owner-color', (d) => {
-      const from = G.world.systemMap.get(d.fromId)!;
+      const from = S.world.systemMap.get(d.fromId)!;
       if (!from.ownerId) return null;
-      const to = G.world.systemMap.get(d.toId)!;
+      const to = S.world.systemMap.get(d.toId)!;
       if (!to.ownerId) return null;
       if (from.ownerId !== to.ownerId) return null;
-      return G.playerMap.get(from.ownerId)?.color ?? null;
+      return S.playerMap.get(from.ownerId)?.color ?? null;
     })
     .attr('d', (d) => {
-      const from = G.world.systemMap.get(d.fromId)!;
-      const to = G.world.systemMap.get(d.toId)!;
+      const from = S.world.systemMap.get(d.fromId)!;
+      const to = S.world.systemMap.get(d.toId)!;
       return geoPathGenerator({
         type: 'LineString',
         coordinates: [from.location, to.location]

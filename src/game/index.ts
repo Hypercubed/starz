@@ -18,30 +18,30 @@ import type { FnContext } from '../managers/types.d.ts';
 
 export function setup(ctx: FnContext): GameState {
   const state = initalState();
-  generateMap({ ...ctx, G: state });
+  generateMap({ ...ctx, S: state });
   return state;
 }
 
 export const moves = {
   makeMove(ctx: FnContext, move: Move) {
-    if (move.playerId === ctx.G.thisPlayerId) {
+    if (move.playerId === ctx.C.playerId) {
       debugLog(`player move: ${JSON.stringify(move)}`);
     }
-    const from = ctx.G.world.systemMap.get(move.fromId)!;
-    const to = ctx.G.world.systemMap.get(move.toId)!;
+    const from = ctx.S.world.systemMap.get(move.fromId)!;
+    const to = ctx.S.world.systemMap.get(move.toId)!;
     moveShips(ctx, from, to, move.ships);
     from.lastMove = move;
 
-    // return ctx.G;
+    // return ctx.S;
   }
 };
 
 export const utilities = {
   takeOrder(ctx: FnContext, order: Order) {
-    if (order.playerId === ctx.G.thisPlayerId) {
+    if (order.playerId === ctx.C.playerId) {
       debugLog(`player order: ${JSON.stringify(order)}`);
     }
-    return orderToMove(ctx.G, order);
+    return orderToMove(ctx.S, order);
   }
 };
 

@@ -23,10 +23,10 @@ import type { FnContext } from '../managers/types';
 
 const createId = init({ length: 5 });
 
-export function generateMap({ G, C }: FnContext) {
-  G.world = createWorld();
+export function generateMap({ S, C }: FnContext) {
+  S.world = createWorld();
 
-  const dz = HEIGHT / (C.gameConfig.numSystems - 1);
+  const dz = HEIGHT / (C.config.numSystems - 1);
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
@@ -34,10 +34,7 @@ export function generateMap({ G, C }: FnContext) {
 
   // Minimum distance between systems
   // Should be < SQRT(PI/NumOfSystems) to ensure spacing
-  const minDistance = Math.min(
-    0.08,
-    Math.sqrt(Math.PI / C.gameConfig.numSystems)
-  );
+  const minDistance = Math.min(0.08, Math.sqrt(Math.PI / C.config.numSystems));
 
   for (let z = z0; z < zN; z += dz) {
     const latitude = Math.asin(z / (HEIGHT / 2)) * (180 / Math.PI);
@@ -45,7 +42,7 @@ export function generateMap({ G, C }: FnContext) {
 
     const thisLocation = [longitude, latitude] as Coordinates;
     const thisSystem = createSystem(thisLocation);
-    const closestSystem = findClosestSystem(G.world, thisSystem.location);
+    const closestSystem = findClosestSystem(S.world, thisSystem.location);
 
     if (closestSystem) {
       // Enforce minimum distance
@@ -54,39 +51,39 @@ export function generateMap({ G, C }: FnContext) {
         continue;
       }
 
-      addLane(G.world, thisSystem, closestSystem);
+      addLane(S.world, thisSystem, closestSystem);
     }
 
-    addSystem(G.world, thisSystem);
+    addSystem(S.world, thisSystem);
   }
 
   // Now in reverse
-  const s = [G.world.systems[G.world.systems.length - 1]];
-  for (let i = G.world.systems.length - 2; i >= 0; i--) {
-    const system = G.world.systems[i];
+  const s = [S.world.systems[S.world.systems.length - 1]];
+  for (let i = S.world.systems.length - 2; i >= 0; i--) {
+    const system = S.world.systems[i];
 
     // Add a lane to the closest system that is not itself
     const closestSystem = findClosestSystemInList(system.location, s);
     if (closestSystem) {
-      addLane(G.world, system, closestSystem);
+      addLane(S.world, system, closestSystem);
     }
     s.push(system);
   }
 
-  buildNeighborMap(G.world);
+  buildNeighborMap(S.world);
 
   debugLog(
-    `Generated ${G.world.systems.length} systems and ${G.world.lanes.length} lanes.`
+    `Generated ${S.world.systems.length} systems and ${S.world.lanes.length} lanes.`
   );
 
-  const unoccupied = G.world.systems.slice(0); // Copy all systems
+  const unoccupied = S.world.systems.slice(0); // Copy all systems
   const occupied = [] as System[];
 
   // Setup inhabited systems (neutral + potential homeworlds)
   // We need enough for all players plus some neutrals
   const totalInhabited = Math.max(
-    FracInhabited * C.gameConfig.numSystems,
-    NumHumanPlayers + C.gameConfig.numBots
+    FracInhabited * C.config.numSystems,
+    NumHumanPlayers + C.config.numBots
   );
 
   for (let i = 0; i < totalInhabited; i++) {

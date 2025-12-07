@@ -1,15 +1,19 @@
+import type { EventBus } from '../classes/EventBus.ts';
 import type { GameConfig, GameState } from '../game/types';
 
 export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
 export interface GameContext {
-  gameStatus: Readonly<GameStatus>;
-  gameConfig: GameConfig; // TODO: make readonly
+  status: Readonly<GameStatus>;
+  config: Readonly<GameConfig>;
+  playerId: string;
 }
 
 export interface FnContext {
-  G: GameState; // TODO: make readonly
-  C: GameContext;
+  S: GameState; // TODO: make readonly
+  E: Pick<EventBus<GameEventMap>, 'emit'>;
+  C: Readonly<GameContext>;
+  P: Readonly<Player>;
 }
 
 export interface WorldJSON {

@@ -26,11 +26,11 @@ export class BGIOGameManager extends GameManager {
     moves: {
       // takeOrder: (_ctx, order: Order) => {
       //   const ctx = this.getContext();
-      //   this.game.utilities.takeOrder({ ...ctx, ..._ctx, G: _ctx.G }, order);
+      //   this.game.utilities.takeOrder({ ...ctx, ..._ctx, S: _ctx.S }, order);
       // },
       makeMove: (_ctx, move: Move) => {
         const ctx = this.getContext();
-        this.game.moves.makeMove({ ...ctx, G: _ctx.G }, move);
+        this.game.moves.makeMove({ ...ctx, S: _ctx.S }, move);
 
         // setTimeout(() => {
         //   // console.log(this.client.getState());
@@ -80,7 +80,7 @@ export class BGIOGameManager extends GameManager {
     trackEvent('starz_gamesStarted');
     this.game.addMessage(this.state, `Game started.`);
 
-    const player = this.state.playerMap[this.state.thisPlayerId!];
+    const player = this.state.playerMap[this.playerId!];
     if (player) {
       this.game.addMessage(this.state, `You are Player ${player.name}.`);
     }
@@ -181,7 +181,7 @@ export class BGIOGameManager extends GameManager {
   }
 
   private setupThisPlayer(playerId: string, name?: string) {
-    this.state.thisPlayerId = playerId;
+    this.playerId = playerId;
     const player = this.state.playerMap[playerId]!;
     if (name) {
       player.name = name;

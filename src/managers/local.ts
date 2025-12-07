@@ -18,7 +18,7 @@ export class LocalGameManager extends GameManager {
 
   async connect() {
     this.gameStop();
-    this.gameStatus = 'WAITING';
+    this.status = 'WAITING';
 
     if (START_PAUSED) {
       await renderer.showStartGame();
@@ -46,7 +46,7 @@ export class LocalGameManager extends GameManager {
     trackEvent('starz_gamesStarted');
     this.game.addMessage(this.state, `Game started.`);
 
-    const player = this.state.playerMap.get(this.state.thisPlayerId!);
+    const player = this.state.playerMap.get(this.playerId);
     if (player) {
       this.game.addMessage(this.state, `You are Player ${player.name}.`);
     }
@@ -77,11 +77,11 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPauseToggle() {
-    if (this.gameStatus === 'PAUSED') {
-      this.gameStatus = 'PLAYING';
+    if (this.status === 'PAUSED') {
+      this.status = 'PLAYING';
       super.startGameLoop();
-    } else if (this.gameStatus === 'PLAYING') {
-      this.gameStatus = 'PAUSED';
+    } else if (this.status === 'PLAYING') {
+      this.status = 'PAUSED';
       super.stopGameLoop();
     }
   }
@@ -137,7 +137,7 @@ export class LocalGameManager extends GameManager {
   }
 
   private setupThisPlayer(playerId: string, name?: string) {
-    this.state.thisPlayerId = playerId;
+    this.playerId = playerId;
     const player = this.state.playerMap.get(playerId)!;
     if (name) {
       player.name = name;

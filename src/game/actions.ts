@@ -47,13 +47,13 @@ function attackSystem(
   }
 }
 
-function takeSystem({ G }: FnContext, playerId: string, system: System) {
+function takeSystem({ S, E, C }: FnContext, playerId: string, system: System) {
   system.ownerId = playerId;
   system.moveQueue = [];
-  if (playerId === G.thisPlayerId) revealSystem(G, system);
+  if (playerId === C.playerId) revealSystem(S, system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    globalThis.gameManager.events.emit('PLAYER_ELIMINATED', {
+    E.emit('PLAYER_ELIMINATED', {
       playerId: system.homeworld,
       winnerId: playerId
     });
@@ -61,18 +61,18 @@ function takeSystem({ G }: FnContext, playerId: string, system: System) {
 }
 
 export function eliminatePlayer(
-  { G }: FnContext,
+  { S, E, C }: FnContext,
   loserId: string,
   winnerId: string | null = null
 ) {
   // Take over homeworld, other systems and 50% of ships
-  G.world.systems.forEach((s) => {
+  S.world.systems.forEach((s) => {
     if (s.ownerId === loserId) {
       s.ownerId = winnerId;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
       s.homeworld = null; // No longer a homeworld
       s.moveQueue = [];
-      if (winnerId === G.thisPlayerId) revealSystem(G, s);
+      if (winnerId === C.playerId) revealSystem(S, s);
     }
 
     if (s.homeworld === loserId) {
@@ -80,21 +80,21 @@ export function eliminatePlayer(
     }
   });
 
-  const loser = G.playerMap.get(loserId);
+  const loser = S.playerMap.get(loserId);
   if (loser) {
     loser.isAlive = false;
   }
 
-  if (loserId === G.thisPlayerId) {
-    globalThis.gameManager.events.emit('PLAYER_LOSE', {
-      playerId: G.thisPlayerId!,
+  if (loserId === C.playerId) {
+    E.emit('PLAYER_LOSE', {
+      playerId: C.playerId,
       winnerId: winnerId
     });
   }
 }
 
 function transferShips(
-  { G }: FnContext,
+  { S, C }: FnContext,
   from: System,
   to: System,
   ships: number
@@ -102,14 +102,14 @@ function transferShips(
   if (from.ships < ships) return; // Not enough ships to transfer
   from.ships -= ships;
   to.ships += ships;
-  if (to.ownerId === G.thisPlayerId) revealSystem(G, to);
+  if (to.ownerId === C.playerId) revealSystem(S, to);
 }
 
-export function doQueuedMoves({ G }: FnContext) {
-  G.world.systems.forEach((system) => {
+export function doQueuedMoves({ S, E }: FnContext) {
+  S.world.systems.forEach((system) => {
     const move = system.moveQueue.shift();
     if (move) {
-      globalThis.gameManager.events.emit('MAKE_MOVE', move);
+      E.emit('MAKE_MOVE', move);
     }
   });
 }
@@ -138,6 +138,8 @@ export function orderToMove(state: GameState, order: Order): Move | null {
   return null;
 
   function massMoveShips(fromId: string, toId: string): Move | null {
+    const { C } = globalThis.gameManager!.getContext();
+
     const fromSystem = state.world.systemMap.get(fromId)!;
     const deltaShips = fromSystem.ships - 1;
 
@@ -148,11 +150,13 @@ export function orderToMove(state: GameState, order: Order): Move | null {
       ships: deltaShips,
       toId: toId,
       fromId: fromId,
-      playerId: state.thisPlayerId!
+      playerId: C.playerId
     } satisfies Move;
   }
 
   function balancedMoveShips(fromId: string, toId: string): Move | null {
+    const { C } = globalThis.gameManager!.getContext();
+
     const fromSystem = state.world.systemMap.get(fromId)!;
     const toSystem = state.world.systemMap.get(toId)!;
 
@@ -168,7 +172,7 @@ export function orderToMove(state: GameState, order: Order): Move | null {
       ships: deltaShips,
       toId: toSystem.id,
       fromId: fromSystem.id,
-      playerId: state.thisPlayerId!
+      playerId: C.playerId
     } satisfies Move;
   }
 }

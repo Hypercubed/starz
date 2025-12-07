@@ -34,7 +34,6 @@ export interface GameConfig {
 export interface GameState {
   tick: number;
   running: boolean;
-  thisPlayerId: string | null;
   world: World;
   players: Player[];
   playerMap: Map<string, Player>;

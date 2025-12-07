@@ -49,8 +49,8 @@ export const PERSONALITIES = {
 
 export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
-export function botQueue({ G }: FnContext) {
-  G.players.forEach((p) => p.bot?.makeMoves());
+export function botQueue({ S }: FnContext) {
+  S.players.forEach((p) => p.bot?.makeMoves());
 }
 
 export interface BotOptions {

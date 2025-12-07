@@ -41,11 +41,11 @@ async function runSimulation(gameId: number) {
   let winner = '-1';
   let running = true;
 
-  while (ctx.G.tick < T && running) {
+  while (ctx.S.tick < T && running) {
     manager.gameTick();
 
     // Check for winner
-    const activePlayers = ctx.G.players.filter(p => p.stats.systems > 0);
+    const activePlayers = ctx.S.players.filter(p => p.stats.systems > 0);
 
     if (activePlayers.length === 1) {
       winner = activePlayers[0].id;
@@ -58,7 +58,7 @@ async function runSimulation(gameId: number) {
     ctx = manager.getContext();
   }
 
-  return { gameId, winner, ticks: ctx.G.tick };
+  return { gameId, winner, ticks: ctx.S.tick };
 }
 
 async function main() {

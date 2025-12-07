@@ -38,37 +38,43 @@ export function setupKeboardControls() {
       event.preventDefault();
       // debugLog("keyup:", event);
 
-      const { G, C } = globalThis.gameManager.getContext();
+      const { S, C } = globalThis.gameManager.getContext();
 
       switch (event.code) {
         case 'KeyC':
-          G.world.systemMap.forEach((system) => {
-            if (system.ownerId === G.thisPlayerId) {
+          S.world.systemMap.forEach((system) => {
+            if (system.ownerId === C.playerId) {
               system.ships *= 2;
             }
           });
           rerender();
           return;
         case 'KeyR':
-          G.world.systemMap.forEach((system) => revealSystem(G, system));
+          S.world.systemMap.forEach((system) => revealSystem(S, system));
           rerender();
           return;
         case 'NumpadAdd':
-        case 'Equal':
-          C.gameConfig.timeScale = Math.min(16, C.gameConfig.timeScale * 2);
-          debugLog(`Time scale increased to ${C.gameConfig.timeScale}x`);
+        case 'Equal': {
+          const timeScale = Math.min(16, C.config.timeScale * 2);
+          globalThis.gameManager.setConfig({ timeScale });
+          debugLog(`Time scale increased to ${C.config.timeScale}x`);
           return;
+        }
         case 'NumpadSubtract':
-        case 'Minus':
-          C.gameConfig.timeScale = Math.max(0.25, C.gameConfig.timeScale / 2);
-          debugLog(`Time scale decreased to ${C.gameConfig.timeScale}x`);
+        case 'Minus': {
+          const timeScale = Math.max(0.25, C.config.timeScale / 2);
+          globalThis.gameManager.setConfig({ timeScale });
+          debugLog(`Time scale decreased to ${C.config.timeScale}x`);
           return;
+        }
       }
     });
   }
 
   d3.select('body').on('keyup.controls', (event) => {
     // debugLog("keyup:", event);
+
+    const { E } = globalThis.gameManager.getContext();
 
     switch (event.key) {
       case 'Escape':
@@ -80,7 +86,7 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        globalThis.gameManager.events.emit('UI_QUIT', undefined);
+        E.emit('UI_QUIT', undefined);
         return;
       }
     }
@@ -89,9 +95,11 @@ export function setupKeboardControls() {
   d3.select('body').on('keypress.controls', (event) => {
     // debugLog("Key pressed:", event);
 
+    const { E } = globalThis.gameManager.getContext();
+
     switch (event.code) {
       case 'Space':
-        globalThis.gameManager.events.emit('UI_PAUSE_TOGGLE', undefined);
+        E.emit('UI_PAUSE_TOGGLE', undefined);
         return;
       case 'Equal':
       case 'NumpadAdd':
@@ -147,8 +155,8 @@ export function setupKeboardControls() {
 }
 
 export function onClickLane(event: PointerEvent, lane: Lane) {
-  const { G, C } = globalThis.gameManager.getContext();
-  if (C.gameStatus !== 'PLAYING') return;
+  const { S, C } = globalThis.gameManager.getContext();
+  if (C.status !== 'PLAYING') return;
 
   switch (event.button) {
     case 0: // Left click
@@ -156,17 +164,17 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       break;
     case 2: {
       // Right click
-      let from = G.world.systemMap.get(lane.fromId)!;
-      let to = G.world.systemMap.get(lane.toId)!;
+      let from = S.world.systemMap.get(lane.fromId)!;
+      let to = S.world.systemMap.get(lane.toId)!;
 
       if (
-        from.ownerId !== G.thisPlayerId &&
-        to.ownerId !== G.thisPlayerId &&
+        from.ownerId !== C.playerId &&
+        to.ownerId !== C.playerId &&
         !ENABLE_BOT_CONTROL
       )
         return; // Can't move if neither side is owned by player
 
-      if (from.ownerId !== G.thisPlayerId) {
+      if (from.ownerId !== C.playerId) {
         // Make sure 'from' is owned by player
         const s = from;
         from = to;
@@ -181,12 +189,12 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
       }
 
       orderBalancedMove(from.id, to.id);
-      if (to.ownerId !== G.thisPlayerId && !ENABLE_BOT_CONTROL) return;
+      if (to.ownerId !== C.playerId && !ENABLE_BOT_CONTROL) return;
 
       if (!event.altKey) {
         if (!event.ctrlKey && !event.shiftKey) clearSelection();
         select(from.id);
-        if (to.ownerId === G.thisPlayerId) select(to.id);
+        if (to.ownerId === C.playerId) select(to.id);
       }
       break;
     }
@@ -195,7 +203,7 @@ export function onClickLane(event: PointerEvent, lane: Lane) {
 
 export function onClickSystem(event: PointerEvent, system: System) {
   const ctx = globalThis.gameManager.getContext();
-  if (ctx.C.gameStatus !== 'PLAYING') return;
+  if (ctx.C.status !== 'PLAYING') return;
 
   if (ENABLE_CHEATS && event.altKey) {
     debugLog(
@@ -208,7 +216,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
   switch (event.button) {
     case 0: // Left click
-      if (system.ownerId !== ctx.G.thisPlayerId && !ENABLE_BOT_CONTROL) return;
+      if (system.ownerId !== ctx.C.playerId && !ENABLE_BOT_CONTROL) return;
       if (event.ctrlKey || event.metaKey) {
         toggleSelection(system.id);
       } else if (event.shiftKey) {
@@ -225,8 +233,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
       selectedSystems.forEach((fromId) => {
         orderMassMove(fromId, system.id);
-        if (system.ownerId !== ctx.G.thisPlayerId && !ENABLE_BOT_CONTROL)
-          return;
+        if (system.ownerId !== ctx.C.playerId && !ENABLE_BOT_CONTROL) return;
 
         if (!event.altKey) {
           if (!event.ctrlKey && !event.shiftKey) {
@@ -241,31 +248,31 @@ export function onClickSystem(event: PointerEvent, system: System) {
 }
 
 export function orderBalancedMove(fromId: string, toId: string) {
-  const { G } = globalThis.gameManager.getContext();
-  if (!hasLane(G.world, fromId, toId)) return;
+  const { S, E, C } = globalThis.gameManager.getContext();
+  if (!hasLane(S.world, fromId, toId)) return;
 
   const order = {
     type: 'BALANCED_MOVE',
     message: `Balanced move from ${fromId} to ${toId}`,
     toId,
     fromId,
-    playerId: G.thisPlayerId!
+    playerId: C.playerId!
   } satisfies Order;
 
-  globalThis.gameManager.events.emit('TAKE_ORDER', order);
+  E.emit('TAKE_ORDER', order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
-  const { G } = globalThis.gameManager.getContext();
-  if (!hasLane(G.world, fromId, toId)) return;
+  const { S, E, C } = globalThis.gameManager.getContext();
+  if (!hasLane(S.world, fromId, toId)) return;
 
   const order = {
     type: 'MASS_MOVE',
     toId,
     fromId,
-    playerId: G.thisPlayerId!,
+    playerId: C.playerId!,
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  globalThis.gameManager.events.emit('TAKE_ORDER', order);
+  E.emit('TAKE_ORDER', order);
 }

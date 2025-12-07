@@ -42,7 +42,7 @@ export function toggleSelection(id: string) {
   }
 }
 
-export function selectPath({ G }: FnContext, systemId: string) {
+export function selectPath({ S, C }: FnContext, systemId: string) {
   if (selection.last == null) return;
 
   // Simple BFS to find shortest path
@@ -60,8 +60,8 @@ export function selectPath({ G }: FnContext, systemId: string) {
       selection.last = systemId;
       return;
     }
-    for (const neighbor of getAdjacentSystems(G.world, current)) {
-      if (!visited.has(neighbor.id) && neighbor.ownerId === G.thisPlayerId) {
+    for (const neighbor of getAdjacentSystems(S.world, current)) {
+      if (!visited.has(neighbor.id) && neighbor.ownerId === C.playerId) {
         visited.add(neighbor.id);
         queue.push([...path, neighbor.id]);
       }

@@ -101,10 +101,17 @@ async function openOptions() {
 
     const gameManager = globalThis.gameManager;
 
-    gameManager.config.numBots = +formData.get('numBots')!;
-    gameManager.config.playerName = formData.get('playerName') as string;
-    gameManager.config.fow = formData.get('fow') === 'on';
-    gameManager.config.numSystems = +formData.get('numSystems')!;
+    const numBots = +formData.get('numBots')!;
+    const playerName = formData.get('playerName') as string;
+    const fow = formData.get('fow') === 'on';
+    const numSystems = +formData.get('numSystems')!;
+
+    gameManager.setConfig({
+      numBots,
+      playerName,
+      fow,
+      numSystems
+    });
   }
 }
 
