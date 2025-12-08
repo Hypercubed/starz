@@ -292,20 +292,29 @@ function drawSystems({ S, C, P }: FnContext) {
     );
   }
 
-  const g = svg
+  // Filter out systems that are not currently visible in the projection
+  visibleSystems = visibleSystems.filter(
+    (d) => !!geoPathGenerator({ type: 'Point', coordinates: d.location })
+  );
+
+  const layer = svg
     .selectAll('g#systems')
     .data([visibleSystems])
     .join((enter) => enter.append('g').attr('id', 'systems'))
-    .classed('reduced-size', reducedSize);
+    .classed('reduced-size', reducedSize)
+    .classed('hidden', false);
 
-  const join = g
+  const group = layer
     .selectAll('.system')
-    .data(visibleSystems, (d) => (d as System).id)
+    .data(
+      (d) => d,
+      (d) => (d as System).id
+    )
     .join((enter) => {
-      const group = enter
+      const g = enter
         .append('g')
         .attr('class', 'system')
-        .attr('id', (d) => `system-${d.id}`)
+        .attr('id', (d) => d.id)
         .on('click', (ev: PointerEvent, d: System) => {
           onClickSystem(ev, d);
           rerender();
@@ -316,48 +325,43 @@ function drawSystems({ S, C, P }: FnContext) {
           rerender();
         });
 
-      group
-        .append('circle')
+      g.append('circle')
         .attr('class', 'system-outline')
         .attr('cx', 0)
         .attr('cy', 0)
         .attr('r', SYSTEM_SIZE / 2);
 
-      group
-        .append('text')
+      g.append('text')
         .attr('class', 'ship-count')
         .attr('y', -10)
         .attr('x', 0)
         .attr('text-anchor', 'start');
 
-      group
-        .append('text')
+      g.append('text')
         .attr('class', 'system-icon')
         .attr('y', 0)
         .attr('x', 0)
         .attr('text-anchor', 'end');
-      return group;
+
+      return g;
     });
 
-  join
+  group
     .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null)
     .classed('selected', (d) => isSelected(d.id))
+    .classed('moved', (d) => d.movement[0] > 0 || d.movement[1] > 0)
     .classed('inhabited', (d) => d.type === 'INHABITED')
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
     .classed('visited', (d) => P.visitedSystems.has(d.id))
-    .classed(
-      'hidden',
-      (d) => !geoPathGenerator({ type: 'Point', coordinates: d.location })
-    )
     .attr('transform', (d) => `translate(${geoProjection(d.location)})`);
 
-  join.select('.system-icon').text((d) => {
+  group.select('.system-icon').text((d) => {
     if (d.homeworld && d.ownerId === d.homeworld) return '✶';
     if (d.type === 'INHABITED') return '✦';
     return '●'; // ⚬❍⊙⊛◉〇⦾◎⊚●⬤▲◯⍟✪★✦⭑✰✦✧✶
   });
 
-  join.select('.ship-count').text((d) => {
+  group.select('.ship-count').text((d) => {
     if (reducedSize) return '';
     const icon = d.type === 'INHABITED' ? '▴' : '';
     return icon + (d.ships ? d.ships.toString() : '');
@@ -393,9 +397,12 @@ function drawRegions({ S, C, P }: FnContext) {
     .data([features])
     .join((enter) => enter.append('g').attr('id', 'mesh'));
 
-  const join = g
+  const path = g
     .selectAll('path')
-    .data(features, (d: any) => d.properties?.site.id)
+    .data(
+      (d) => d,
+      (d: any) => d.properties?.site.id
+    )
     .join((enter: any) =>
       enter
         .append('path')
@@ -411,11 +418,8 @@ function drawRegions({ S, C, P }: FnContext) {
         })
     );
 
-  join
-    .attr('d', (d) => {
-      const path = geoPathGenerator(d);
-      return path; // ? smoothPath(path, { radius: 5 }) : path;
-    })
+  path
+    .attr('d', (d) => geoPathGenerator(d))
     .datum((d: any) => d.properties.site as System)
     .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null);
 }
@@ -430,21 +434,22 @@ function drawLanes({ S, C, P }: FnContext) {
     );
   }
 
-  const g = svg
+  const layer = svg
     .selectAll('g#lanes')
-    .data([null])
+    .data([visibleLanes])
     .join((enter) => enter.append('g').attr('id', 'lanes'));
 
-  g.selectAll('.lane')
-    .data(visibleLanes, (d) => (d as Lane).id)
-    .join((enter) =>
-      enter
-        .append('path')
-        .attr('class', 'lane')
-        .attr('fill', 'none')
-        .attr('stroke-width', 2)
-        .attr('stroke', 'orange')
-        .attr('id', (_, i) => `lane-${i}`)
+  const group = layer
+    .selectAll('g.lane-group')
+    .data(
+      (d) => d,
+      (d) => (d as Lane).id
+    )
+    .join((enter) => {
+      const g = enter
+        .append('g')
+        .attr('class', 'lane-group')
+        .attr('id', (d) => d.id)
         .on('click', (ev: PointerEvent, d: Lane) => {
           onClickLane(ev, d);
           rerender();
@@ -453,22 +458,79 @@ function drawLanes({ S, C, P }: FnContext) {
           ev.preventDefault();
           onClickLane(ev, d);
           rerender();
-        })
-    )
-    .style('--owner-color', (d) => {
-      const from = S.world.systemMap.get(d.fromId)!;
-      if (!from.ownerId) return null;
-      const to = S.world.systemMap.get(d.toId)!;
-      if (!to.ownerId) return null;
-      if (from.ownerId !== to.ownerId) return null;
-      return S.playerMap.get(from.ownerId)?.color ?? null;
+        });
+
+      g.append('path').attr('class', 'lane');
+      g.append('path').attr('class', 'pulse');
+
+      return g;
     })
-    .attr('d', (d) => {
-      const from = S.world.systemMap.get(d.fromId)!;
+    .datum((d) => {
       const to = S.world.systemMap.get(d.toId)!;
-      return geoPathGenerator({
+      const from = S.world.systemMap.get(d.fromId)!;
+      const path = geoPathGenerator({
         type: 'LineString',
         coordinates: [from.location, to.location]
       });
+
+      return {
+        ...d,
+        from: S.world.systemMap.get(d.fromId)!,
+        to: S.world.systemMap.get(d.toId)!,
+        path
+      };
     });
+
+  group.style('--owner-color', (d) => {
+    const from = d.from;
+    if (!from.ownerId) return null;
+    const to = d.to;
+    if (!to.ownerId) return null;
+    if (from.ownerId !== to.ownerId) return null;
+    return S.playerMap.get(from.ownerId)?.color ?? null;
+  });
+
+  group
+    .select('path.lane')
+    .attr('d', (d) => d.path)
+    .style('--path-length', (d) => {
+      const pathElement = d3
+        .select<SVGPathElement, unknown>(`#${d.id} .lane`)
+        .node();
+      if (pathElement) {
+        const length = pathElement.getTotalLength();
+        return length;
+      }
+      return 200;
+    });
+
+  group
+    .select('path.pulse')
+    .attr('d', (d) => d.path)
+    .classed('moved', (d) => d.movement[0] > 0 || d.movement[1] > 0)
+    .style('stroke-width', (d) => {
+      if (d.movement[0] === 0 && d.movement[1] === 0) return null;
+      const baseWidth = 2;
+      const extraWidth = Math.floor(
+        Math.log2(Math.max(d.movement[0], d.movement[1]))
+      );
+      const w = baseWidth + extraWidth;
+      return `${w * 2}px`;
+    })
+    .classed('moved--fwd', (d) => d.movement[0] > d.movement[1])
+    .classed('moved--bak', (d) => d.movement[1] > d.movement[0]);
+  // .transition()
+  // .duration(250)
+  //   .attrTween("stroke-dashoffset", function (d) {
+  //     const L = 200; // d3.select(this).node()?.getTotalLength?.() ?? 200;
+
+  //     return (t) => {
+  //       if (d.movement[0] > d.movement[1]) {
+  //         return `${L * (1 - t)}`;
+  //       } else if (d.movement[1] > d.movement[0]) {
+  //         return `${L * t}`;
+  //       }
+  //       return `0`;
+  //     }
+  //   });
 }

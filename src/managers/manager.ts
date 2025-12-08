@@ -111,9 +111,21 @@ export abstract class GameManager {
   }
 
   protected onTakeOrder(order: Order) {
-    const move = this.game.utilities.takeOrder(this.getContext(), order);
+    const move = this.game.orderToMove(this.state, order);
     if (move) {
       this.onMakeMove(move);
+
+      // game.queueMove(
+      //   this.state.world.systemMap.get(move.fromId)!,
+      //   this.state.world.systemMap.get(move.toId)!,
+      //   move.ships,
+      //   move.playerId
+      // );
+
+      this.events.emit('STATE_UPDATED', {
+        state: this.state,
+        status: this.status
+      });
     }
   }
 

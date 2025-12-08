@@ -1,7 +1,7 @@
 import { revealSystem } from './state.ts';
 import { hasLane } from './world.ts';
 
-import type { Move, Order, System, GameState } from './types.d.ts';
+import type { Move, Order, System, GameState, World } from './types.d.ts';
 import type { FnContext } from '../managers/types';
 
 export function moveShips(
@@ -35,6 +35,8 @@ function attackSystem(
 ) {
   const player = from.ownerId!;
   const defendingShips = to.ships ?? 0;
+
+  setMovement(ctx.S.world, from, to, attackingShips);
 
   if (attackingShips > defendingShips) {
     const remainingShips = attackingShips - defendingShips;
@@ -93,6 +95,25 @@ export function eliminatePlayer(
   }
 }
 
+function setMovement(world: World, from: System, to: System, ships: number) {
+  from.movement = [from.movement[0], from.movement[1] + ships];
+  to.movement = [to.movement[0] + ships, to.movement[1]];
+
+  // Find lane and update its movement
+  const laneFwd = world.lanes.find(
+    (l) => l.fromId === from.id && l.toId === to.id
+  );
+  if (laneFwd) {
+    laneFwd.movement = [laneFwd.movement[0] + ships, laneFwd.movement[1]];
+  }
+  const laneBak = world.lanes.find(
+    (l) => l.fromId === to.id && l.toId === from.id
+  );
+  if (laneBak) {
+    laneBak.movement = [laneBak.movement[0], laneBak.movement[1] + ships];
+  }
+}
+
 function transferShips(
   { S, C }: FnContext,
   from: System,
@@ -102,14 +123,19 @@ function transferShips(
   if (from.ships < ships) return; // Not enough ships to transfer
   from.ships -= ships;
   to.ships += ships;
+  setMovement(S.world, from, to, ships);
+
   if (to.ownerId === C.playerId) revealSystem(S, to);
 }
 
 export function doQueuedMoves({ S, E }: FnContext) {
   S.world.systems.forEach((system) => {
-    const move = system.moveQueue.shift();
-    if (move) {
-      E.emit('MAKE_MOVE', move);
+    system.lastMove = null;
+    while (system.moveQueue.length > 0) {
+      const move = system.moveQueue.shift();
+      if (move) {
+        E.emit('MAKE_MOVE', move);
+      }
     }
   });
 }

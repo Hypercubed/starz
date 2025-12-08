@@ -135,6 +135,7 @@ function createSystem(location: Coordinates): System {
     ships: 0,
     homeworld: null,
     moveQueue: [],
-    lastMove: null
+    lastMove: null,
+    movement: [0, 0]
   };
 }

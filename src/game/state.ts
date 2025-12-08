@@ -17,12 +17,11 @@ export function defaultConfig(): GameConfig {
 
 export function initalState(): GameState {
   return {
-    tick: 0,
-    running: false, // TODO: rmove this
+    tick: 0, // TODO: move to C object
     world: createWorld(),
     players: [] as Player[],
     playerMap: new Map<string, Player>(),
-    messages: [] as Messages[] // TODO: Move out of state
+    messages: [] as Messages[] // TODO: Move out of state, make a UI thing
   };
 }
 

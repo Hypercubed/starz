@@ -29,14 +29,14 @@ async function runSimulation(gameId: number) {
   }
   
   // Add specific personalities
-  // const id = `${ctx.G.players.length + 1}`;
-  // const bot = new Bot({ id, personality: 'idle' });
-  // manager.addPlayer(
-  //   `idle`,
-  //   id,
-  //   bot,
-  //   `red`
-  // );
+  const id = `${ctx.S.players.length + 1}`;
+  const bot = new Bot({ id, personality: 'idle' });
+  manager.addPlayer(
+    `idle`,
+    id,
+    bot,
+    `red`
+  );
 
   let winner = '-1';
   let running = true;

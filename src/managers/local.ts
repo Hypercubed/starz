@@ -35,7 +35,9 @@ export class LocalGameManager extends GameManager {
     }
 
     const thisPlayer = this.state.players[0];
-    this.setupThisPlayer(thisPlayer.id, this.config.playerName);
+
+    const name = NumHumanPlayers > 0 ? this.config.playerName : '1';
+    this.setupThisPlayer(thisPlayer.id, name);
     renderer.setupUI();
 
     this.gameStart();
@@ -123,7 +125,7 @@ export class LocalGameManager extends GameManager {
     return renderer.showEndGame(`You have lost your homeworld! Game Over.`);
   }
 
-  protected onAddPlayer(
+  protected addPlayer(
     name: string,
     playerId: string,
     bot: Bot | undefined,
@@ -131,6 +133,10 @@ export class LocalGameManager extends GameManager {
   ) {
     const player = super.addPlayer(name, playerId, bot, color);
     if (!player) return;
+
+    player.color ??= getRandomColor();
+
+    console.log(`Added player ${player.name} (${player.id})`);
 
     document.documentElement.style.setProperty(`--player-${player.id}`, color);
     return player;
@@ -145,8 +151,11 @@ export class LocalGameManager extends GameManager {
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
     this.game.revealSystem(this.state, homeworld);
     renderer.centerOnHome();
-    clearSelection();
-    select(homeworld.id);
+
+    if (!player.bot) {
+      clearSelection();
+      select(homeworld.id);
+    }
   }
 
   private registerUIEvents() {
@@ -169,4 +178,13 @@ export class LocalGameManager extends GameManager {
       this.onPauseToggle();
     });
   }
+}
+
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 }

@@ -7,13 +7,14 @@ import {
   addMessage,
   addPlayer,
   initalState,
-  defaultConfig
+  defaultConfig,
+  queueMove
 } from '../game/state.ts';
 import { debugLog } from '../utils/logging.ts';
 
 import { eliminatePlayer, moveShips, orderToMove } from './actions.ts';
 
-import type { GameState, Move, Order } from './types.d.ts';
+import type { GameState, Move } from './types.d.ts';
 import type { FnContext } from '../managers/types.d.ts';
 
 export function setup(ctx: FnContext): GameState {
@@ -36,15 +37,6 @@ export const moves = {
   }
 };
 
-export const utilities = {
-  takeOrder(ctx: FnContext, order: Order) {
-    if (order.playerId === ctx.C.playerId) {
-      debugLog(`player order: ${JSON.stringify(order)}`);
-    }
-    return orderToMove(ctx.S, order);
-  }
-};
-
 export {
   initalState,
   defaultConfig,
@@ -57,5 +49,7 @@ export {
   assignSystem,
   checkVictory,
   addPlayer,
-  eliminatePlayer
+  eliminatePlayer,
+  queueMove,
+  orderToMove
 };

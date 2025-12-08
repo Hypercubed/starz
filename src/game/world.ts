@@ -24,7 +24,8 @@ export function addLane(world: World, from: System, to: System): void {
   const newLane = {
     id,
     fromId: from.id,
-    toId: to.id
+    toId: to.id,
+    movement: [0, 0]
   } satisfies Lane;
 
   world.lanes.push(newLane);

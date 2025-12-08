@@ -111,6 +111,14 @@ export function gameTick(ctx: FnContext) {
   if (S.tick % TICKS_PER_TURN === 0) turnUpdate(S);
   if (S.tick % TICKS_PER_ROUND === 0) roundUpdate(S);
 
+  for (const s of S.world.systems) {
+    s.movement = [0, 0];
+  }
+
+  for (const l of S.world.lanes) {
+    l.movement = [0, 0];
+  }
+
   botQueue(ctx);
   doQueuedMoves(ctx);
   updateStats(S);

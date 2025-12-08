@@ -95,6 +95,7 @@ button {
 }
 
 svg {
+  transform-box: fill-box;
 
   svg #graticule,
   svg #outline {
@@ -121,6 +122,8 @@ svg {
   }
 
   .system {
+    will-change: fill, fill-opacity;
+
     cursor: pointer;
     user-select: none;
 
@@ -150,9 +153,10 @@ svg {
     .system-outline {
       stroke: var(--owner-color, var(--unoccupied));
       fill: black;
-      fill-opacity: 0;
+      /* fill-opacity: 0; */
       stroke-opacity: 0;
       stroke-width: 2;
+      transition: stroke-width 0.25s ease-in-out, stroke-opacity 0.25s ease-in-out;
     }
 
     .system-marker {
@@ -161,11 +165,22 @@ svg {
       stroke-opacity: 0.5;
       stroke-width: 0.5;
       r: 3;
+      transition: stroke-width 0.25s ease-in-out, stroke-opacity 0.25s ease-in-out;
     }
 
     &.visited .system-outline {
       fill-opacity: 0.8;
       stroke-opacity: 0.0;
+    }
+
+    &.moved {
+      .system-outline {
+        stroke-width: 2;
+      }
+
+      .system-outline {
+        stroke-opacity: 0.5;
+      }
     }
 
     &.selected {
@@ -206,18 +221,46 @@ svg {
   }
 
   .lane {
+    will-change: stroke, stroke-opacity, path;
+
+    fill: none;
     stroke: var(--owner-color, var(--unoccupied));
     stroke-width: 2;
     stroke-opacity: 0.3;
     cursor: pointer;
-    /* display: none; */
-
-    &.revealed {
-      display: inline;
-    }
 
     &:hover {
       stroke-width: 9;
+    }
+  }
+
+  .pulse {
+    will-change: stroke, stroke-opacity, path;
+    transform-box: fill-box;
+
+    fill: none;
+    stroke: var(--owner-color, var(--unoccupied));
+    stroke-width: 2 !important;
+    stroke-opacity: 0;
+    stroke-dasharray: 5 calc(var(--path-length, 200) * 0.1);
+    stroke-dasharray: 5 30;
+    stroke-linecap: round;
+    
+    &.moved {
+      animation: drawPath 2s linear infinite forwards;
+      stroke-opacity: 1;
+    }
+
+    &.moved--fwd {
+      animation-direction: forwards;
+    }
+
+    &.moved--bak {
+      animation-direction: reverse;
+    }
+
+    &.moved--fwd &.moved--bak {
+      animation: none;
     }
   }
 
@@ -293,4 +336,13 @@ datalist {
   justify-content: space-between;
   writing-mode: vertical-lr;
   width: 200px;
+}
+
+@keyframes drawPath {
+  from {
+    stroke-dashoffset: var(--path-length, 200); /* Initial offset, same as dasharray's first value */
+  }
+  to {
+    stroke-dashoffset: 0; /* Fully revealed */
+  }
 }

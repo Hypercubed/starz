@@ -33,7 +33,6 @@ export interface GameConfig {
 
 export interface GameState {
   tick: number;
-  running: boolean;
   world: World;
   players: Player[];
   playerMap: Map<string, Player>;
@@ -77,6 +76,7 @@ export interface System {
   homeworld: string | null;
   moveQueue: Move[];
   lastMove: Move | null;
+  movement: [number, number]; // [ships moving in, ships moving out]
 }
 
 export interface Order {
@@ -99,4 +99,5 @@ export interface Lane {
   id: string;
   fromId: string;
   toId: string;
+  movement: [number, number]; // [ships moving fwd, ships moving bak]
 }

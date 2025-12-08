@@ -18,32 +18,39 @@ interface BotPersonality {
   expansion: number; // 0.0 - 1.0: priority on claiming unclaimed systems
   defensiveness: number; // 0.0 - 1.0: tendency to defend vs. attack
   riskTolerance: number; // 0.0 - 1.0: willingness to attack with marginal advantage
+  speed: number; // [1, Infinity], max movement speed (moves per tick)
 }
+
+const BASE_SPEED = 100;
 
 export const PERSONALITIES = {
   territory: {
     aggression: 0.3,
     expansion: 1.0,
     defensiveness: 0.5,
-    riskTolerance: 0.4
+    riskTolerance: 0.4,
+    speed: (((((BASE_SPEED * 250) / 251) * 25) / 26) * 25) / 23
   }, // 2, Yellow
   rusher: {
     aggression: 1.0,
     expansion: 0.4,
     defensiveness: 0.1,
-    riskTolerance: 0.7
+    riskTolerance: 0.7,
+    speed: (((((BASE_SPEED * 250) / 233) * 25) / 21) * 25) / 16
   }, // 3, Purple
   turtle: {
     aggression: 0.1,
     expansion: 0.3,
     defensiveness: 0.95,
-    riskTolerance: 0.2
+    riskTolerance: 0.2,
+    speed: (((((BASE_SPEED * 250) / 258) * 25) / 33) * 25) / 27
   }, // 4, Green
   balanced: {
     aggression: 0.5,
     expansion: 0.5,
     defensiveness: 0.5,
-    riskTolerance: 0.5
+    riskTolerance: 0.5,
+    speed: (((((BASE_SPEED * 250) / 257) * 25) / 20) * 25) / 34
   } // 5, Orange
 } as const satisfies Record<string, BotPersonality>;
 
@@ -65,6 +72,7 @@ export class Bot implements BotInterface {
   id: string;
   name: string;
   personality: BotPersonality;
+  queuedMoves = 0;
 
   botSystems!: System[];
   threatLevels = new Map<string, number>();
@@ -102,23 +110,29 @@ export class Bot implements BotInterface {
     this.botSystems.forEach((system) => {
       system.moveQueue = []; // Clear previous moves
     });
+    this.queuedMoves = 0;
 
     this.analyzeMap();
 
     const defensiveMoves = this.getDefensiveMoves();
     this.chooseMoves(defensiveMoves, 1.0 - this.personality.defensiveness);
+    if (this.queuedMoves >= this.personality.speed) return;
 
     const coordinatedAttacks = this.getCoordinatedAttackMoves();
     this.chooseMoves(coordinatedAttacks, this.personality.aggression);
+    if (this.queuedMoves >= this.personality.speed) return;
 
     const eXterminate = this.getExterminateMoves();
     this.chooseMoves(eXterminate, this.personality.defensiveness);
+    if (this.queuedMoves >= this.personality.speed) return;
 
     const eXplore = this.getExploreMoves();
     this.chooseMoves(eXplore, this.personality.expansion);
+    if (this.queuedMoves >= this.personality.speed) return;
 
     const logistics = this.getLogisticsMoves();
     this.chooseMoves(logistics, 1.0);
+    if (this.queuedMoves >= this.personality.speed) return;
   }
 
   private analyzeMap() {
@@ -461,20 +475,38 @@ export class Bot implements BotInterface {
   chooseMoves(moves: BotMove[][], weight = 1) {
     if (moves.length === 0) return;
 
-    moves.forEach((systemMoves) => {
-      // For each system's possible moves, pick one
-      if (systemMoves.length === 0) return;
-      const sortedMoves = [...systemMoves].sort(scoreSort);
+    const sortedMoves = moves.flat().sort(scoreSort);
 
-      for (let i = 0; i < sortedMoves.length; i++) {
-        const move = sortedMoves[i];
-        if (Math.random() < weight) {
-          // Weighted choice gives more variety
-          queueMove(move.from, move.to, move.units, this.id, move.message);
-          return;
-        }
+    for (const move of sortedMoves) {
+      if (this.queuedMoves >= this.personality.speed) return;
+
+      if (Math.random() < weight) {
+        if (move.from.moveQueue.length > 0) continue;
+
+        // Weighted choice gives more variety
+        queueMove(move.from, move.to, move.units, this.id, move.message);
+        if (move.units > 0) this.queuedMoves++;
       }
-    });
+    }
+
+    // This picks the best move for each system
+    // TODO: Pick the best move across all systems to optimize overall strategy
+
+    // for (let systemMoves of moves) {
+    //   // For each system's possible moves, pick one
+    //   if (systemMoves.length === 0) continue;
+    //   const sortedMoves = systemMoves.sort(scoreSort);
+
+    //   for (let move of sortedMoves) {
+    //     if (Math.random() < weight) {
+    //       // Weighted choice gives more variety
+    //       queueMove(move.from, move.to, move.units, this.id, move.message);
+    //       this.queuedMoves++;
+    //       if (this.queuedMoves >= this.personality.speed) return;
+    //       break;
+    //     }
+    //   }
+    // }
   }
 }
 
