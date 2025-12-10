@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 
 export function updateInfoBox() {
-  const state = globalThis.gameManager.getState();
+  const { C } = globalThis.gameManager.getContext();
 
   const div = d3
     .select('#app')
@@ -13,7 +13,7 @@ export function updateInfoBox() {
 
   div
     .select('span')
-    .text(`${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}`);
+    .text(`${~~(C.tick / 2)}${C.tick % 2 === 1 ? '.' : ''}`);
 }
 
 export function updateLeaderbox() {
@@ -53,22 +53,6 @@ export function updateLeaderbox() {
     .join('td')
     // eslint-disable-next-line no-irregular-whitespace
     .text((d) => ` ${d} `);
-}
-
-export function updateMessageBox() {
-  const state = globalThis.gameManager.getState();
-
-  const box = d3
-    .select('#app')
-    .selectAll('#messagebox')
-    .data([null])
-    .join((enter) => enter.append('div').attr('id', 'messagebox'));
-
-  box
-    .selectAll('div')
-    .data(state.messages.slice(-5), (d: any) => d.id)
-    .join('div')
-    .html((d) => d.html);
 }
 
 export function setupDialogs() {

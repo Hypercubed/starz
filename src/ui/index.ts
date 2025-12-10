@@ -18,11 +18,11 @@ import {
   showHelp,
   updateInfoBox,
   updateLeaderbox,
-  updateMessageBox,
   showStartGame,
   showEndGame,
   setupDialogs
 } from './ui.ts';
+import { addMessage, updateMessageBox } from './messages.ts';
 
 export const rerender = debounce(_rerender, 16);
 
@@ -57,5 +57,6 @@ export {
   centerOnSystem,
   onClickLane,
   onClickSystem,
-  setupKeboardControls
+  setupKeboardControls,
+  addMessage
 };

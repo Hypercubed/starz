@@ -17,31 +17,11 @@ export function defaultConfig(): GameConfig {
 
 export function initalState(): GameState {
   return {
-    tick: 0, // TODO: move to C object
     world: createWorld(),
     players: [] as Player[],
     playerMap: new Map<string, Player>(),
     messages: [] as Messages[] // TODO: Move out of state, make a UI thing
   };
-}
-
-let messageIdCounter = 0;
-
-export function addMessage(state: GameState, message: string) {
-  const html = `${message} <small>${~~(state.tick / 2)}${state.tick % 2 === 1 ? '.' : ''}</small>`;
-  state.messages.push({
-    id: messageIdCounter++,
-    message,
-    tick: state.tick,
-    html
-  });
-
-  return state;
-}
-
-export function clearMessages(state: GameState) {
-  state.messages = [];
-  return state;
 }
 
 export function addPlayer(state: GameState, player: Player) {

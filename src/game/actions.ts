@@ -3,6 +3,7 @@ import { hasLane } from './world.ts';
 
 import type { Move, Order, System, GameState, World } from './types.d.ts';
 import type { FnContext } from '../managers/types';
+import { debugLog } from '../utils/logging.ts';
 
 export function moveShips(
   ctx: FnContext,
@@ -49,16 +50,13 @@ function attackSystem(
   }
 }
 
-function takeSystem({ S, E, C }: FnContext, playerId: string, system: System) {
+function takeSystem(ctx: FnContext, playerId: string, system: System) {
   system.ownerId = playerId;
   system.moveQueue = [];
-  if (playerId === C.playerId) revealSystem(S, system);
+  if (playerId === ctx.C.playerId) revealSystem(ctx.S, system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    E.emit('PLAYER_ELIMINATED', {
-      playerId: system.homeworld,
-      winnerId: playerId
-    });
+    eliminatePlayer(ctx, playerId, system.homeworld);
   }
 }
 
@@ -82,17 +80,13 @@ export function eliminatePlayer(
     }
   });
 
-  const loser = S.playerMap.get(loserId);
-  if (loser) {
-    loser.isAlive = false;
-  }
+  const loser = S.playerMap.get(loserId)!;
+  loser.isAlive = false;
 
-  if (loserId === C.playerId) {
-    E.emit('PLAYER_LOSE', {
-      playerId: C.playerId,
-      winnerId: winnerId
-    });
-  }
+  E.emit('PLAYER_ELIMINATED', {
+    playerId: C.playerId,
+    winnerId: winnerId
+  });
 }
 
 function setMovement(world: World, from: System, to: System, ships: number) {
@@ -128,16 +122,33 @@ function transferShips(
   if (to.ownerId === C.playerId) revealSystem(S, to);
 }
 
-export function doQueuedMoves({ S, E }: FnContext) {
-  S.world.systems.forEach((system) => {
+export function doQueuedMoves(ctx: FnContext) {
+  ctx.S.world.systems.forEach((system) => {
     system.lastMove = null;
     while (system.moveQueue.length > 0) {
       const move = system.moveQueue.shift();
       if (move) {
-        E.emit('MAKE_MOVE', move);
+        makeMove(ctx, move)
       }
     }
   });
+}
+
+function makeMove(ctx: FnContext, move: Move) {
+  if (move.playerId === ctx.C.playerId) {
+    debugLog(`player move: ${JSON.stringify(move)}`);
+  }
+  const from = ctx.S.world.systemMap.get(move.fromId)!;
+  const to = ctx.S.world.systemMap.get(move.toId)!;
+  moveShips(ctx, from, to, move.ships);
+  from.lastMove = move;
+}
+
+export function takeOrder(ctx: FnContext, order: Order) {
+  const move = orderToMove(ctx.S, order);
+  if (move) {
+    makeMove(ctx, move);
+  }
 }
 
 function validateOrder(state: GameState, order: Order): boolean {

@@ -197,20 +197,12 @@ export class BGIOGameManager extends GameManager {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
 
-    this.events.on('UI_QUIT', () => {
-      this.onQuit();
-    });
-
     this.events.on('PLAYER_LOSE', (move) => {
       this.onThisPlayerLose(move.winnerId);
     });
 
     this.events.on('PLAYER_WIN', () => {
       this.onThisPlayerWin();
-    });
-
-    this.events.on('UI_PAUSE_TOGGLE', () => {
-      this.onPauseToggle();
     });
   }
 }

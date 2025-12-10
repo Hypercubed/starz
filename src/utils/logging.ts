@@ -7,17 +7,17 @@ declare global {
 }
 
 export function debugLog(message: string, ...optionalParams: any[]) {
-  const state = globalThis.gameManager?.getState();
+  const { C } = globalThis.gameManager?.getContext();
 
   if (DEBUG_LOGGING_ENABLED) {
-    console.log(`[DEBUG][Tick ${state?.tick}] ${message}`, ...optionalParams);
+    console.log(`[DEBUG][Tick ${C?.tick}] ${message}`, ...optionalParams);
   }
 }
 
 export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
   if (!EVENT_TRACKING_ENABLED) return;
 
-  const state = globalThis.gameManager?.getState();
+  const { C } = globalThis.gameManager?.getContext();
 
   let count = 1;
   try {
@@ -31,7 +31,7 @@ export function trackEvent(eventName: string, meta: Record<string, any> = {}) {
     try {
       window.sa_event(eventName, {
         [eventName]: count,
-        tick: state?.tick,
+        tick: C?.tick,
         ...meta
       });
     } catch (e) {

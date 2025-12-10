@@ -21,7 +21,7 @@ import {
   selectPath,
   toggleSelection
 } from './selection.ts';
-import { showHelp } from './ui.ts';
+import { showEndGame, showHelp } from './ui.ts';
 
 import type { Lane, Order, System } from '../game/types';
 
@@ -74,8 +74,6 @@ export function setupKeboardControls() {
   d3.select('body').on('keyup.controls', (event) => {
     // debugLog("keyup:", event);
 
-    const { E } = globalThis.gameManager.getContext();
-
     switch (event.key) {
       case 'Escape':
         clearSelection();
@@ -86,7 +84,7 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        E.emit('UI_QUIT', undefined);
+        return showEndGame('Quit?');
         return;
       }
     }
@@ -95,11 +93,11 @@ export function setupKeboardControls() {
   d3.select('body').on('keypress.controls', (event) => {
     // debugLog("Key pressed:", event);
 
-    const { E } = globalThis.gameManager.getContext();
-
     switch (event.code) {
       case 'Space':
-        E.emit('UI_PAUSE_TOGGLE', undefined);
+        if ('pauseToggle' in globalThis.gameManager) {
+          (globalThis.gameManager.pauseToggle as () => void)();
+        }
         return;
       case 'Equal':
       case 'NumpadAdd':

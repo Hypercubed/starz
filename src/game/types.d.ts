@@ -11,15 +11,10 @@ export interface GameEventMap {
 
   // Player Events
   PLAYER_ELIMINATED: { playerId: string; winnerId: string | null };
-  PLAYER_WIN: { playerId: string };
+  PLAYER_WIN: { playerId: string, message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };
 
-  // UI Events
-  UI_QUIT: undefined;
-  UI_PAUSE_TOGGLE: undefined;
-
   // Actions
-  MAKE_MOVE: Move;
   TAKE_ORDER: Order;
 }
 
@@ -32,7 +27,6 @@ export interface GameConfig {
 }
 
 export interface GameState {
-  tick: number;
   world: World;
   players: Player[];
   playerMap: Map<string, Player>;

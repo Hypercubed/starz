@@ -8,7 +8,6 @@ import type {
   GameConfig,
   GameEventMap,
   GameState,
-  Move,
   Order
 } from '../game/types.d.ts';
 import type { Player } from '../types.d.ts';
@@ -19,6 +18,7 @@ export abstract class GameManager {
   protected game = game;
   protected state = game.initalState();
   protected config = game.defaultConfig();
+  protected tick = 0;
 
   protected status: GameStatus = 'WAITING';
   protected playerId!: string;
@@ -49,6 +49,7 @@ export abstract class GameManager {
       E: this.events,
       P: this.state.playerMap.get(this.playerId)!,
       C: {
+        tick: this.tick,
         status: this.status,
         playerId: this.playerId,
         config: this.getConfig()
@@ -81,6 +82,7 @@ export abstract class GameManager {
 
   protected gameStart() {
     this.status = 'PLAYING';
+    this.tick = 0;
     this.#runGameLoop();
   }
 
@@ -90,43 +92,14 @@ export abstract class GameManager {
   }
 
   public gameTick() {
+    this.tick++;
+
     this.game.gameTick(this.getContext());
+    this.game.checkVictory(this.getContext());
     this.events.emit('STATE_UPDATED', {
       state: this.state,
       status: this.status
     });
-  }
-
-  protected onEliminatePlayer(loserId: string, winnerId: string | null) {
-    this.game.eliminatePlayer(this.getContext(), loserId, winnerId);
-  }
-
-  protected onMakeMove(move: Move) {
-    this.game.moves.makeMove(this.getContext(), move);
-
-    this.events.emit('STATE_UPDATED', {
-      state: this.state,
-      status: this.status
-    });
-  }
-
-  protected onTakeOrder(order: Order) {
-    const move = this.game.orderToMove(this.state, order);
-    if (move) {
-      this.onMakeMove(move);
-
-      // game.queueMove(
-      //   this.state.world.systemMap.get(move.fromId)!,
-      //   this.state.world.systemMap.get(move.toId)!,
-      //   move.ships,
-      //   move.playerId
-      // );
-
-      this.events.emit('STATE_UPDATED', {
-        state: this.state,
-        status: this.status
-      });
-    }
   }
 
   #runGameLoop() {
@@ -164,16 +137,13 @@ export abstract class GameManager {
       this.gameStart();
     });
 
-    this.events.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
-      this.onEliminatePlayer(playerId, winnerId);
-    });
+    this.events.on('TAKE_ORDER', (order: Order) => {
+      this.game.takeOrder(this.getContext(), order);
 
-    this.events.on('MAKE_MOVE', (move) => {
-      this.onMakeMove(move);
-    });
-
-    this.events.on('TAKE_ORDER', (order) => {
-      this.onTakeOrder(order);
+      this.events.emit('STATE_UPDATED', {
+        state: this.state,
+        status: this.status
+      });
     });
   }
 }

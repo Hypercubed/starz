@@ -159,11 +159,11 @@ export class PlayroomGameManager extends GameManager {
 
   protected gameStart() {
     trackEvent('starz_gamesStarted');
-    game.addMessage(this.state, `Game started.`);
+    renderer.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId!);
     if (player) {
-      game.addMessage(this.state, `You are Player ${player.name}.`);
+      renderer.addMessage(`You are Player ${player.name}.`);
     }
 
     super.gameStart();
@@ -184,7 +184,7 @@ export class PlayroomGameManager extends GameManager {
     );
 
     if (PR.isHost()) {
-      PR.setState(PLAYROOM_STATES.TICK, this.state.tick, false);
+      PR.setState(PLAYROOM_STATES.TICK, this.tick, false);
       PR.setState(
         PLAYROOM_STATES.PLAYER_STATS,
         this.state.players.map((p) => p.stats),
@@ -204,10 +204,10 @@ export class PlayroomGameManager extends GameManager {
         false
       );
     } else {
-      this.state.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
+      this.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
       // this.gameState = PR.getState(PLAYROOM_STATES.GAME_STATE) as GameState;
 
-      if (this.state.tick % 10 === 0) {
+      if (this.tick % 10 === 0) {
         const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
         if (world) {
           this.state.world = worldFromJson(world);
@@ -299,7 +299,7 @@ export class PlayroomGameManager extends GameManager {
     }
   }
 
-  protected eliminatePlayer(loserId: string, winnerId: string | null) {
+  protected onEliminatePlayer(loserId: string, winnerId: string | null) {
     if (PR.isHost()) {
       const loser = this.state.playerMap.get(loserId)!;
       const winner = this.state.playerMap.get(winnerId as any);
@@ -309,8 +309,7 @@ export class PlayroomGameManager extends GameManager {
           ? `Player ${loser.name} has been eliminated!`
           : `Player ${winner!.name} has eliminated Player ${loser.name}!`;
 
-      game.addMessage(this.state, message);
-      super.onEliminatePlayer(loserId, winnerId);
+      renderer.addMessage(message);
 
       PR.setState(PLAYROOM_STATES.WORLD, this.state.world, false);
 
@@ -404,10 +403,6 @@ export class PlayroomGameManager extends GameManager {
   private registerUIEvents() {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
-
-    this.events.on('UI_QUIT', () => {
-      this.onQuit();
-    });
 
     this.events.on('PLAYER_LOSE', ({ winnerId }) => {
       this.onThisPlayerLose(winnerId!);

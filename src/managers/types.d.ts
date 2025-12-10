@@ -4,6 +4,7 @@ import type { GameConfig, GameState } from '../game/types';
 export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
 export interface GameContext {
+  tick: number;
   status: Readonly<GameStatus>;
   config: Readonly<GameConfig>;
   playerId: string;

@@ -46,14 +46,14 @@ export class LocalGameManager extends GameManager {
 
   protected gameStart() {
     trackEvent('starz_gamesStarted');
-    this.game.addMessage(this.state, `Game started.`);
+    super.gameStart();
+
+    renderer.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
     if (player) {
-      this.game.addMessage(this.state, `You are Player ${player.name}.`);
+      renderer.addMessage(`You are Player ${player.name}.`);
     }
-
-    super.gameStart();
   }
 
   protected gameStop() {
@@ -61,11 +61,6 @@ export class LocalGameManager extends GameManager {
 
     clearSelection();
     renderer.rerender();
-  }
-
-  public gameTick() {
-    super.gameTick();
-    this.game.checkVictory(this.getContext());
   }
 
   private onPlayerJoin(playerIndex: number) {
@@ -78,7 +73,7 @@ export class LocalGameManager extends GameManager {
     this.addPlayer(name, id, bot, color);
   }
 
-  protected onPauseToggle() {
+  protected pauseToggle() {
     if (this.status === 'PAUSED') {
       this.status = 'PLAYING';
       super.startGameLoop();
@@ -88,18 +83,21 @@ export class LocalGameManager extends GameManager {
     }
   }
 
-  protected onThisPlayerWin() {
-    this.gameStop();
+  protected onPlayerWin(winnerId: string, message?: string) {
+    if (message) {
+      renderer.addMessage(message);
+    }
 
     this.game.revealAllSystems(this.state);
     clearSelection();
 
-    trackEvent('starz_gamesWon');
-    return renderer.showEndGame(`You have conquered The Bubble!`);
-  }
-
-  protected async onQuit() {
-    return renderer.showEndGame('Quit?');
+    if (winnerId === this.playerId) {
+      trackEvent('starz_gamesWon');
+      return renderer.showEndGame(`You have conquered The Bubble!`);
+    } else {
+      trackEvent('starz_gamesLost', { winnerId });
+      return renderer.showEndGame(`You have lost your homeworld! Game Over.`);
+    }
   }
 
   protected onEliminatePlayer(loserId: string, winnerId: string | null) {
@@ -111,18 +109,11 @@ export class LocalGameManager extends GameManager {
         ? `Player ${loser.name} has been eliminated!`
         : `Player ${winner!.name} has eliminated Player ${loser.name}!`;
 
-    this.game.addMessage(this.state, message);
-    super.onEliminatePlayer(loserId, winnerId);
-  }
+    renderer.addMessage(message);
 
-  protected onThisPlayerLose(winner: string | null) {
-    this.gameStop();
-
-    this.game.revealAllSystems(this.state);
-    clearSelection();
-
-    trackEvent('starz_gamesLost', { winner });
-    return renderer.showEndGame(`You have lost your homeworld! Game Over.`);
+    if (winnerId === this.playerId) {
+      return this.onPlayerWin(winnerId);
+    }
   }
 
   protected addPlayer(
@@ -162,20 +153,12 @@ export class LocalGameManager extends GameManager {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
 
-    this.events.on('UI_QUIT', () => {
-      this.onQuit();
+    this.events.on('PLAYER_WIN', ({ playerId, message}) => {
+      this.onPlayerWin(playerId, message);
     });
 
-    this.events.on('PLAYER_LOSE', (move) => {
-      this.onThisPlayerLose(move.winnerId);
-    });
-
-    this.events.on('PLAYER_WIN', () => {
-      this.onThisPlayerWin();
-    });
-
-    this.events.on('UI_PAUSE_TOGGLE', () => {
-      this.onPauseToggle();
+    this.events.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
+      this.onEliminatePlayer(playerId, winnerId);
     });
   }
 }
