@@ -3,9 +3,12 @@ import { type BotPersonalities, PERSONALITIES } from '../src/game/bots.ts';
 import { Bot } from '../src/game/bots.ts';
 import { SimGameManager } from '../src/managers/simulation.ts';
 import type {} from '../src/globals.d.ts';
+import type { Player } from '../src/types.d.ts';
 
-const N = 1000; // Number of simulations
+const N = 10; // Number of simulations
 const T = 5000; // Max ticks per simulation
+
+const personalities = Object.keys(PERSONALITIES) as BotPersonalities[];
 
 async function runSimulation(gameId: number) {
   const manager = new SimGameManager();
@@ -15,13 +18,12 @@ async function runSimulation(gameId: number) {
 
   let ctx = manager.getContext();
 
-  const personalities = Object.keys(PERSONALITIES) as BotPersonalities[];
-  for (let i = 1; i <= personalities.length; i++) {
-    const id = `${i}`;
-    const bot = new Bot({ id, personality: personalities[i - 1] });
+  for (let i = 0; i < personalities.length; i++) {
+    const id = `${i + 1}`;
+    const bot = new Bot({ id, personality: personalities[i] });
 
     manager.addPlayer(
-      `${personalities[i - 1]}`,
+      `${personalities[i]}`,
       id,
       bot,
       `red`
@@ -29,8 +31,8 @@ async function runSimulation(gameId: number) {
   }
   
   // Add specific personalities
-  const id = `${ctx.S.players.length + 1}`;
-  const bot = new Bot({ id, personality: 'idle' });
+  const id = `${ctx.S.playerMap.size + 1}`;
+  const bot = new Bot({ id, personality: 'idle', name: 'idle' });
   manager.addPlayer(
     `idle`,
     id,
@@ -38,17 +40,20 @@ async function runSimulation(gameId: number) {
     `red`
   );
 
-  let winner = '-1';
+  let winner: Player | null = null;
   let running = true;
 
-  while (ctx.S.tick < T && running) {
+  const players = Array.from(ctx.S.playerMap.values());
+  // console.log(players);
+
+  while (ctx.C.tick < T && running) {
     manager.gameTick();
 
     // Check for winner
-    const activePlayers = ctx.S.players.filter(p => p.stats.systems > 0);
+    const activePlayers = players.filter(p => p.stats.systems > 0);
 
     if (activePlayers.length === 1) {
-      winner = activePlayers[0].id;
+      winner = activePlayers[0];
       running = false;
     } else if (activePlayers.length === 0) {
       // Draw?
@@ -58,7 +63,7 @@ async function runSimulation(gameId: number) {
     ctx = manager.getContext();
   }
 
-  return { gameId, winner, ticks: ctx.S.tick };
+  return { gameId, winner, ticks: ctx.C.tick };
 }
 
 async function main() {
@@ -67,7 +72,8 @@ async function main() {
 
   for (let i = 0; i < N; i++) {
     const result = await runSimulation(i + 1);
-    console.log(`Game ${result.gameId}: Winner=${result.winner}, Ticks=${result.ticks}`);
+    const winner = result.winner ? `${result.winner.id} (${result.winner.name})` : 'None';
+    console.log(`Game ${result.gameId}: Winner=${winner}, Ticks=${result.ticks}`);
     results.push(result);
   }
 
@@ -79,12 +85,12 @@ async function main() {
   let timeouts = 0;
 
   results.forEach(r => {
-    if (r.winner === '-1') {
+    if (!r.winner) {
       timeouts++;
     } else {
-      wins[r.winner] = (wins[r.winner] || 0) + 1;
-      if (!winTicks[r.winner]) winTicks[r.winner] = [];
-      winTicks[r.winner].push(r.ticks);
+      wins[r.winner.id] = (wins[r.winner.id] || 0) + 1;
+      if (!winTicks[r.winner.id]) winTicks[r.winner.id] = [];
+      winTicks[r.winner.id].push(r.ticks);
     }
   });
 
@@ -92,7 +98,6 @@ async function main() {
   Object.entries(wins).forEach(([player, count]) => {
     const pId = parseInt(player);
     // Map player ID to personality if possible, but we know the mapping from the loop
-    const personalities = ['territory', 'rusher', 'turtle', 'balanced'];
     const name = personalities[(pId - 1) % personalities.length];
 
     const ticks = winTicks[pId];

@@ -4,8 +4,6 @@ import type { Coordinates, Lane, System, World } from './types.d.ts';
 
 export function createWorld(): World {
   return {
-    systems: [],
-    lanes: [],
     systemMap: new Map<string, System>(),
     laneMap: new Map<string, Lane>(),
     neighborMap: new Map<string, Array<string>>()
@@ -13,7 +11,6 @@ export function createWorld(): World {
 }
 
 export function addSystem(world: World, node: System): void {
-  world.systems.push(node);
   world.systemMap.set(node.id, node);
 }
 
@@ -28,14 +25,13 @@ export function addLane(world: World, from: System, to: System): void {
     movement: [0, 0]
   } satisfies Lane;
 
-  world.lanes.push(newLane);
   world.laneMap.set(id, newLane);
 }
 
 export function buildNeighborMap(world: World) {
   const map = new Map<string, Array<string>>();
 
-  world.lanes.forEach((lane) => {
+  world.laneMap.forEach((lane) => {
     if (!map.has(lane.fromId)) {
       map.set(lane.fromId, []);
     }
@@ -77,7 +73,8 @@ export function findClosestSystem(
   world: World,
   loc: Coordinates
 ): System | null {
-  return findClosestSystemInList(loc, world.systems);
+  // TODO: Optomize with loop here instead of creating array each time
+  return findClosestSystemInList(loc, Array.from(world.systemMap.values()));
 }
 
 export function findClosestSystemInList(

@@ -284,7 +284,7 @@ function drawSystems({ S, C, P }: FnContext) {
   const currentScale = geoProjection.scale();
   const reducedSize = currentScale / initialScale < 1;
 
-  let visibleSystems = S.world.systems;
+  let visibleSystems = Array.from(S.world.systemMap.values());
 
   if (C.config.fow) {
     visibleSystems = visibleSystems.filter((system) =>
@@ -371,12 +371,13 @@ function drawSystems({ S, C, P }: FnContext) {
 // Memoized features for regions
 const getFeatures = (() => {
   let features: d3.ExtendedFeature[] = [];
-  let systems: System[] = [];
+  let systems: Map<string, System>;
 
   return (state: GameState) => {
-    if (!features || systems !== state.world.systems) {
-      systems = state.world.systems;
-      features = mesh.polygons(systems).features;
+    if (!features || systems !== state.world.systemMap) {
+      systems = state.world.systemMap;
+      const systemArray = Array.from(systems.values());
+      features = mesh.polygons(systemArray).features;
     }
     return features!;
   };
@@ -425,7 +426,7 @@ function drawRegions({ S, C, P }: FnContext) {
 }
 
 function drawLanes({ S, C, P }: FnContext) {
-  let visibleLanes = S.world.lanes;
+  let visibleLanes = Array.from(S.world.laneMap.values());
 
   if (C.config.fow) {
     visibleLanes = visibleLanes.filter(

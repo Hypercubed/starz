@@ -10,7 +10,7 @@ export interface GameEventMap {
   STATE_UPDATED: { state: GameState; status: GameStatus };
 
   // Player Events
-  PLAYER_ELIMINATED: { playerId: string; winnerId: string | null };
+  PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };
   PLAYER_WIN: { playerId: string, message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };
 
@@ -28,7 +28,6 @@ export interface GameConfig {
 
 export interface GameState {
   world: World;
-  players: Player[];
   playerMap: Map<string, Player>;
   messages: Messages[];
 }
@@ -48,8 +47,6 @@ export interface GameEvents {
 }
 
 export interface World {
-  systems: Array<System>;
-  lanes: Array<Lane>;
   systemMap: Map<string, System>;
   laneMap: Map<string, Lane>;
   neighborMap: Map<string, Array<string>>;

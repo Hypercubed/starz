@@ -18,22 +18,24 @@ export function defaultConfig(): GameConfig {
 export function initalState(): GameState {
   return {
     world: createWorld(),
-    players: [] as Player[],
     playerMap: new Map<string, Player>(),
     messages: [] as Messages[] // TODO: Move out of state, make a UI thing
   };
 }
 
 export function addPlayer(state: GameState, player: Player) {
-  state.players.push(player);
   state.playerMap.set(player.id, player);
-  return state;
 }
 
 export function getPlayersHomeworld(state: GameState) {
   const { C } = globalThis.gameManager!.getContext();
   if (!C.playerId) return null;
-  return state.world.systems.find((system) => system.homeworld === C.playerId);
+
+  for (const system of state.world.systemMap.values()) {
+    if (system.homeworld === C.playerId) return system;
+  }
+
+  return null;
 }
 
 export function revealSystem(state: GameState, system: System) {
@@ -54,7 +56,7 @@ export function revealSystem(state: GameState, system: System) {
 }
 
 export function revealAllSystems(state: GameState) {
-  state.world.systems.forEach((system) => revealSystem(state, system));
+  state.world.systemMap.forEach((system) => revealSystem(state, system));
 }
 
 export function queueMove(

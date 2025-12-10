@@ -56,7 +56,7 @@ function takeSystem(ctx: FnContext, playerId: string, system: System) {
   if (playerId === ctx.C.playerId) revealSystem(ctx.S, system);
 
   if (system.homeworld && system.homeworld !== playerId) {
-    eliminatePlayer(ctx, playerId, system.homeworld);
+    eliminatePlayer(ctx, system.homeworld, playerId);
   }
 }
 
@@ -66,7 +66,7 @@ export function eliminatePlayer(
   winnerId: string | null = null
 ) {
   // Take over homeworld, other systems and 50% of ships
-  S.world.systems.forEach((s) => {
+  S.world.systemMap.forEach((s) => {
     if (s.ownerId === loserId) {
       s.ownerId = winnerId;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
@@ -84,8 +84,8 @@ export function eliminatePlayer(
   loser.isAlive = false;
 
   E.emit('PLAYER_ELIMINATED', {
-    playerId: C.playerId,
-    winnerId: winnerId
+    loserId,
+    winnerId
   });
 }
 
@@ -94,18 +94,13 @@ function setMovement(world: World, from: System, to: System, ships: number) {
   to.movement = [to.movement[0] + ships, to.movement[1]];
 
   // Find lane and update its movement
-  const laneFwd = world.lanes.find(
-    (l) => l.fromId === from.id && l.toId === to.id
-  );
-  if (laneFwd) {
-    laneFwd.movement = [laneFwd.movement[0] + ships, laneFwd.movement[1]];
-  }
-  const laneBak = world.lanes.find(
-    (l) => l.fromId === to.id && l.toId === from.id
-  );
-  if (laneBak) {
-    laneBak.movement = [laneBak.movement[0], laneBak.movement[1] + ships];
-  }
+  world.laneMap.forEach((lane) => {
+    if (lane.fromId === from.id && lane.toId === to.id) {
+      lane.movement = [lane.movement[0] + ships, lane.movement[1]];
+    } else if (lane.fromId === to.id && lane.toId === from.id) {
+      lane.movement = [lane.movement[0], lane.movement[1] + ships];
+    }
+  });
 }
 
 function transferShips(
@@ -123,7 +118,7 @@ function transferShips(
 }
 
 export function doQueuedMoves(ctx: FnContext) {
-  ctx.S.world.systems.forEach((system) => {
+  ctx.S.world.systemMap.forEach((system) => {
     system.lastMove = null;
     while (system.moveQueue.length > 0) {
       const move = system.moveQueue.shift();

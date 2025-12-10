@@ -57,10 +57,12 @@ export function generateMap({ S, C }: FnContext) {
     addSystem(S.world, thisSystem);
   }
 
+  const systems = Array.from(S.world.systemMap.values());
+
   // Now in reverse
-  const s = [S.world.systems[S.world.systems.length - 1]];
-  for (let i = S.world.systems.length - 2; i >= 0; i--) {
-    const system = S.world.systems[i];
+  const s = [systems[systems.length - 1]];
+  for (let i = systems.length - 2; i >= 0; i--) {
+    const system = systems[i];
 
     // Add a lane to the closest system that is not itself
     const closestSystem = findClosestSystemInList(system.location, s);
@@ -73,10 +75,10 @@ export function generateMap({ S, C }: FnContext) {
   buildNeighborMap(S.world);
 
   debugLog(
-    `Generated ${S.world.systems.length} systems and ${S.world.lanes.length} lanes.`
+    `Generated ${S.world.systemMap.size} systems and ${S.world.laneMap.size} lanes.`
   );
 
-  const unoccupied = S.world.systems.slice(0); // Copy all systems
+  const unoccupied = [...systems]; // Copy all systems
   const occupied = [] as System[];
 
   // Setup inhabited systems (neutral + potential homeworlds)
@@ -109,7 +111,8 @@ export function generateMap({ S, C }: FnContext) {
 }
 
 export function assignSystem(state: GameState, playerId: string) {
-  const systems = state.world.systems.filter(
+  // TODO: Optimize
+  const systems = Array.from(state.world.systemMap.values()).filter(
     (system) => !system.ownerId && system.type === 'INHABITED'
   );
   if (systems.length === 0) {

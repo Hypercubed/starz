@@ -13,8 +13,9 @@ import type { GameState } from './types.ts';
 import type { FnContext } from '../managers/types.d.ts';
 
 export function updateStats(state: GameState) {
-  state.players.forEach((player) => {
-    const systems = state.world.systems.filter(
+  state.playerMap.forEach((player) => {
+    // TODO: Optimize
+    const systems = Array.from(state.world.systemMap.values()).filter(
       (system) => system.ownerId === player.id
     );
     const homeworld = systems.find((system) => system.homeworld === player.id);
@@ -29,7 +30,7 @@ export function updateStats(state: GameState) {
 }
 
 export function turnUpdate(state: GameState) {
-  state.world.systems.forEach((system) => {
+  state.world.systemMap.forEach((system) => {
     if (system.type === 'INHABITED' && system.ownerId != null) {
       if (system.ownerId || system.ships < MAX_SHIPS_PER_SYSTEM) {
         system.ships = (system.ships ?? 0) + SHIPS_PER_TURN;
@@ -39,7 +40,7 @@ export function turnUpdate(state: GameState) {
 }
 
 export function roundUpdate(state: GameState) {
-  state.world.systems.forEach((system) => {
+  state.world.systemMap.forEach((system) => {
     if (system.ownerId != null) {
       system.ships = (system.ships ?? 0) + SHIPS_PER_ROUND;
     }
@@ -49,9 +50,9 @@ export function roundUpdate(state: GameState) {
 export function checkVictory({ S, C, E, P }: FnContext) {
   if (C.status !== 'PLAYING') return;
 
-  if (S.players.length > 1) {
+  if (S.playerMap.size > 1) {
     // Check for conquest victory
-    const homeworlds = S.world.systems.filter(
+    const homeworlds = Array.from(S.world.systemMap.values()).filter( // TODO: Optimize
       (system) => system.homeworld && system.ownerId === system.homeworld
     );
 
@@ -67,7 +68,7 @@ export function checkVictory({ S, C, E, P }: FnContext) {
     }
   } else {
     // Check for domination victory
-    const systems = S.world.systems.filter(
+    const systems = Array.from(S.world.systemMap.values()).filter( // TODO: Optimize
       (system) => system.ownerId !== C.playerId
     );
 
@@ -87,13 +88,8 @@ export function gameTick(ctx: FnContext) {
   if (C.tick % TICKS_PER_TURN === 0) turnUpdate(S);
   if (C.tick % TICKS_PER_ROUND === 0) roundUpdate(S);
 
-  for (const s of S.world.systems) {
-    s.movement = [0, 0];
-  }
-
-  for (const l of S.world.lanes) {
-    l.movement = [0, 0];
-  }
+  for (const s of S.world.systemMap.values()) s.movement = [0, 0];
+  for (const l of S.world.laneMap.values()) l.movement = [0, 0];
 
   botQueue(ctx);
   doQueuedMoves(ctx);

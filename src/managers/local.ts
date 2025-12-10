@@ -30,11 +30,12 @@ export class LocalGameManager extends GameManager {
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
 
     for (let i = 1; i <= totalPlayers; i++) {
-      this.onPlayerJoin(i);
-      this.game.assignSystem(this.state, this.state.players[i - 1].id);
+      const player = this.onPlayerJoin(i)!;
+      if (i === 1) this.playerId = player.id;
+      this.game.assignSystem(this.state, player.id);
     }
 
-    const thisPlayer = this.state.players[0];
+    const thisPlayer = this.state.playerMap.get(this.playerId)!;
 
     const name = NumHumanPlayers > 0 ? this.config.playerName : '1';
     this.setupThisPlayer(thisPlayer.id, name);
@@ -70,7 +71,7 @@ export class LocalGameManager extends GameManager {
     const id = createId();
     const bot: Bot | undefined =
       playerIndex > NumHumanPlayers ? new Bot({ playerIndex, id }) : undefined;
-    this.addPlayer(name, id, bot, color);
+    return this.addPlayer(name, id, bot, color);
   }
 
   protected pauseToggle() {
@@ -157,8 +158,8 @@ export class LocalGameManager extends GameManager {
       this.onPlayerWin(playerId, message);
     });
 
-    this.events.on('PLAYER_ELIMINATED', ({ playerId, winnerId }) => {
-      this.onEliminatePlayer(playerId, winnerId);
+    this.events.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
+      this.onEliminatePlayer(loserId, winnerId);
     });
   }
 }

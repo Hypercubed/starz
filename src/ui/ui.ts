@@ -31,7 +31,8 @@ export function updateLeaderbox() {
       return table;
     });
 
-  const stats = state.players.sort(
+  const players = Array.from(state.playerMap.values()); // TODO: optimize?
+  const stats = players.sort(
     (a, b) => b.stats.systems - a.stats.systems || b.stats.ships - a.stats.ships
   );
 

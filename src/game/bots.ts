@@ -29,41 +29,42 @@ export const PERSONALITIES = {
     expansion: 1.0,
     defensiveness: 0.5,
     riskTolerance: 0.4,
-    speed: (((((BASE_SPEED * 250) / 251) * 25) / 26) * 25) / 23
+    speed: BASE_SPEED
   }, // 2, Yellow
   rusher: {
     aggression: 1.0,
     expansion: 0.4,
     defensiveness: 0.1,
     riskTolerance: 0.7,
-    speed: (((((BASE_SPEED * 250) / 233) * 25) / 21) * 25) / 16
+    speed: BASE_SPEED
   }, // 3, Purple
   turtle: {
     aggression: 0.1,
     expansion: 0.3,
     defensiveness: 0.95,
     riskTolerance: 0.2,
-    speed: (((((BASE_SPEED * 250) / 258) * 25) / 33) * 25) / 27
+    speed: BASE_SPEED
   }, // 4, Green
   balanced: {
     aggression: 0.5,
     expansion: 0.5,
     defensiveness: 0.5,
     riskTolerance: 0.5,
-    speed: (((((BASE_SPEED * 250) / 257) * 25) / 20) * 25) / 34
+    speed: BASE_SPEED
   } // 5, Orange
 } as const satisfies Record<string, BotPersonality>;
 
 export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
 export function botQueue({ S }: FnContext) {
-  S.players.forEach((p) => p.bot?.makeMoves());
+  S.playerMap.forEach((p) => p.bot?.makeMoves());
 }
 
 export interface BotOptions {
-  id?: string;
-  playerIndex?: number;
-  personality?: BotPersonalities;
+  id: string;
+  playerIndex: number;
+  personality: BotPersonalities;
+  name: string;
 }
 
 let botId = 0;
@@ -79,7 +80,7 @@ export class Bot implements BotInterface {
   frontline = new Set<string>();
   backline = new Set<string>();
 
-  constructor(botParams: BotOptions = {}) {
+  constructor(botParams: Partial<BotOptions> = {}) {
     const index = botParams.playerIndex ?? botId++;
     this.id = botParams.id ?? `${index}`;
 
@@ -90,7 +91,7 @@ export class Bot implements BotInterface {
       personality = keys[index % keys.length] as BotPersonalities;
     }
 
-    this.name = personality;
+    this.name = botParams.name ?? personality;
     this.personality =
       personality === 'idle'
         ? PERSONALITIES.balanced
@@ -102,9 +103,8 @@ export class Bot implements BotInterface {
 
     const state = gameManager.getState();
 
-    this.botSystems = state.world.systems.filter(
-      (system) => system.ownerId === this.id
-    );
+    const systems = Array.from(state.world.systemMap.values());
+    this.botSystems = systems.filter((system) => system.ownerId === this.id);
     if (this.botSystems.length === 0) return;
 
     this.botSystems.forEach((system) => {
