@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-import type { Messages } from "../types";
+import type { Messages } from '../types';
 
 let messageIdCounter = 0;
 const messages: Messages[] = [];
@@ -20,11 +20,13 @@ export function addMessage(message: string) {
     tick: C.tick,
     html
   });
+
+  console.log(`MESSAGE: ${html}`);
+
+  updateMessageBox();
 }
 
 export function updateMessageBox() {
-  const state = globalThis.gameManager.getState();
-
   const box = d3
     .select('#app')
     .selectAll('#messagebox')
@@ -33,7 +35,7 @@ export function updateMessageBox() {
 
   box
     .selectAll('div')
-    .data(state.messages.slice(-5), (d: any) => d.id)
+    .data(messages.slice(-5), (d: any) => d.id)
     .join('div')
     .html((d) => d.html);
 }

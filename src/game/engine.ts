@@ -52,7 +52,8 @@ export function checkVictory({ S, C, E, P }: FnContext) {
 
   if (S.playerMap.size > 1) {
     // Check for conquest victory
-    const homeworlds = Array.from(S.world.systemMap.values()).filter( // TODO: Optimize
+    const homeworlds = Array.from(S.world.systemMap.values()).filter(
+      // TODO: Optimize
       (system) => system.homeworld && system.ownerId === system.homeworld
     );
 
@@ -61,21 +62,22 @@ export function checkVictory({ S, C, E, P }: FnContext) {
       const winner = S.playerMap.get(winnerId)!;
 
       E.emit('PLAYER_WIN', {
-        playerId: C.playerId,
-        message: `Player ${winner.name} has conquered The Bubble!`
+        playerId: winnerId,
+        message: `${winner.name} has conquered The Bubble!`
       });
       E.emit('GAME_STOP', undefined);
     }
   } else {
     // Check for domination victory
-    const systems = Array.from(S.world.systemMap.values()).filter( // TODO: Optimize
+    const systems = Array.from(S.world.systemMap.values()).filter(
+      // TODO: Optimize
       (system) => system.ownerId !== C.playerId
     );
 
     if (systems.length === 0) {
       E.emit('PLAYER_WIN', {
         playerId: C.playerId,
-        message: `Player ${P.name} has conquered The Bubble!`
+        message: `${P.name} has conquered The Bubble!`
       });
       E.emit('GAME_STOP', undefined);
     }

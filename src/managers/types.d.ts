@@ -18,6 +18,6 @@ export interface FnContext {
 }
 
 export interface WorldJSON {
-  systems: Array<System>;
-  lanes: Array<Lane>;
+  systems: Array<[string, System]>;
+  lanes: Array<[string, Lane]>;
 }

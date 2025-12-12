@@ -99,28 +99,3 @@ export function findClosestSystemInList(
 
   return closestSystem;
 }
-
-export function worldFromJson(json: any): World {
-  const world = createWorld();
-
-  json.systems.forEach((sysJson: any) => {
-    const system = {
-      ...sysJson,
-      moveQueue: [],
-      lastMove: null
-    } satisfies System;
-    addSystem(world, system);
-  });
-
-  json.lanes.forEach((laneJson: any) => {
-    addLane(
-      world,
-      world.systemMap.get(laneJson.fromId)!,
-      world.systemMap.get(laneJson.toId)!
-    );
-  });
-
-  buildNeighborMap(world);
-
-  return world;
-}

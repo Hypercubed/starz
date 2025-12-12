@@ -11,9 +11,7 @@ export function updateInfoBox() {
       enter.append('div').attr('id', 'infobox').html('Turn: <span>0</span>')
     );
 
-  div
-    .select('span')
-    .text(`${~~(C.tick / 2)}${C.tick % 2 === 1 ? '.' : ''}`);
+  div.select('span').text(`${~~(C.tick / 2)}${C.tick % 2 === 1 ? '.' : ''}`);
 }
 
 export function updateLeaderbox() {
@@ -84,6 +82,8 @@ async function openOptions() {
     const form = document.getElementById('optionsForm') as HTMLFormElement;
     const formData = new FormData(form);
 
+    console.log(Array.from(formData.values()));
+
     const gameManager = globalThis.gameManager;
 
     const numBots = +formData.get('numBots')!;
@@ -95,7 +95,7 @@ async function openOptions() {
       numBots,
       playerName,
       fow,
-      numSystems
+      numSystems: 48 * 2 ** numSystems
     });
   }
 }

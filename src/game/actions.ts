@@ -1,9 +1,10 @@
+import { debugLog } from '../utils/logging.ts';
+
 import { revealSystem } from './state.ts';
 import { hasLane } from './world.ts';
 
 import type { Move, Order, System, GameState, World } from './types.d.ts';
 import type { FnContext } from '../managers/types';
-import { debugLog } from '../utils/logging.ts';
 
 export function moveShips(
   ctx: FnContext,
@@ -123,7 +124,7 @@ export function doQueuedMoves(ctx: FnContext) {
     while (system.moveQueue.length > 0) {
       const move = system.moveQueue.shift();
       if (move) {
-        makeMove(ctx, move)
+        makeMove(ctx, move);
       }
     }
   });
@@ -137,6 +138,8 @@ function makeMove(ctx: FnContext, move: Move) {
   const to = ctx.S.world.systemMap.get(move.toId)!;
   moveShips(ctx, from, to, move.ships);
   from.lastMove = move;
+
+  ctx.E.emit('MAKE_MOVE', move);
 }
 
 export function takeOrder(ctx: FnContext, order: Order) {

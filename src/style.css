@@ -1,11 +1,12 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 400; */
 
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: black;
+  --pico-form-element-spacing-vertical: 0.05rem;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -16,7 +17,7 @@
   --inhabited: #808080;
 }
 
-html,
+/* html,
 body {
   height: 100%;
   width: 100%;
@@ -33,7 +34,7 @@ button {
   color: inherit;
   padding: 5px 10px;
   cursor: pointer;
-}
+} */
 
 #app {
   height: 100vh;
@@ -53,6 +54,7 @@ button {
 
 #leaderbox {
   position: absolute;
+  width: 300px;
   top: 10px;
   right: 10px;
   z-index: 10;
@@ -286,6 +288,20 @@ svg {
   display: none;
 }
 
+#startDialog article {
+  text-align: center;
+}
+
+#helpDialog article {
+  font-size: smaller;
+  text-align: center;
+
+  ul, li {
+    list-style-type: none;
+    padding: 0;
+  }
+}
+
 #helpButton {
   position: absolute;
   bottom: 20px;
@@ -300,42 +316,38 @@ svg {
   cursor: pointer;
 }
 
-dialog {
-  z-index: 100;
-  margin: 10vh auto;
-  width: 70vw;
-  max-height: 80vh;
-  overflow-y: auto;
-  text-align: center;
-
-  ul {
-    list-style-type: none;
-  }
-}
-
 #optionsDialog {
   margin: 9vh auto;
   width: 71vw;
   height: 80vh;
+  text-align: center;
+  align-items: flex-start;
 
   label {
-    display: block;
-    margin: 10px 0 5px 0;
+    margin-top: 25px;
   }
 
-  input {
-    width: 160px;
-    margin: 0 10px 20px 10px;
-    height: 25px;
+  [type=range]:has(+ datalist) {
+    margin-bottom: 0;
+  }
+
+  datalist {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    writing-mode: vertical-lr;
+    width: 100%;
+
+    option {
+      transform: rotate(-45deg);
+      padding: 0;
+      margin: 0;
+    }
   }
 }
 
-datalist {
-  display: flex;
+#endDialog {
   flex-direction: column;
-  justify-content: space-between;
-  writing-mode: vertical-lr;
-  width: 200px;
 }
 
 @keyframes drawPath {

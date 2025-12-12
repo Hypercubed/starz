@@ -1,5 +1,5 @@
 import type { GameStatus } from '../managers/types.d.ts';
-import type { Messages, Move, Order, Player } from '../types.d.ts';
+import type { Move, Order, Player } from '../types.d.ts';
 
 export interface GameEventMap {
   GAME_INIT: undefined;
@@ -11,11 +11,12 @@ export interface GameEventMap {
 
   // Player Events
   PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };
-  PLAYER_WIN: { playerId: string, message: string };
+  PLAYER_WIN: { playerId: string; message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };
 
   // Actions
   TAKE_ORDER: Order;
+  MAKE_MOVE: Move;
 }
 
 export interface GameConfig {
@@ -29,21 +30,6 @@ export interface GameConfig {
 export interface GameState {
   world: World;
   playerMap: Map<string, Player>;
-  messages: Messages[];
-}
-
-export interface GameEvents {
-  eliminatePlayer: (loserId: string, winnerId: string | null) => void;
-  makeMove: (move: Move) => void;
-  takeOrder: (order: Order) => void;
-  // playerLose: (winner: string | null) => void;
-  // playerWin: () => void;
-  // stopGame: () => void;
-  // onSystemClick: (event: PointerEvent, system: System) => void;
-  // onLaneClick: (event: PointerEvent, lane: Lane) => void;
-  // quit: () => Promise<boolean>;
-  // startGame: () => void;
-  // gameTick: () => void;
 }
 
 export interface World {

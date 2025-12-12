@@ -5,6 +5,7 @@ import {
   onClickSystem,
   setupKeboardControls
 } from './controls.ts';
+import { addMessage, clearMessages, updateMessageBox } from './messages.ts';
 import {
   drawMap,
   rerender as _rerender,
@@ -22,7 +23,6 @@ import {
   showEndGame,
   setupDialogs
 } from './ui.ts';
-import { addMessage, updateMessageBox } from './messages.ts';
 
 export const rerender = debounce(_rerender, 16);
 
@@ -58,5 +58,6 @@ export {
   onClickLane,
   onClickSystem,
   setupKeboardControls,
-  addMessage
+  addMessage,
+  clearMessages
 };

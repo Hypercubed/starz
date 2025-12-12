@@ -26,6 +26,7 @@ export class LocalGameManager extends GameManager {
 
     const ctx = this.getContext();
     this.state = this.game.setup(ctx);
+    renderer.clearMessages();
 
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
 
@@ -66,11 +67,13 @@ export class LocalGameManager extends GameManager {
 
   private onPlayerJoin(playerIndex: number) {
     const color = COLORS[playerIndex];
-    const name = /* bot?.name ?? */ `${playerIndex}`;
+    const name = /* bot?.name ?? */ `Bot ${playerIndex}`;
 
     const id = createId();
     const bot: Bot | undefined =
-      playerIndex > NumHumanPlayers ? new Bot({ playerIndex, id }) : undefined;
+      playerIndex > NumHumanPlayers
+        ? new Bot({ playerIndex, id, name })
+        : undefined;
     return this.addPlayer(name, id, bot, color);
   }
 
@@ -85,6 +88,7 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPlayerWin(winnerId: string, message?: string) {
+    console.log('onPlayerWin', { winnerId, message }, this.playerId);
     if (message) {
       renderer.addMessage(message);
     }
@@ -107,13 +111,17 @@ export class LocalGameManager extends GameManager {
 
     const message =
       winnerId === null
-        ? `Player ${loser.name} has been eliminated!`
-        : `Player ${winner!.name} has eliminated Player ${loser.name}!`;
+        ? `${loser.name} has been eliminated!`
+        : `${winner!.name} has eliminated ${loser.name}!`;
 
     renderer.addMessage(message);
 
     if (winnerId === this.playerId) {
       return this.onPlayerWin(winnerId);
+    }
+
+    if (loserId === this.playerId) {
+      this.onPlayerWin(winnerId!);
     }
   }
 
@@ -154,7 +162,7 @@ export class LocalGameManager extends GameManager {
     renderer.setupDialogs();
     renderer.setupKeboardControls();
 
-    this.events.on('PLAYER_WIN', ({ playerId, message}) => {
+    this.events.on('PLAYER_WIN', ({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
