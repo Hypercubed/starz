@@ -187,7 +187,7 @@ export class BGIOGameManager extends GameManager {
       player.name = name;
     }
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
-    this.game.revealSystem(this.state, homeworld);
+    this.game.visitSystem(this.state, homeworld);
     renderer.centerOnHome();
     clearSelection();
     select(homeworld.id);

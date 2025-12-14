@@ -1,286 +1,132 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import { doQueuedMoves } from '../src/game/actions';
-import { state, resetState, revealSystem, queueMove } from '../src/game/state';
-import { orderBalancedMove, orderMassMove } from '../src/input/controls';
+import type { GameManager } from '../src/managers/manager';
 
-import { createMockSystem, createMockLane } from './setup';
-
-// Mock the render module
-vi.mock('../src/render/render', () => ({
-  rerender: vi.fn()
-}));
+import { createMockManager } from './setup';
 
 // Mock the logging module
 vi.mock('../src/utils/logging', () => ({
-  trackEvent: vi.fn()
-}));
-
-// Mock the controls module
-vi.mock('../src/input/controls', () => ({
-  removeSystemSelect: vi.fn()
+  trackEvent: vi.fn(),
+  debugLog: vi.fn()
 }));
 
 describe('actions', () => {
+  let manager: GameManager;
+  let game: typeof import('../src/game/index');
+
   beforeEach(() => {
-    resetState();
+    manager = createMockManager();
+    game = manager['game'];
   });
 
-  describe.skip('revealSystem', () => {
+  describe('visitSystem', () => {
     it('should mark system as revealed and visited', () => {
-      const system = createMockSystem({});
+      const { S, P } = manager.getContext();
+      const system = S.world.systemMap.values().next().value;
 
-      revealSystem(system);
+      game.visitSystem(S, system!);
 
-      expect(system.isRevealed).toBe(true);
-      expect(system.isVisited).toBe(true);
+      expect(P.visitedSystems.has(system!.id)).toBe(true);
+      expect(P.revealedSystems.has(system!.id)).toBe(true);
     });
   });
 
-  describe.skip('queueMove', () => {
+  describe('queueMove', () => {
     it("should add a move to the system's move queue", () => {
-      const fromSystem = createMockSystem({ id: '1', ownerId: `1`, ships: 10 });
-      const toSystem = createMockSystem({ id: '2', ownerId: `2`, ships: 5 });
+      const { S, P } = manager.getContext();
 
-      queueMove(fromSystem, toSystem, 5);
+      const systems = S.world.systemMap.values();
+      const fromSystem = systems.next().value!;
+      const toSystem = systems.next().value!;
+
+      game.queueMove(fromSystem, toSystem, 5, P.id);
 
       expect(fromSystem.moveQueue).toHaveLength(1);
       expect(fromSystem.moveQueue[0]).toEqual({
+        playerId: '1',
         ships: 5,
-        to: toSystem,
-        message: undefined
+        toId: toSystem.id,
+        fromId: fromSystem.id
       });
-    });
+    });``
 
     it('should support optional message parameter', () => {
-      const fromSystem = createMockSystem({ id: '1', ownerId: `1`, ships: 10 });
-      const toSystem = createMockSystem({ id: '2', ownerId: `2`, ships: 5 });
+      const { S, P } = manager.getContext();
 
-      queueMove(fromSystem, toSystem, 5, 'Attack!');
+      const systems = S.world.systemMap.values();
+      const fromSystem = systems.next().value!;
+      const toSystem = systems.next().value!;
+
+      game.queueMove(fromSystem, toSystem, 5, P.id, 'Attack!');
 
       expect(fromSystem.moveQueue[0].message).toBe('Attack!');
     });
 
     it('should allow multiple queued moves', () => {
-      const fromSystem = createMockSystem({ id: `1`, ownerId: `1`, ships: 20 });
-      const toSystem1 = createMockSystem({ id: `2` });
-      const toSystem2 = createMockSystem({ id: `3` });
+      const { S, P } = manager.getContext();
 
-      queueMove(fromSystem, toSystem1, 5, `1`);
-      queueMove(fromSystem, toSystem2, 3, `2`);
+      const systems = S.world.systemMap.values();
+      const fromSystem = systems.next().value!;
+      const toSystem1 = systems.next().value!;
+      const toSystem2 = systems.next().value!;
+
+      game.queueMove(fromSystem, toSystem1, 5, P.id);
+      game.queueMove(fromSystem, toSystem2, 3, P.id);
 
       expect(fromSystem.moveQueue).toHaveLength(2);
     });
   });
 
-  describe.skip('doQueuedMoves', () => {
+  describe('doQueuedMoves', () => {
     it('should process the first queued move for each system', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 5
-      });
+      const { S, P } = manager.getContext();
 
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
+      const from = S.world.systemMap.get('1')!;
+      const to = S.world.systemMap.get('2')!;
 
-      queueMove(system1, system2, 3, `1`);
-      state.world.systems = [system1, system2];
+      // Ensure systems have ships
+      from.ships = 10;
+      to.ships = 5;
 
-      doQueuedMoves();
+      game.queueMove(from, to, 3, P.id);
+      game.doQueuedMoves(manager.getContext());
 
-      expect(system1.ships).toBe(7); // 10 - 3
-      expect(system2.ships).toBe(8); // 5 + 3
+      expect(from.ships).toBe(7); // 10 - 3
+      expect(to.ships).toBe(8); // 5 + 3
     });
 
     it('should set lastMove on the system', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 5
-      });
+      const { S, P } = manager.getContext();
 
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
+      const from = S.world.systemMap.get('1')!;
+      const to = S.world.systemMap.get('2')!;
 
-      queueMove(system1, system2, 3, 'Moving ships');
-      state.world.systems = [system1, system2];
+      game.queueMove(from, to, 3, P.id, 'Moving ships');
+      game.doQueuedMoves(manager.getContext());
 
-      doQueuedMoves();
-
-      expect(system1.lastMove).toBeDefined();
-      expect(system1.lastMove?.ships).toBe(3);
-      expect(system1.lastMove?.toId).toBe(`2`);
+      expect(from.lastMove).toBeDefined();
+      expect(from.lastMove?.ships).toBe(3);
+      expect(from.lastMove?.toId).toBe(`2`);
     });
 
-    it('should only process one move per system per call', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 20
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 5
-      });
+    it('should process all moves per system per call', () => {
+      const { S, P } = manager.getContext();
 
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
+      const from = S.world.systemMap.get('1')!;
+      const to = S.world.systemMap.get('2')!;
 
-      queueMove(system1, system2, 3, `1`);
-      queueMove(system1, system2, 5, `2`);
-      state.world.systems = [system1, system2];
+      // Ensure systems have ships
+      from.ships = 20;
+      to.ships = 0;
 
-      doQueuedMoves();
+      game.queueMove(from, to, 3, P.id);
+      game.queueMove(from, to, 5, P.id);
 
-      expect(system1.moveQueue).toHaveLength(1); // One move still queued
-      expect(system1.ships).toBe(17); // 20 - 3, only first move processed
-    });
-  });
+      game.doQueuedMoves(manager.getContext());
 
-  describe.skip('orderBalancedMove', () => {
-    it('should balance ships between friendly systems', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `1`,
-        ships: 4
-      });
-
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
-
-      orderBalancedMove(system1, system2);
-
-      // Delta is (10 - 4) / 2 = 3
-      expect(system1.ships).toBe(7); // 10 - 3
-      expect(system2.ships).toBe(7); // 4 + 3
-    });
-
-    it('should send half ships when attacking enemy system', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 3
-      });
-
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
-
-      orderBalancedMove(system1, system2);
-
-      // Delta is floor(10 / 2) = 5
-      // Attack: 5 > 3, so system2 gets 2 ships (5 - 3) and changes owner
-      expect(system1.ships).toBe(5); // 10 - 5
-      expect(system2.ships).toBe(2); // 5 - 3
-      expect(system2.ownerId).toBe(`1`);
-    });
-
-    it('should do nothing if no lane exists', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 4
-      });
-
-      state.world.lanes = []; // No lanes
-
-      orderBalancedMove(system1, system2);
-
-      expect(system1.ships).toBe(10); // Unchanged
-      expect(system2.ships).toBe(4); // Unchanged
-    });
-  });
-
-  describe.skip('orderMassMove', () => {
-    it('should move all but one ship', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `1`,
-        ships: 5
-      });
-
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
-
-      orderMassMove(system1, system2);
-
-      expect(system1.ships).toBe(1); // Leave 1 ship
-      expect(system2.ships).toBe(14); // 5 + 9
-    });
-
-    it('should attack with all available ships minus one', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `2`,
-        ships: 5
-      });
-
-      const lane = createMockLane(system1, system2);
-      state.world.lanes = [lane];
-
-      orderMassMove(system1, system2);
-
-      // Sends 9 ships (10 - 1)
-      // Attack: 9 > 5, so system2 gets 4 ships (9 - 5) and changes owner
-      expect(system1.ships).toBe(1);
-      expect(system2.ships).toBe(4); // 9 - 5
-      expect(system2.ownerId).toBe(`1`);
-    });
-
-    it('should do nothing if no lane exists', () => {
-      const system1 = createMockSystem({
-        id: `1`,
-        ownerId: `1`,
-        ships: 10
-      });
-      const system2 = createMockSystem({
-        id: `2`,
-        ownerId: `1`,
-        ships: 5
-      });
-
-      state.world.lanes = [];
-
-      orderMassMove(system1, system2);
-
-      expect(system1.ships).toBe(10);
-      expect(system2.ships).toBe(5);
+      expect(from.moveQueue).toHaveLength(0); // All moves processed
+      expect(from.ships).toBe(12); // 20 - 3 - 5, all moves processed
+      expect(to.ships).toBe(8); // 0 + 3 + 5
     });
   });
 });

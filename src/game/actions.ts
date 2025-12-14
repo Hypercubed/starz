@@ -1,6 +1,6 @@
 import { debugLog } from '../utils/logging.ts';
 
-import { revealSystem } from './state.ts';
+import { visitSystem } from './state.ts';
 import { hasLane } from './world.ts';
 
 import type { Move, Order, System, GameState, World } from './types.d.ts';
@@ -54,7 +54,7 @@ function attackSystem(
 function takeSystem(ctx: FnContext, playerId: string, system: System) {
   system.ownerId = playerId;
   system.moveQueue = [];
-  if (playerId === ctx.C.playerId) revealSystem(ctx.S, system);
+  if (playerId === ctx.C.playerId) visitSystem(ctx.S, system);
 
   if (system.homeworld && system.homeworld !== playerId) {
     eliminatePlayer(ctx, system.homeworld, playerId);
@@ -66,20 +66,19 @@ export function eliminatePlayer(
   loserId: string,
   winnerId: string | null = null
 ) {
-  // Take over homeworld, other systems and 50% of ships
-  S.world.systemMap.forEach((s) => {
+  for (const s of S.world.systemMap.values()) {
     if (s.ownerId === loserId) {
       s.ownerId = winnerId;
       s.ships = Math.max(Math.floor((s.ships ?? 0) / 2), 1);
       s.homeworld = null; // No longer a homeworld
       s.moveQueue = [];
-      if (winnerId === C.playerId) revealSystem(S, s);
+      if (winnerId === C.playerId) visitSystem(S, s);
     }
 
     if (s.homeworld === loserId) {
       s.homeworld = null; // No longer a homeworld
     }
-  });
+  }
 
   const loser = S.playerMap.get(loserId)!;
   loser.isAlive = false;
@@ -95,13 +94,13 @@ function setMovement(world: World, from: System, to: System, ships: number) {
   to.movement = [to.movement[0] + ships, to.movement[1]];
 
   // Find lane and update its movement
-  world.laneMap.forEach((lane) => {
+  for (const lane of world.laneMap.values()) {
     if (lane.fromId === from.id && lane.toId === to.id) {
       lane.movement = [lane.movement[0] + ships, lane.movement[1]];
     } else if (lane.fromId === to.id && lane.toId === from.id) {
       lane.movement = [lane.movement[0], lane.movement[1] + ships];
     }
-  });
+  }
 }
 
 function transferShips(
@@ -115,11 +114,11 @@ function transferShips(
   to.ships += ships;
   setMovement(S.world, from, to, ships);
 
-  if (to.ownerId === C.playerId) revealSystem(S, to);
+  if (to.ownerId === C.playerId) visitSystem(S, to);
 }
 
 export function doQueuedMoves(ctx: FnContext) {
-  ctx.S.world.systemMap.forEach((system) => {
+  for (const system of ctx.S.world.systemMap.values()) {
     system.lastMove = null;
     while (system.moveQueue.length > 0) {
       const move = system.moveQueue.shift();
@@ -127,7 +126,7 @@ export function doQueuedMoves(ctx: FnContext) {
         makeMove(ctx, move);
       }
     }
-  });
+  }
 }
 
 function makeMove(ctx: FnContext, move: Move) {

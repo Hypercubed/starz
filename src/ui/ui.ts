@@ -1,5 +1,7 @@
 import * as d3 from 'd3';
 
+const formatSIInteger = d3.format('.3~s');
+
 export function updateInfoBox() {
   const { C } = globalThis.gameManager.getContext();
 
@@ -37,7 +39,7 @@ export function updateLeaderbox() {
   const row = table
     .select('tbody')
     .selectAll('tr')
-    .data(stats)
+    .data(stats, (d: any) => d.id)
     .join('tr')
     .style('--owner-color', (d) => {
       const player = state.playerMap.get(d.id);
@@ -48,7 +50,7 @@ export function updateLeaderbox() {
 
   row
     .selectAll('td')
-    .data((d) => [d.name, d.stats.systems, d.stats.ships])
+    .data((d) => [d.name, d.stats.systems, formatSIInteger(d.stats.ships)])
     .join('td')
     // eslint-disable-next-line no-irregular-whitespace
     .text((d) => ` ${d} `);
@@ -81,8 +83,6 @@ async function openOptions() {
   if (ret) {
     const form = document.getElementById('optionsForm') as HTMLFormElement;
     const formData = new FormData(form);
-
-    console.log(Array.from(formData.values()));
 
     const gameManager = globalThis.gameManager;
 

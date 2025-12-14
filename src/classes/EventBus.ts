@@ -26,13 +26,13 @@ export class EventBus<Events extends Record<string, any>> {
   ): void {
     const listeners = this.listeners[event];
     if (listeners) {
-      listeners.forEach((listener) => {
+      for (const listener of listeners) {
         try {
           listener(data as Events[K]);
         } catch (error) {
           console.error(`Error in listener for event ${String(event)}:`, error);
         }
-      });
+      }
     }
   }
 

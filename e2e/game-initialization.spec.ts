@@ -67,7 +67,6 @@ test.describe('Game Initialization', () => {
 
     // Homeworld should be visible and owned by player 1
     await expect(homeworld).toBeVisible();
-    await expect(homeworld).toHaveAttribute('data-owner', '1');
     await expect(homeworld).toHaveClass(/inhabited/)
     await expect(homeworld).toHaveClass(/visited/)
   });

@@ -31,7 +31,7 @@ export function addLane(world: World, from: System, to: System): void {
 export function buildNeighborMap(world: World) {
   const map = new Map<string, Array<string>>();
 
-  world.laneMap.forEach((lane) => {
+  for (const lane of world.laneMap.values()) {
     if (!map.has(lane.fromId)) {
       map.set(lane.fromId, []);
     }
@@ -41,11 +41,12 @@ export function buildNeighborMap(world: World) {
       map.set(lane.toId, []);
     }
     map.get(lane.toId)?.push(lane.fromId);
-  });
+  }
   world.neighborMap = map;
 }
 
 export function getAdjacentSystems(world: World, systemId: string): System[] {
+  //TODO: return Iterable<System>
   const system = world.systemMap.get(systemId);
   if (!system) return [];
 
@@ -79,7 +80,7 @@ export function findClosestSystem(
 
 export function findClosestSystemInList(
   loc: Coordinates,
-  systems: Array<System>
+  systems: Array<System> // TODO: Change to Iterable<System> for optimization
 ): System | null {
   if (systems.length === 0) return null;
 

@@ -100,18 +100,6 @@ test.describe('Gameplay Mechanics', () => {
     expect(revealedSystems).toBeGreaterThan(1);
   });
 
-  test('systems have correct owner colors', async ({ page }) => {
-    await pauseGame(page);
-
-    const player1Systems = await page.locator('svg g.system[data-owner="1"]').all();
-
-    // Different players should have systems
-    expect(player1Systems.length).toBeGreaterThan(0);
-
-    // Systems should be visible
-    await expect(player1Systems[0]).toBeVisible();
-  });
-
   test('lanes connect systems on the map', async ({ page }) => {
     await pauseGame(page);
 

@@ -21,8 +21,6 @@ export function addMessage(message: string) {
     html
   });
 
-  console.log(`MESSAGE: ${html}`);
-
   updateMessageBox();
 }
 
@@ -36,6 +34,5 @@ export function updateMessageBox() {
   box
     .selectAll('div')
     .data(messages.slice(-5), (d: any) => d.id)
-    .join('div')
-    .html((d) => d.html);
+    .join((enter) => enter.append('div').html((d) => d.html));
 }

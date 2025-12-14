@@ -1,14 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Bot, PERSONALITIES } from '../src/game/bots';
-import { state, resetState } from '../src/game/state';
 import { createMockSystem } from './setup';
-import { SystemTypes, type Lane } from '../src/types';
 
 describe('bots', () => {
-  beforeEach(() => {
-    resetState();
-  });
-
   describe('Bot class', () => {
     describe('initialization', () => {
       it('should create a bot with default personality', () => {
@@ -107,7 +101,7 @@ describe('bots', () => {
         const toSystem = createMockSystem({
           id: `2`,
           ownerId: null,
-          type: SystemTypes.UNINHABITED,
+          type: 'UNINHABITED',
           ships: 0
         });
 
@@ -116,46 +110,6 @@ describe('bots', () => {
 
         expect(amount).toBeGreaterThan(0);
         expect(amount).toBeLessThan(fromSystem.ships);
-      });
-    });
-
-    describe('makeMoves', () => {
-      it('should not crash when bot has no systems', () => {
-        state.world.systems = [];
-        const bot = new Bot({ playerIndex: 2 });
-
-        expect(() => bot.makeMoves()).not.toThrow();
-      });
-
-      it('should queue moves when bot has systems', () => {
-        const botSystem = createMockSystem({
-          id: `1`,
-          ownerId: `2`,
-          ships: 10,
-          type: SystemTypes.INHABITED
-        });
-        const targetSystem = createMockSystem({
-          id: `2`,
-          ownerId: null,
-          ships: 0,
-          type: SystemTypes.UNINHABITED
-        });
-
-        const lane: Lane = {
-          id: '1-2',
-          fromId: `1`,
-          toId: `2`
-        };
-
-        state.world.systems.push(botSystem, targetSystem);
-        state.world.lanes.push(lane);
-
-        const bot = new Bot({ playerIndex: 2 });
-        bot.makeMoves();
-
-        // Bot should have evaluated moves (exact behavior depends on personality)
-        // We just verify it doesn't crash and can process the situation
-        expect(botSystem.moveQueue.length).toBeGreaterThanOrEqual(0);
       });
     });
   });

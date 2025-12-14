@@ -18,6 +18,8 @@ const SYSTEM_SIZE = 20;
 
 const ENABLE_MESH = true;
 
+const formatSIInteger = d3.format('.3~s');
+
 const projections = {
   Orthographic: d3.geoOrthographic,
   Stereographic: d3.geoStereographic,
@@ -113,8 +115,8 @@ export function drawMap() {
   }
 
   function drag() {
-    let v0: number;
-    let q0: number;
+    let v0: [number, number, number];
+    let q0: [number, number, number, number];
     let r0: [number, number, number];
     let a0: number;
     let l: number;
@@ -141,14 +143,14 @@ export function drawMap() {
 
     function dragstarted({ x, y }: any) {
       const ep = transform([x, y]);
-      v0 = versor.cartesian(geoProjection.invert!(ep));
+      v0 = versor.cartesian(geoProjection.invert!(ep)!);
       r0 = geoProjection.rotate();
       q0 = versor(r0);
     }
 
     function dragged(this: any, event: any) {
       const ep = transform([event.x, event.y]);
-      const v1 = versor.cartesian(geoProjection.rotate(r0).invert!(ep));
+      const v1 = versor.cartesian(geoProjection.rotate(r0).invert!(ep)!);
       const delta = versor.delta(v0, v1);
       let q1 = versor.multiply(q0, delta);
 
@@ -269,7 +271,7 @@ export function centerOnCoordinates(coords: Coordinates) {
   rerender();
 }
 
-export function rerender() {
+function _rerender() {
   if (!svg) return;
 
   const ctx = globalThis.gameManager.getContext();
@@ -280,36 +282,39 @@ export function rerender() {
   drawLanes(ctx);
 }
 
+let requestID: number | null = null;
+export function rerender() {
+  cancelAnimationFrame(requestID!);
+  requestID = requestAnimationFrame(_rerender);
+}
+
 function drawSystems({ S, C, P }: FnContext) {
   const currentScale = geoProjection.scale();
   const reducedSize = currentScale / initialScale < 1;
 
-  let visibleSystems = Array.from(S.world.systemMap.values());
+  let systems = S.world.systemMap.values();
 
   if (C.config.fow) {
-    visibleSystems = visibleSystems.filter((system) =>
-      P.revealedSystems.has(system.id)
-    );
+    systems = P.revealedSystems
+      .values()
+      .map((id) => S.world.systemMap.get(id)!);
   }
 
-  // Filter out systems that are not currently visible in the projection
-  visibleSystems = visibleSystems.filter(
+  // Hide systems with no location in the current projection
+  systems = systems.filter(
     (d) => !!geoPathGenerator({ type: 'Point', coordinates: d.location })
   );
 
   const layer = svg
     .selectAll('g#systems')
-    .data([visibleSystems])
+    .data([null])
     .join((enter) => enter.append('g').attr('id', 'systems'))
     .classed('reduced-size', reducedSize)
     .classed('hidden', false);
 
   const group = layer
     .selectAll('.system')
-    .data(
-      (d) => d,
-      (d) => (d as System).id
-    )
+    .data(systems, (d) => (d as System).id)
     .join((enter) => {
       const g = enter
         .append('g')
@@ -348,6 +353,7 @@ function drawSystems({ S, C, P }: FnContext) {
 
   group
     .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null)
+    .classed('own', (d) => d.ownerId === C.playerId)
     .classed('selected', (d) => isSelected(d.id))
     .classed('moved', (d) => d.movement[0] > 0 || d.movement[1] > 0)
     .classed('inhabited', (d) => d.type === 'INHABITED')
@@ -364,7 +370,7 @@ function drawSystems({ S, C, P }: FnContext) {
   group.select('.ship-count').text((d) => {
     if (reducedSize) return '';
     const icon = d.type === 'INHABITED' ? '▴' : '';
-    return icon + (d.ships ? d.ships.toString() : '');
+    return icon + (d.ships ? formatSIInteger(d.ships) : '');
   });
 }
 
@@ -384,28 +390,30 @@ const getFeatures = (() => {
 })();
 
 function drawRegions({ S, C, P }: FnContext) {
+  const currentScale = geoProjection.scale();
+  const reducedSize = currentScale / initialScale < 1;
+
   let features = getFeatures(S);
 
   if (C.config.fow) {
     features = features.filter((feature) => {
       const system = feature.properties?.site as System;
-      return P.visitedSystems.has(system.id);
+      return P.revealedSystems.has(system.id);
     });
   }
 
   const g = svg
     .selectAll('g#mesh')
-    .data([features])
-    .join((enter) => enter.append('g').attr('id', 'mesh'));
+    .data([null])
+    .join((enter) => enter.append('g').attr('id', 'mesh'))
+    .classed('reduced-size', reducedSize)
+    .classed('hidden', false);
 
   const path = g
     .selectAll('path')
-    .data(
-      (d) => d,
-      (d: any) => d.properties?.site.id
-    )
-    .join((enter: any) =>
-      enter
+    .data(features)
+    .join((enter: any) => {
+      return enter
         .append('path')
         .classed('region', true)
         .on('click', (ev: PointerEvent, d: System) => {
@@ -416,20 +424,21 @@ function drawRegions({ S, C, P }: FnContext) {
           ev.preventDefault();
           onClickSystem(ev, d);
           rerender();
-        })
-    );
+        });
+    });
 
   path
     .attr('d', (d) => geoPathGenerator(d))
     .datum((d: any) => d.properties.site as System)
+    .classed('visited', (d) => P.visitedSystems.has(d.id))
     .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
 function drawLanes({ S, C, P }: FnContext) {
-  let visibleLanes = Array.from(S.world.laneMap.values());
+  let lanes = S.world.laneMap.values();
 
   if (C.config.fow) {
-    visibleLanes = visibleLanes.filter(
+    lanes = lanes.filter(
       (lane) =>
         P.revealedSystems.has(lane.fromId) && P.revealedSystems.has(lane.toId)
     );
@@ -437,15 +446,12 @@ function drawLanes({ S, C, P }: FnContext) {
 
   const layer = svg
     .selectAll('g#lanes')
-    .data([visibleLanes])
+    .data([null])
     .join((enter) => enter.append('g').attr('id', 'lanes'));
 
   const group = layer
     .selectAll('g.lane-group')
-    .data(
-      (d) => d,
-      (d) => (d as Lane).id
-    )
+    .data(lanes, (d) => (d as Lane).id)
     .join((enter) => {
       const g = enter
         .append('g')
@@ -494,6 +500,11 @@ function drawLanes({ S, C, P }: FnContext) {
   group
     .select('path.lane')
     .attr('d', (d) => d.path)
+    .classed('own', (d) => {
+      const from = d.from;
+      const to = d.to;
+      return from.ownerId === C.playerId || to.ownerId === C.playerId;
+    })
     .style('--path-length', (d) => {
       const pathElement = d3
         .select<SVGPathElement, unknown>(`#${d.id} .lane`)

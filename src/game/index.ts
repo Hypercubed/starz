@@ -3,14 +3,25 @@ import { generateMap, assignSystem } from '../game/generate.ts';
 import {
   getPlayersHomeworld,
   revealAllSystems,
-  revealSystem,
+  visitSystem,
   addPlayer,
   initalState,
   defaultConfig,
   queueMove
 } from '../game/state.ts';
 
-import { eliminatePlayer, orderToMove, takeOrder } from './actions.ts';
+import {
+  doQueuedMoves,
+  eliminatePlayer,
+  orderToMove,
+  takeOrder
+} from './actions.ts';
+import {
+  buildNeighborMap,
+  createWorld,
+  findClosestSystem,
+  hasLane
+} from './world.ts';
 
 import type { GameState } from './types.d.ts';
 import type { FnContext } from '../managers/types.d.ts';
@@ -28,12 +39,17 @@ export {
   generateMap,
   getPlayersHomeworld,
   revealAllSystems,
-  revealSystem,
+  visitSystem,
   assignSystem,
   checkVictory,
   addPlayer,
   eliminatePlayer,
   queueMove,
+  doQueuedMoves,
   orderToMove,
-  takeOrder
+  takeOrder,
+  findClosestSystem,
+  createWorld,
+  buildNeighborMap,
+  hasLane
 };

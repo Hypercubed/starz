@@ -1,8 +1,4 @@
 :root {
-  /* font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400; */
-
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   background-color: black;
@@ -16,25 +12,6 @@
   --unoccupied: #808080;
   --inhabited: #808080;
 }
-
-/* html,
-body {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
-button {
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  line-height: inherit;
-  color: inherit;
-  padding: 5px 10px;
-  cursor: pointer;
-} */
 
 #app {
   height: 100vh;
@@ -66,6 +43,7 @@ button {
     padding: 3px 5px;
     text-align: center;
     color: var(--owner-color, var(--unoccupied));
+    background-color: rgb(19 22 30 / 34%);
   }
 
   tr.eliminated td {
@@ -125,9 +103,9 @@ svg {
 
   .system {
     will-change: fill, fill-opacity;
-
-    cursor: pointer;
     user-select: none;
+
+    cursor: pointer; /* TODO: only if own or neighboring */
 
     text {
       fill: white;
@@ -175,6 +153,10 @@ svg {
       stroke-opacity: 0.0;
     }
 
+    &:not(.visited) .system-icon {
+      fill-opacity: 0;
+    }
+
     &.moved {
       .system-outline {
         stroke-width: 2;
@@ -195,10 +177,6 @@ svg {
       }
     }
 
-    &.revealed {
-      display: inline;
-    }
-
     &.inhabited .system-marker {
       r: 5;
     }
@@ -206,18 +184,17 @@ svg {
     &.homeworld {
       .system-icon {
         stroke: var(--owner-color, var(--unoccupied));
-        stroke-opacity: 1;
-        fill-opacity: 1;
         fill: var(--owner-color, var(--unoccupied));
         transform: translate(0px, 1.5px) scale(1.4);
       }
     }
 
-    &[data-player="1"]:hover {
-      .system-outline {
-        stroke: var(--player-1);
-        stroke-width: 3;
-        stroke-opacity: 0.6;
+    &.own {
+      &:hover {
+        .system-outline {
+          stroke-width: 3;
+          stroke-opacity: 0.6;
+        }
       }
     }
   }
@@ -229,10 +206,13 @@ svg {
     stroke: var(--owner-color, var(--unoccupied));
     stroke-width: 2;
     stroke-opacity: 0.3;
-    cursor: pointer;
-
-    &:hover {
-      stroke-width: 9;
+    
+    &.own {
+      cursor: pointer;
+      
+      &:hover {
+        stroke-width: 9;
+      }
     }
   }
 
@@ -270,16 +250,30 @@ svg {
     stroke-opacity: 0.2;
   }
 
-  .region {
-    fill: var(--owner-color, transparent);
-    fill-opacity: 0.3;
-    stroke: var(--owner-color, transparent);
-    stroke-width: 4;
-    stroke-opacity: 0;
+  #mesh {
+    .region {
+      fill: var(--owner-color, transparent);
+      fill-opacity: 1;
+      stroke: var(--owner-color, transparent);
+      stroke-width: 4;
+      stroke-opacity: 0.5;
+      filter: blur(5px) opacity(50%);
+  
+      &[data-player="null"] {
+        fill: transparent;
+        stroke: transparent;
+      }
 
-    &[data-player="null"] {
-      fill: transparent;
-      stroke: transparent;
+      /* &:not(.visited) {
+        fill-opacity: 0.5;
+        stroke-opacity: 0;
+      } */
+    }
+
+    &.reduced-size .region {
+      stroke-opacity: 0.15;
+      fill-opacity: 1;
+      filter: blur(1px) opacity(50%);
     }
   }
 }
@@ -344,6 +338,12 @@ svg {
       margin: 0;
     }
   }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 }
 
 #endDialog {
@@ -357,4 +357,17 @@ svg {
   to {
     stroke-dashoffset: 0; /* Fully revealed */
   }
+}
+
+[role="button"]:has([type="radio"]) {
+  input {
+    display: none;
+  }
+}
+
+[role="button"]:has([type="radio"]:checked) {
+  --pico-background-color: var(--pico-primary-hover-background);
+  --pico-border-color: var(--pico-primary-hover-border);
+  --pico-box-shadow: var(--pico-button-hover-box-shadow, 0 0 0 rgba(0, 0, 0, 0));
+  --pico-color: var(--pico-primary-inverse);
 }

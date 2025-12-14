@@ -115,6 +115,7 @@ export function assignSystem(state: GameState, playerId: string) {
   const systems = Array.from(state.world.systemMap.values()).filter(
     (system) => !system.ownerId && system.type === 'INHABITED'
   );
+
   if (systems.length === 0) {
     throw 'No available homeworlds to join.';
   }
@@ -125,6 +126,8 @@ export function assignSystem(state: GameState, playerId: string) {
   system.ships = 1;
   system.ownerId = system.homeworld = playerId;
   system.type = 'INHABITED';
+
+  console.log(`Assigned system ${system.id} to player ${playerId}`);
 
   return system;
 }

@@ -3,9 +3,7 @@ import * as PR from 'playroomkit';
 import { COLORS } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as game from '../game/index.ts';
-import { buildNeighborMap, createWorld } from '../game/world.ts';
 import * as renderer from '../ui/index.ts';
-import { clearSelection, deselect, select } from '../ui/selection.ts';
 import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
@@ -92,9 +90,9 @@ export class PlayroomGameManager extends GameManager {
     if (PR.isHost()) {
       game.generateMap(this.getContext());
 
-      this.state.playerMap.forEach((player) =>
-        game.assignSystem(this.state, player.id)
-      );
+      for (const player of this.state.playerMap.values()) {
+        game.assignSystem(this.state, player.id);
+      }
 
       console.log('Generated world and players as host.');
 
@@ -112,9 +110,9 @@ export class PlayroomGameManager extends GameManager {
 
       this.state.world = worldFromJson(world);
 
-      players.forEach((stats) => {
-        this.addPlayer(stats.name, stats.id, undefined, stats.color);
-      });
+      for (const player of players) {
+        this.addPlayer(player.name, player.id, undefined, player.color);
+      }
     }
 
     console.log(
@@ -137,7 +135,7 @@ export class PlayroomGameManager extends GameManager {
     const colorsAvailable = new Set<string>(COLORS);
     const colorsUsed = new Set<string>();
 
-    this.state.playerMap.forEach((player) => {
+    for (const player of this.state.playerMap.values()) {
       if (colorsUsed.has(player.color)) {
         player.color =
           colorsAvailable.values().next().value || getRandomColor();
@@ -145,7 +143,7 @@ export class PlayroomGameManager extends GameManager {
 
       colorsAvailable.delete(player.color);
       colorsUsed.add(player.color);
-    });
+    }
 
     this.gameStart();
     renderer.rerender();
@@ -154,10 +152,10 @@ export class PlayroomGameManager extends GameManager {
   protected setupThisPlayer(playerId: string) {
     this.playerId = playerId;
     const homeworld = game.getPlayersHomeworld(this.state)!;
-    game.revealSystem(this.state, homeworld);
+    game.visitSystem(this.state, homeworld);
     renderer.centerOnHome();
-    clearSelection();
-    select(homeworld.id);
+    renderer.clearSelection();
+    renderer.select(homeworld.id);
   }
 
   protected gameStart() {
@@ -173,11 +171,22 @@ export class PlayroomGameManager extends GameManager {
   }
 
   public gameTick() {
-    super.gameTick();
-    this.syncState();
+    this.tick++;
+
+    this.game.gameTick(this.getContext(), !PR.isHost());
+
+    this.sendStateToPlayroom();
+    this.getStateFromPlayroom();
+
+    this.game.checkVictory(this.getContext());
+
+    this.events.emit('STATE_UPDATED', {
+      state: this.state,
+      status: this.status
+    });
   }
 
-  private syncState() {
+  private sendStateToPlayroom() {
     PR.myPlayer().setState(PLAYER_STATES.PLAYER, this.state.playerMap, false);
 
     if (PR.isHost()) {
@@ -195,34 +204,31 @@ export class PlayroomGameManager extends GameManager {
         playersToJson(this.state.playerMap),
         false
       );
-    } else {
+    }
+  }
+
+  private getStateFromPlayroom() {
+    if (!PR.isHost()) {
       this.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
       // this.gameState = PR.getState(PLAYROOM_STATES.GAME_STATE) as GameState;
 
-      if (this.tick % 10 === 0) {
-        const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
-        if (world) {
-          this.state.world.systemMap = new Map(world.systems);
-          this.state.world.laneMap = new Map(world.lanes);
-        }
+      // if (this.tick % 10 === 0) {
+      const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
+      if (world) {
+        this.state.world.systemMap = new Map(world.systems);
+        this.state.world.laneMap = new Map(world.lanes);
       }
+      // }
 
       const playerStats = PR.getState(
         PLAYROOM_STATES.PLAYER_STATS
       ) as PlayerStats[];
       if (playerStats) {
-        Array.from(this.state.playerMap.values()).forEach((p) => {
+        for (const p of this.state.playerMap.values()) {
           const stats = playerStats.find((s) => s.playerId === p.id);
-          if (stats) {
-            p.stats = stats;
-          }
-        });
+          if (stats) p.stats = stats;
+        }
       }
-
-      this.events.emit('STATE_UPDATED', {
-        state: this.state,
-        status: this.status
-      });
     }
   }
 
@@ -289,9 +295,9 @@ export class PlayroomGameManager extends GameManager {
     Object.assign(from, system);
 
     if (from.ownerId === this.playerId) {
-      game.revealSystem(this.state, from);
+      game.visitSystem(this.state, from);
     } else {
-      deselect(from.id);
+      renderer.deselect(from.id);
     }
 
     // TODO: Also set data for animation
@@ -344,7 +350,7 @@ export class PlayroomGameManager extends GameManager {
     }
 
     this.game.revealAllSystems(this.state);
-    clearSelection();
+    renderer.clearSelection();
 
     if (winnerId === this.playerId) {
       trackEvent('starz_gamesWon');
@@ -386,6 +392,8 @@ export class PlayroomGameManager extends GameManager {
 
       // TODO: Also send lane
     }
+
+    this.sendStateToPlayroom();
   }
 
   private registerUIEvents() {
@@ -439,11 +447,11 @@ function playerToJson(player: Player) {
 export function worldFromJson(json: WorldJSON): World {
   console.log('Loading world from JSON...', json);
 
-  const world = createWorld();
+  const world = game.createWorld();
 
   world.systemMap = new Map(json.systems);
   world.laneMap = new Map(json.lanes);
-  buildNeighborMap(world);
+  game.buildNeighborMap(world);
   return world;
 }
 

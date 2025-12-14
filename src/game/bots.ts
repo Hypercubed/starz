@@ -57,7 +57,9 @@ export const PERSONALITIES = {
 export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
 export function botQueue({ S }: FnContext) {
-  S.playerMap.forEach((p) => p.bot?.makeMoves());
+  for (const p of S.playerMap.values()) {
+    p.bot?.makeMoves();
+  }
 }
 
 export interface BotOptions {
@@ -103,13 +105,16 @@ export class Bot implements BotInterface {
 
     const state = gameManager.getState();
 
-    const systems = Array.from(state.world.systemMap.values());
-    this.botSystems = systems.filter((system) => system.ownerId === this.id);
+    const systemIter = state.world.systemMap.values();
+    this.botSystems = Array.from(systemIter).filter(
+      (s) => s.ownerId === this.id
+    );
     if (this.botSystems.length === 0) return;
 
-    this.botSystems.forEach((system) => {
+    for (const system of this.botSystems) {
       system.moveQueue = []; // Clear previous moves
-    });
+    }
+
     this.queuedMoves = 0;
 
     this.analyzeMap();

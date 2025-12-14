@@ -1,8 +1,7 @@
 import * as d3 from 'd3';
 
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
-import { revealSystem } from '../game/state.ts';
-import { hasLane } from '../game/world.ts';
+import * as game from '../game/index.ts';
 import { debugLog } from '../utils/logging.ts';
 
 import {
@@ -42,15 +41,15 @@ export function setupKeboardControls() {
 
       switch (event.code) {
         case 'KeyC':
-          S.world.systemMap.forEach((system) => {
+          for (const system of S.world.systemMap.values()) {
             if (system.ownerId === C.playerId) {
               system.ships *= 2;
             }
-          });
+          }
           rerender();
           return;
         case 'KeyR':
-          S.world.systemMap.forEach((system) => revealSystem(S, system));
+          game.revealAllSystems(S);
           rerender();
           return;
         case 'NumpadAdd':
@@ -247,7 +246,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
 
 export function orderBalancedMove(fromId: string, toId: string) {
   const { S, E, C } = globalThis.gameManager.getContext();
-  if (!hasLane(S.world, fromId, toId)) return;
+  if (!game.hasLane(S.world, fromId, toId)) return;
 
   const order = {
     type: 'BALANCED_MOVE',
@@ -262,7 +261,7 @@ export function orderBalancedMove(fromId: string, toId: string) {
 
 export function orderMassMove(fromId: string, toId: string) {
   const { S, E, C } = globalThis.gameManager.getContext();
-  if (!hasLane(S.world, fromId, toId)) return;
+  if (!game.hasLane(S.world, fromId, toId)) return;
 
   const order = {
     type: 'MASS_MOVE',

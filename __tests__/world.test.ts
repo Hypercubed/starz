@@ -1,32 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { state } from '../src/game/state';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createMockSystem, createMockCoordinates } from './setup';
-import { findClosestSystem, Graph } from '../src/classes/graph';
+import { createWorld, findClosestSystem } from '../src/game/world';
 
-// Mock the state module
-vi.mock('../game/state', () => ({
-  state: {
-    systems: [],
-    lanes: []
-  }
-}));
+describe('world', () => {
+  let world: ReturnType<typeof createWorld>;
 
-describe('generate', () => {
   beforeEach(() => {
-    state.world = new Graph();
+    world = createWorld();
   });
 
   describe('findClosestSystem', () => {
     it('should return null for empty systems array', () => {
-      const location = createMockCoordinates(0, 0);
-      const result = findClosestSystem(location, []);
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null when no other systems exist', () => {
-      const location = createMockCoordinates(0, 0);
-      const result = findClosestSystem(location, state.world.systems);
+      const location = createMockCoordinates();
+      const result = findClosestSystem(world, location);
 
       expect(result).toBeNull();
     });
@@ -34,28 +20,30 @@ describe('generate', () => {
     it('should return the only system when one exists', () => {
       const location = createMockCoordinates(0, 0);
       const system1 = createMockSystem({
-        id: 1,
+        id: `1`,
         location: createMockCoordinates(10, 10)
       });
+      world.systemMap.set(system1.id, system1);
 
-      const result = findClosestSystem(location, [system1]);
-
+      const result = findClosestSystem(world, location);
       expect(result).toBe(system1);
     });
 
     it('should find the closest system by distance', () => {
       const location = createMockCoordinates(0, 0);
       const nearSystem = createMockSystem({
-        id: 1,
+        id: `1`,
         location: createMockCoordinates(1, 1)
       });
       const farSystem = createMockSystem({
-        id: 2,
+        id: `2`,
         location: createMockCoordinates(50, 50)
       });
 
-      const result = findClosestSystem(location, [farSystem, nearSystem]);
+      world.systemMap.set(nearSystem.id, nearSystem);
+      world.systemMap.set(farSystem.id, farSystem);
 
+      const result = findClosestSystem(world, location);
       expect(result).toBe(nearSystem);
     });
 
@@ -70,7 +58,10 @@ describe('generate', () => {
         location: createMockCoordinates(20, 20)
       });
 
-      const result = findClosestSystem(location, [sameSystem, otherSystem]);
+      world.systemMap.set(sameSystem.id, sameSystem);
+      world.systemMap.set(otherSystem.id, otherSystem);
+
+      const result = findClosestSystem(world, location);
 
       expect(result).toBe(otherSystem);
     });
@@ -89,8 +80,11 @@ describe('generate', () => {
         id: '3',
         location: createMockCoordinates(2, 2)
       });
+      world.systemMap.set(system1.id, system1);
+      world.systemMap.set(system2.id, system2);
+      world.systemMap.set(system3.id, system3);
 
-      const result = findClosestSystem(location, [system1, system2, system3]);
+      const result = findClosestSystem(world, location);
 
       expect(result).toBe(system3);
     });
@@ -107,7 +101,11 @@ describe('generate', () => {
         location: createMockCoordinates(180, 89) // Same latitude, opposite longitude
       });
 
-      const result = findClosestSystem(location, [system1, system2]);
+      world.systemMap.set(system1.id, system1);
+      world.systemMap.set(system2.id, system2);
+
+
+      const result = findClosestSystem(world, location);
 
       // system2 should be closer at high latitudes due to geodesic distance
       expect(result).toBe(system1);
@@ -122,7 +120,9 @@ describe('generate', () => {
         createMockSystem({ id: '4', location: createMockCoordinates(15, 15) })
       ];
 
-      const result = findClosestSystem(location, systems);
+      systems.forEach((sys) => world.systemMap.set(sys.id, sys));
+
+      const result = findClosestSystem(world, location);
 
       expect(result?.id).toBe('3'); // ID 3 is at (5, 5), closest to (0, 0)
     });

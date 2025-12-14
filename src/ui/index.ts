@@ -1,5 +1,3 @@
-import { debounce } from 'ts-debounce';
-
 import {
   onClickLane,
   onClickSystem,
@@ -8,13 +6,14 @@ import {
 import { addMessage, clearMessages, updateMessageBox } from './messages.ts';
 import {
   drawMap,
-  rerender as _rerender,
+  rerender,
   centerOnHome,
   centerOnSystem,
   changeView,
   rotateProjection,
   scaleZoom
 } from './render.ts';
+import { clearSelection, deselect, select } from './selection.ts';
 import {
   showHelp,
   updateInfoBox,
@@ -23,8 +22,6 @@ import {
   showEndGame,
   setupDialogs
 } from './ui.ts';
-
-export const rerender = debounce(_rerender, 16);
 
 export function setupUI() {
   drawMap();
@@ -59,5 +56,9 @@ export {
   onClickSystem,
   setupKeboardControls,
   addMessage,
-  clearMessages
+  clearMessages,
+  rerender,
+  select,
+  clearSelection,
+  deselect
 };

@@ -88,10 +88,7 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPlayerWin(winnerId: string, message?: string) {
-    console.log('onPlayerWin', { winnerId, message }, this.playerId);
-    if (message) {
-      renderer.addMessage(message);
-    }
+    if (message) renderer.addMessage(message);
 
     this.game.revealAllSystems(this.state);
     clearSelection();
@@ -115,10 +112,6 @@ export class LocalGameManager extends GameManager {
         : `${winner!.name} has eliminated ${loser.name}!`;
 
     renderer.addMessage(message);
-
-    if (winnerId === this.playerId) {
-      return this.onPlayerWin(winnerId);
-    }
 
     if (loserId === this.playerId) {
       this.onPlayerWin(winnerId!);
@@ -149,7 +142,7 @@ export class LocalGameManager extends GameManager {
       player.name = name;
     }
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
-    this.game.revealSystem(this.state, homeworld);
+    this.game.visitSystem(this.state, homeworld);
     renderer.centerOnHome();
 
     if (!player.bot) {

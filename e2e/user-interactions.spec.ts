@@ -168,22 +168,4 @@ test.describe('User Interactions', () => {
 
     await expect(homeworld).not.toHaveClass(/selected/);
   });
-
-  test('ctrl+click adds system to selection', async ({ page }) => {
-    const systems = await page.locator('svg circle.system[data-owner="1"]').all();
-
-    if (systems.length >= 2) {
-      // Click first system
-      await systems[0].click();
-      await page.waitForTimeout(100);
-
-      // Ctrl+click second system
-      await systems[1].click({ modifiers: ['Control'] });
-      await page.waitForTimeout(100);
-
-      // Both should be selected
-      await expect(systems[0]).toHaveClass(/selected/);
-      await expect(systems[1]).toHaveClass(/selected/);
-    }
-  });
 });

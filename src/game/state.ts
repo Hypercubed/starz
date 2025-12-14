@@ -2,7 +2,7 @@ import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
 
 import { createWorld, getAdjacentSystems } from './world.ts';
 
-import type { Messages, Player } from '../types.d.ts';
+import type { Player } from '../types.d.ts';
 import type { GameConfig, GameState, System } from './types.d.ts';
 
 export function defaultConfig(): GameConfig {
@@ -18,8 +18,7 @@ export function defaultConfig(): GameConfig {
 export function initalState(): GameState {
   return {
     world: createWorld(),
-    playerMap: new Map<string, Player>(),
-    messages: [] as Messages[] // TODO: Move out of state, make a UI thing
+    playerMap: new Map<string, Player>()
   };
 }
 
@@ -38,7 +37,7 @@ export function getPlayersHomeworld(state: GameState) {
   return null;
 }
 
-export function revealSystem(state: GameState, system: System) {
+export function visitSystem(state: GameState, system: System) {
   const { P } = globalThis.gameManager!.getContext();
 
   P.revealedSystems.add(system.id);
@@ -46,17 +45,16 @@ export function revealSystem(state: GameState, system: System) {
 
   const neighbors = getAdjacentSystems(state.world, system.id);
   if (!neighbors) return;
-
-  neighbors.forEach((neighbor) => {
-    P.revealedSystems.add(neighbor.id);
-    P.visitedSystems.add(neighbor.id);
-  });
-
+  neighbors.forEach((neighbor) => P.revealedSystems.add(neighbor.id));
   return state;
 }
 
 export function revealAllSystems(state: GameState) {
-  state.world.systemMap.forEach((system) => revealSystem(state, system));
+  const { P } = globalThis.gameManager!.getContext();
+
+  for (const system of state.world.systemMap.values()) {
+    P.revealedSystems.add(system.id);
+  }
 }
 
 export function queueMove(

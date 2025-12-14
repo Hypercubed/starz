@@ -50,7 +50,7 @@ export async function getSystemsByOwner(page: Page, owner: number): Promise<Loca
  * Get the player's homeworld (first system, owner 1)
  */
 export async function getHomeworld(page: Page): Promise<Locator> {
-  const homeworld = page.locator('#app svg g.system[data-owner="1"]').first();
+  const homeworld = page.locator('#app svg g.system.homeworld').first();
   await expect(homeworld).toBeVisible();
   return homeworld;
 }

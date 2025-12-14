@@ -1,5 +1,6 @@
 import type { EventBus } from '../classes/EventBus.ts';
-import type { GameConfig, GameState } from '../game/types';
+import type { GameConfig, GameState } from '../game/types.d.ts';
+import type { Player } from '../types.d.ts';
 
 export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
