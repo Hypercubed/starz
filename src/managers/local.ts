@@ -2,8 +2,7 @@ import { init } from '@paralleldrive/cuid2';
 
 import { COLORS, NumHumanPlayers, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
-import * as renderer from '../ui/index.ts';
-import { clearSelection, select } from '../ui/selection.ts';
+import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
@@ -21,12 +20,12 @@ export class LocalGameManager extends GameManager {
     this.status = 'WAITING';
 
     if (START_PAUSED) {
-      await renderer.showStartGame();
+      await ui.showStartGame();
     }
 
     const ctx = this.getContext();
     this.state = this.game.setup(ctx);
-    renderer.clearMessages();
+    ui.clearMessages();
 
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
 
@@ -40,29 +39,29 @@ export class LocalGameManager extends GameManager {
 
     const name = NumHumanPlayers > 0 ? this.config.playerName : '1';
     this.setupThisPlayer(thisPlayer.id, name);
-    renderer.setupUI();
+    ui.setupUI();
 
     this.gameStart();
-    renderer.rerender();
+    ui.rerender();
   }
 
   protected gameStart() {
     trackEvent('starz_gamesStarted');
     super.gameStart();
 
-    renderer.addMessage(`Game started.`);
+    ui.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
     if (player) {
-      renderer.addMessage(`You are Player ${player.name}.`);
+      ui.addMessage(`You are Player ${player.name}.`);
     }
   }
 
   protected gameStop() {
     super.gameStop();
 
-    clearSelection();
-    renderer.rerender();
+    ui.clearSelection();
+    ui.rerender();
   }
 
   private onPlayerJoin(playerIndex: number) {
@@ -88,17 +87,19 @@ export class LocalGameManager extends GameManager {
   }
 
   protected onPlayerWin(winnerId: string, message?: string) {
-    if (message) renderer.addMessage(message);
+    if (message) ui.addMessage(message);
 
     this.game.revealAllSystems(this.state);
-    clearSelection();
+    ui.clearSelection();
 
     if (winnerId === this.playerId) {
       trackEvent('starz_gamesWon');
-      return renderer.showEndGame(`You have conquered The Bubble!`);
+      return ui.showEndGame(`You have conquered The Bubble!`);
     } else {
       trackEvent('starz_gamesLost', { winnerId });
-      return renderer.showEndGame(`You have lost your homeworld! Game Over.`);
+      return ui.showEndGame(
+        `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
+      );
     }
   }
 
@@ -111,7 +112,7 @@ export class LocalGameManager extends GameManager {
         ? `${loser.name} has been eliminated!`
         : `${winner!.name} has eliminated ${loser.name}!`;
 
-    renderer.addMessage(message);
+    ui.addMessage(message);
 
     if (loserId === this.playerId) {
       this.onPlayerWin(winnerId!);
@@ -143,17 +144,17 @@ export class LocalGameManager extends GameManager {
     }
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
     this.game.visitSystem(this.state, homeworld);
-    renderer.centerOnHome();
+    ui.centerOnHome();
 
     if (!player.bot) {
-      clearSelection();
-      select(homeworld.id);
+      ui.clearSelection();
+      ui.select(homeworld.id);
     }
   }
 
   private registerUIEvents() {
-    renderer.setupDialogs();
-    renderer.setupKeboardControls();
+    ui.setupDialogs();
+    ui.setupKeboardControls();
 
     this.events.on('PLAYER_WIN', ({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
@@ -161,6 +162,10 @@ export class LocalGameManager extends GameManager {
 
     this.events.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
+    });
+
+    this.events.on('PLAYER_QUIT', ({ playerId }) => {
+      this.game.eliminatePlayer(this.getContext(), playerId);
     });
   }
 }

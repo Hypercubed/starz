@@ -57,17 +57,6 @@ export function updateLeaderbox() {
 }
 
 export function setupDialogs() {
-  const endDialog = document.getElementById('endDialog') as HTMLDialogElement;
-
-  const restartButton = document.getElementById(
-    'restartButton'
-  ) as HTMLButtonElement;
-
-  restartButton.addEventListener('click', () => {
-    endDialog.close();
-    globalThis.gameManager.connect();
-  });
-
   const optionsButton = document.getElementById(
     'optionsButton'
   ) as HTMLButtonElement;

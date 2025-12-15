@@ -15,13 +15,6 @@ coverage
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
 # Playwright
 /test-results/
@@ -29,3 +22,6 @@ coverage
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Others
+.notes

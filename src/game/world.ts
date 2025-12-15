@@ -1,6 +1,7 @@
 import { geoDistance } from 'd3';
 
 import type { Coordinates, Lane, System, World } from './types.d.ts';
+import type { WorldJSON } from '../managers/types';
 
 export function createWorld(): World {
   return {
@@ -99,4 +100,22 @@ export function findClosestSystemInList(
   });
 
   return closestSystem;
+}
+
+export function worldFromJson(json: WorldJSON): World {
+  console.log('Loading world from JSON...', json);
+
+  const world = createWorld();
+
+  world.systemMap = new Map(json.systems);
+  world.laneMap = new Map(json.lanes);
+  buildNeighborMap(world);
+  return world;
+}
+
+export function worldToJson(world: World): WorldJSON {
+  return {
+    systems: Array.from(world.systemMap.entries()),
+    lanes: Array.from(world.laneMap.entries())
+  };
 }

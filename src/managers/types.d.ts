@@ -15,7 +15,7 @@ export interface FnContext {
   S: GameState; // TODO: make readonly
   E: Pick<EventBus<GameEventMap>, 'emit'>;
   C: Readonly<GameContext>;
-  P: Readonly<Player>;
+  P: Readonly<Player> | null; // Player can be null for spectators
 }
 
 export interface WorldJSON {

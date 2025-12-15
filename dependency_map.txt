@@ -2,85 +2,94 @@
 
 This map shows the runtime import relationships between modules in the `src` directory. Arrows (->) indicate that the module on the left imports the module on the right. Type-only imports are excluded.
 
-# Dependency Graph (runtime imports only
-- grouped by primary folder)
+# Dependency Graph (runtime imports only - grouped by primary folder)
+
+## root
+- src/main.ts
+  - ./managers/local.ts
+
+## classes
+- src/classes/EventBus.ts
+  - (No internal dependencies)
 
 ## constants
 - src/constants.ts
   - (No internal dependencies)
 
-## classes
-- src/classes/graph.ts
-  - (No internal dependencies)
-
 ## game
-- src/game/state.ts
-  - ../classes/graph.ts
-  - ../constants.ts
 - src/game/actions.ts
+  - ../utils/logging.ts
   - ./state.ts
+  - ./world.ts
 - src/game/bots.ts
   - ./state.ts
-- src/game/generate.ts
-  - ../utils/logging.ts
-  - ../classes/graph.ts
+  - ./world.ts
 - src/game/engine.ts
+  - ../constants.ts
   - ./actions.ts
   - ./bots.ts
-  - ./state.ts
-- src/game/index.ts
-  - ./generate.ts
-  - ./engine.ts
-  - ./actions.ts
-  - ../utils/logging.ts
-  - ./state.ts
-
-## utils
-- src/utils/logging.ts
+- src/game/generate.ts
   - ../constants.ts
+  - ../utils/logging.ts
+  - ./world.ts
+- src/game/index.ts
+  - ./engine.ts
+  - ./generate.ts
+  - ./state.ts
+  - ./actions.ts
+  - ./world.ts
+- src/game/state.ts
+  - ../constants.ts
+  - ./world.ts
+- src/game/world.ts
+  - (No internal dependencies)
 
 ## managers
-- src/managers/manager.ts
-  - ../constants.ts
-  - ../game/index.ts
-  - ../classes/EventBus.ts
 - src/managers/local.ts
   - ../constants.ts
+  - ../game/bots.ts
   - ../ui/index.ts
-  - ../game/bots.ts
-  - ./manager.ts
   - ../utils/logging.ts
-  - ../ui/selection.ts
-- src/managers/playroom.ts
-  - ../game/bots.ts
-  - ../classes/graph.ts
+  - ./manager.ts
+- src/managers/manager.ts
+  - ../classes/EventBus.ts
+  - ../constants.ts
   - ../game/index.ts
+- src/managers/playroom.ts
+  - ../constants.ts
+  - ../game/bots.ts
   - ../ui/index.ts
-  - ../game/generate.ts
-  - ./manager.ts
   - ../utils/logging.ts
-  - ../ui/selection.ts
+  - ./manager.ts
 - src/managers/simulation.ts
   - ./manager.ts
 
 ## ui
-- src/ui/index.ts
-  - ./render.ts
-  - ./ui.ts
-  - ./controls.ts
 - src/ui/controls.ts
   - ../constants.ts
+  - ../game/index.ts
   - ../utils/logging.ts
-  - ./selection.ts
-  - ../game/state.ts
   - ./render.ts
+  - ./selection.ts
   - ./ui.ts
+- src/ui/index.ts
+  - ./controls.ts
+  - ./messages.ts
+  - ./render.ts
+  - ./selection.ts
+  - ./ui.ts
+- src/ui/messages.ts
+  - (No internal dependencies)
 - src/ui/render.ts
   - ../constants.ts
-  - ./selection.ts
   - ../game/state.ts
   - ./controls.ts
+  - ./selection.ts
 - src/ui/selection.ts
-  - (No internal dependencies)
+  - ../game/world.ts
 - src/ui/ui.ts
   - (No internal dependencies)
+
+## utils
+- src/utils/logging.ts
+  - ../constants.ts

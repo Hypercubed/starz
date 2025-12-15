@@ -13,6 +13,7 @@ export interface GameEventMap {
   PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };
   PLAYER_WIN: { playerId: string; message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };
+  PLAYER_QUIT: { playerId: string };
 
   // Actions
   TAKE_ORDER: Order;

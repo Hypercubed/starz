@@ -1,5 +1,11 @@
-import { checkVictory, gameTick } from '../game/engine.ts';
-import { generateMap, assignSystem } from '../game/generate.ts';
+import {
+  doQueuedMoves,
+  eliminatePlayer,
+  orderToMove,
+  takeOrder
+} from './actions.ts';
+import { checkVictory, gameTick } from './engine.ts';
+import { generateMap, assignSystem } from './generate.ts';
 import {
   getPlayersHomeworld,
   revealAllSystems,
@@ -8,19 +14,14 @@ import {
   initalState,
   defaultConfig,
   queueMove
-} from '../game/state.ts';
-
-import {
-  doQueuedMoves,
-  eliminatePlayer,
-  orderToMove,
-  takeOrder
-} from './actions.ts';
+} from './state.ts';
 import {
   buildNeighborMap,
   createWorld,
   findClosestSystem,
-  hasLane
+  hasLane,
+  worldFromJson,
+  worldToJson
 } from './world.ts';
 
 import type { GameState } from './types.d.ts';
@@ -51,5 +52,7 @@ export {
   findClosestSystem,
   createWorld,
   buildNeighborMap,
-  hasLane
+  hasLane,
+  worldToJson,
+  worldFromJson
 };

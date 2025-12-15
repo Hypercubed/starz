@@ -13,7 +13,7 @@ You are the commander of a fledgling interstellar empire.  Your species recently
 - Use middle mouse button to rotate/pan the view, scroll wheel to zoom.
 - Each turn, your homeworld and any other inhabited systems you control, will produce an additional ship.
 - You can send these ships to other systems to capture them.
-- Each controlled system receives an additional ship each 25 turns.
+- Each controlled system, whether inhabited or not, receives an additional ship every 25 turns.
 - To transfer ships, left click on a system you control and then right click on a target system.
 - This will send all available ships, less one, from the source system to the target system.
 - Right click on the hyperspace lane between the systems to equalize ships between the systems, or attack the target system with half of the available ships.
@@ -35,7 +35,7 @@ You are the commander of a fledgling interstellar empire.  Your species recently
 
 - Spacebar: Pause/Resume Game
 - h: Center View on Homeworld
-- c: Center View on Selected System
+- c: Center View on the last selected system
 - p: Change View Mode (e.g., toggle between normal and strategic view)
 - ?: Show Help Menu
 
@@ -46,6 +46,54 @@ Cheats:
 - alt-=: Increase Game Speed
 - alt-c: Double Ships in all Owned Systems
 
+## Development
+
+### Prerequisites
+
+- Node.js (v20+ recommended)
+- npm
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm start
+   ```
+   Open http://localhost:5173 to view the game.
+
+### Building
+
+To create a production build:
+
+```bash
+npm run build
+```
+
+The output will be in the `dist` directory.
+
+### Testing
+
+- Unit tests: `npm run test:unit`
+- E2E tests: `npm run test:e2e`
+- Linting: `npm run lint`
+
+## Architecture Overview
+
+- **Entry Point**: `src/main.ts` initializes the `GameManager`.
+- **Game Logic**:
+    - `src/game/`: Core game logic (pure functions, state manipulation).
+    - `src/managers/`: Handles the game loop and orchestrates logic (e.g., `LocalGameManager`).
+- **Rendering & UI**:
+    - `src/ui/render.ts`: Handles D3.js rendering of the star map.
+    - `src/ui/controls.ts`: Manages input (keyboard/mouse) and dispatches events.
+- **State Management**:
+    - The game uses a singleton `GameManager` pattern accessible via `globalThis.gameManager`.
+
 ## License
 
-Licensed under the MIT License.
+Licensed under the MIT License. See [LICENSE](LICENSE) for details.

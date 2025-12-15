@@ -19,7 +19,9 @@ export const ENABLE_FOG_OF_WAR = true; // Whether to enable fog of war
 export const NumOfSystems = 384; // Number of systems
 export const NumHumanPlayers = 1; // Number of human players (should be 1 or 0)
 export const NumBots = 4; // Total number of players (must be < N * fracOccupied)
-export const FracInhabited = 0.1; // Fraction of systems that are occupied at start
+
+export const FP = 0.1; // Fraction of systems that are occupied at start
+// export const PC = 0.15; // Probability of an inhabited system being a homeworld (per tick)
 
 const env = (import.meta as any).env || {};
 

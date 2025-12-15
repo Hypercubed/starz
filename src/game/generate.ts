@@ -5,7 +5,7 @@ import {
   HEIGHT,
   NumHumanPlayers,
   MAX_SHIPS_PER_SYSTEM,
-  FracInhabited
+  FP
 } from '../constants.ts';
 import { debugLog } from '../utils/logging.ts';
 
@@ -84,7 +84,7 @@ export function generateMap({ S, C }: FnContext) {
   // Setup inhabited systems (neutral + potential homeworlds)
   // We need enough for all players plus some neutrals
   const totalInhabited = Math.max(
-    FracInhabited * C.config.numSystems,
+    FP * C.config.numSystems,
     NumHumanPlayers + C.config.numBots
   );
 

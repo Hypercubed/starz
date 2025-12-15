@@ -294,7 +294,7 @@ function drawSystems({ S, C, P }: FnContext) {
 
   let systems = S.world.systemMap.values();
 
-  if (C.config.fow) {
+  if (P && C.config.fow) {
     systems = P.revealedSystems
       .values()
       .map((id) => S.world.systemMap.get(id)!);
@@ -358,7 +358,7 @@ function drawSystems({ S, C, P }: FnContext) {
     .classed('moved', (d) => d.movement[0] > 0 || d.movement[1] > 0)
     .classed('inhabited', (d) => d.type === 'INHABITED')
     .classed('homeworld', (d) => !!d.homeworld && d.ownerId === d.homeworld)
-    .classed('visited', (d) => P.visitedSystems.has(d.id))
+    .classed('visited', (d) => (P ? P.visitedSystems.has(d.id) : true))
     .attr('transform', (d) => `translate(${geoProjection(d.location)})`);
 
   group.select('.system-icon').text((d) => {
@@ -395,7 +395,7 @@ function drawRegions({ S, C, P }: FnContext) {
 
   let features = getFeatures(S);
 
-  if (C.config.fow) {
+  if (P && C.config.fow) {
     features = features.filter((feature) => {
       const system = feature.properties?.site as System;
       return P.revealedSystems.has(system.id);
@@ -430,14 +430,14 @@ function drawRegions({ S, C, P }: FnContext) {
   path
     .attr('d', (d) => geoPathGenerator(d))
     .datum((d: any) => d.properties.site as System)
-    .classed('visited', (d) => P.visitedSystems.has(d.id))
+    .classed('visited', (d) => (P ? P.visitedSystems.has(d.id) : true))
     .style('--owner-color', (d) => S.playerMap.get(d.ownerId!)?.color ?? null);
 }
 
 function drawLanes({ S, C, P }: FnContext) {
   let lanes = S.world.laneMap.values();
 
-  if (C.config.fow) {
+  if (P && C.config.fow) {
     lanes = lanes.filter(
       (lane) =>
         P.revealedSystems.has(lane.fromId) && P.revealedSystems.has(lane.toId)

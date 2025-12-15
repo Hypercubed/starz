@@ -39,6 +39,7 @@ export function getPlayersHomeworld(state: GameState) {
 
 export function visitSystem(state: GameState, system: System) {
   const { P } = globalThis.gameManager!.getContext();
+  if (!P) return;
 
   P.revealedSystems.add(system.id);
   P.visitedSystems.add(system.id);
@@ -51,6 +52,7 @@ export function visitSystem(state: GameState, system: System) {
 
 export function revealAllSystems(state: GameState) {
   const { P } = globalThis.gameManager!.getContext();
+  if (!P) return;
 
   for (const system of state.world.systemMap.values()) {
     P.revealedSystems.add(system.id);

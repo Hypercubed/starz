@@ -70,7 +70,7 @@ export function setupKeboardControls() {
     });
   }
 
-  d3.select('body').on('keyup.controls', (event) => {
+  d3.select('body').on('keyup.controls', async (event) => {
     // debugLog("keyup:", event);
 
     switch (event.key) {
@@ -83,7 +83,11 @@ export function setupKeboardControls() {
         return;
       case 'x': {
         if (!event.ctrlKey) return;
-        return showEndGame('Quit?');
+        const ret = await showEndGame('Are you sure you want to quit?');
+        if (ret) {
+          const { C, E } = globalThis.gameManager.getContext();
+          E.emit('PLAYER_QUIT', { playerId: C.playerId });
+        }
         return;
       }
     }
