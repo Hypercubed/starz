@@ -3,8 +3,9 @@ import { ConvexClient } from 'convex/browser';
 
 import { api } from '../../convex/_generated/api';
 
-import type { Player } from '../types';
 import { LocalGameManager } from './local.ts';
+
+import type { Player } from '../types';
 
 const client = new ConvexClient(import.meta.env.VITE_CONVEX_URL);
 

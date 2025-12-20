@@ -57,11 +57,7 @@ export class PlayroomGameManager extends GameManager {
     this.status = 'WAITING';
 
     this.registerPlayroomEvents();
-
-    const ctx = this.getContext();
-    this.state = this.game.setup(ctx);
-    PR.resetStates();
-    ui.clearMessages();
+    this.gameInit();
 
     await PR.insertCoin({
       gameId: 'etTt5RuPbZxwWPXQvYzF',
@@ -77,6 +73,48 @@ export class PlayroomGameManager extends GameManager {
       }
     });
 
+    await this.gameSetup();
+    this.gameStart();
+    ui.requestRerender();
+  }
+
+  protected gameInit() {
+    const ctx = this.getContext();
+    this.state = this.game.setup(ctx);
+    PR.resetStates();
+    ui.clearMessages();
+
+    this.events.emit('GAME_INIT', undefined);
+  }
+
+  protected setupThisPlayer(playerId: string) {
+    this.playerId = playerId;
+    if (!this.state.playerMap.has(playerId)) return;
+
+    const homeworld = this.game.getPlayersHomeworld(this.state)!;
+    this.game.visitSystem(this.state, homeworld);
+    ui.centerOnHome();
+    ui.clearSelection();
+    ui.select(homeworld.id);
+  }
+
+  protected gameStart() {
+    PR.setState(PLAYROOM_STATES.GAME_STATUS, 'PLAYING', true);
+
+    trackEvent('starz_gamesStarted');
+    super.gameStart();
+
+    ui.addMessage(`Game started.`);
+
+    const player = this.state.playerMap.get(this.playerId!);
+    if (player) {
+      ui.addMessage(`You are Player ${player.name}.`);
+    } else {
+      ui.addMessage(`You are a Spectator.`);
+    }
+  }
+
+  protected async gameSetup() {
     this.status = await PR.waitForState<GameStatus>(
       PLAYROOM_STATES.GAME_STATUS
     );
@@ -146,8 +184,6 @@ export class PlayroomGameManager extends GameManager {
     //   Object.assign(localPlayer, p);
     // }
 
-    ui.setupUI();
-
     // Adjust colors as needed
     const colorsAvailable = new Set<string>(COLORS);
     const colorsUsed = new Set<string>();
@@ -160,36 +196,6 @@ export class PlayroomGameManager extends GameManager {
 
       colorsAvailable.delete(player.color);
       colorsUsed.add(player.color);
-    }
-
-    this.gameStart();
-    ui.rerender();
-  }
-
-  protected setupThisPlayer(playerId: string) {
-    this.playerId = playerId;
-    if (!this.state.playerMap.has(playerId)) return;
-
-    const homeworld = this.game.getPlayersHomeworld(this.state)!;
-    this.game.visitSystem(this.state, homeworld);
-    ui.centerOnHome();
-    ui.clearSelection();
-    ui.select(homeworld.id);
-  }
-
-  protected gameStart() {
-    PR.setState(PLAYROOM_STATES.GAME_STATUS, 'PLAYING', true);
-
-    trackEvent('starz_gamesStarted');
-    super.gameStart();
-
-    ui.addMessage(`Game started.`);
-
-    const player = this.state.playerMap.get(this.playerId!);
-    if (player) {
-      ui.addMessage(`You are Player ${player.name}.`);
-    } else {
-      ui.addMessage(`You are a Spectator.`);
     }
   }
 
@@ -260,15 +266,11 @@ export class PlayroomGameManager extends GameManager {
   }
 
   private async playerJoin(playerState: PR.PlayerState) {
-    if (this.status !== 'WAITING') {
-      return;
-    }
+    if (this.status !== 'WAITING') return;
 
     this.playerStates.set(playerState.id, playerState);
 
-    if (PR.isHost()) {
-      await this.addPlayerProfile(playerState);
-    }
+    if (PR.isHost()) await this.addPlayerProfile(playerState);
 
     playerState.onQuit(() => {
       this.playerStates.delete(playerState.id);
@@ -370,7 +372,7 @@ export class PlayroomGameManager extends GameManager {
   public async onQuit() {
     const restart = await ui.showEndGame('Are you sure you want to quit?');
     if (!restart) return false;
-    this.reload();
+    this.restart();
     return true;
   }
 
@@ -393,10 +395,11 @@ export class PlayroomGameManager extends GameManager {
         `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
       );
     }
-    if (restart) this.reload();
+    if (restart) this.restart();
   }
 
-  private reload() {
+  private restart() {
+    // PR.me().leaveRoom();
     const newURL = window.location.href.split('#')[0];
     window.history.replaceState(null, '', newURL);
     window.location.reload();
@@ -477,11 +480,3 @@ function playerToJson(player: Player) {
     revealedSystems: player.revealedSystems
   };
 }
-
-// function playerFromJson(player: any) {
-//   return {
-//     ...player,
-//     visitedSystems: [],
-//     revealedSystems: []
-//   }
-// }

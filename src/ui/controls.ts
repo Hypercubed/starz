@@ -8,7 +8,7 @@ import {
   centerOnHome,
   centerOnSystem,
   changeView,
-  rerender,
+  requestRerender,
   rotateProjection,
   scaleZoom
 } from './render.ts';
@@ -46,11 +46,11 @@ export function setupKeboardControls() {
               system.ships *= 2;
             }
           }
-          rerender();
+          requestRerender();
           return;
         case 'KeyR':
           game.revealAllSystems(S);
-          rerender();
+          requestRerender();
           return;
         case 'NumpadAdd':
         case 'Equal': {
@@ -76,7 +76,7 @@ export function setupKeboardControls() {
     switch (event.key) {
       case 'Escape':
         clearSelection();
-        rerender();
+        requestRerender();
         return;
       case '?':
         showHelp();
@@ -105,51 +105,51 @@ export function setupKeboardControls() {
       case 'Equal':
       case 'NumpadAdd':
         scaleZoom(1.2);
-        rerender();
+        requestRerender();
         return;
       case 'Minus':
       case 'NumpadSubtract':
         scaleZoom(0.8);
-        rerender();
+        requestRerender();
         return;
       case 'KeyW':
         rotateProjection([0, ROTATION_STEP]);
-        rerender();
+        requestRerender();
         return;
       case 'KeyA':
         rotateProjection([-ROTATION_STEP, 0]);
-        rerender();
+        requestRerender();
         return;
       case 'KeyS':
         rotateProjection([0, -ROTATION_STEP]);
-        rerender();
+        requestRerender();
         return;
       case 'KeyD':
         rotateProjection([ROTATION_STEP, 0]);
-        rerender();
+        requestRerender();
         return;
       case 'KeyQ':
         rotateProjection([0, 0, ROTATION_STEP]);
-        rerender();
+        requestRerender();
         break;
       case 'KeyE':
         rotateProjection([0, 0, -ROTATION_STEP]);
-        rerender();
+        requestRerender();
         break;
       case 'KeyH':
         centerOnHome();
-        rerender();
+        requestRerender();
         return;
       case 'KeyC':
         if (selection.last) {
           centerOnSystem(selection.last);
-          rerender();
+          requestRerender();
         }
         return;
       case 'KeyP':
         changeView();
         centerOnHome();
-        rerender();
+        requestRerender();
         return;
     }
   });

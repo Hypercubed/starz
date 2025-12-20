@@ -55,6 +55,7 @@ export function roundUpdate(state: GameState) {
 
 export function checkVictory({ S, C, E, P }: FnContext) {
   if (C.status !== 'PLAYING') return;
+  if (!P) return;
 
   if (S.playerMap.size > 1) {
     const players = Array.from(S.playerMap.values());

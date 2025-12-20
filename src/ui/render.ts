@@ -27,6 +27,7 @@ const projections = {
   TransverseMercator: d3.geoTransverseMercator
 };
 
+let root: d3.Selection<HTMLElement, unknown, null, undefined>;
 let svg: d3.Selection<SVGSVGElement, unknown, HTMLElement, unknown>;
 
 let selectedProjectionType = projections[PROJECTION];
@@ -70,31 +71,38 @@ export function rotateProjection(
   geoProjection.rotate(rotation);
 }
 
-export function drawMap() {
-  const ctx = globalThis.gameManager.getContext();
+// Main function to draw the map
+// This runs once at the start
+export function drawMap(el: HTMLElement, ctx: FnContext) {
+  root = d3.select(el);
+  svg = root.select('svg') as unknown as d3.Selection<
+    SVGSVGElement,
+    unknown,
+    HTMLElement,
+    unknown
+  >;
 
-  d3.select('#app').select('svg').remove();
-
-  svg = d3
-    .select('#app')
-    .append('svg')
+  svg
     .attr('width', '100vw')
     .attr('height', '100vh')
     .attr('viewBox', `-${WIDTH / 2} -${HEIGHT / 2} ${WIDTH} ${HEIGHT}`)
     .on('contextmenu', (ev: PointerEvent) => ev.preventDefault());
 
-  if (ENABLE_GRATICULE) drawGraticule(ctx.S);
+  // Background canvas for graticule and other effects
+  drawCanvas(ctx.S);
+
   if (ENABLE_MESH) drawRegions(ctx);
   drawLanes(ctx);
   drawSystems(ctx);
 
   svg.call(createDrag() as any);
   svg.call(createZoom() as any);
+  window.addEventListener('resize', resizeCanvas);
 
   function createDrag() {
     return drag()
-      .on('drag.render', () => rerender())
-      .on('end.render', () => rerender());
+      .on('drag.render', () => requestRerender())
+      .on('end.render', () => requestRerender());
   }
 
   function createZoom(): d3.ZoomBehavior<Element, unknown> {
@@ -107,7 +115,7 @@ export function drawMap() {
         if (event.transform.k > ZOOM_SENSITIVITY) {
           const newScale = initialScale * event.transform.k;
           geoProjection.scale(newScale);
-          rerender();
+          requestRerender();
         } else {
           event.transform.k = ZOOM_SENSITIVITY;
         }
@@ -183,9 +191,78 @@ export function drawMap() {
       .on('start', dragstarted)
       .on('drag', dragged);
   }
+
+  function resizeCanvas() {
+    const { S } = globalThis.gameManager.getContext();
+    drawCanvas(S);
+  }
 }
 
-function getFeature(state: GameState) {
+function drawCanvas(state: GameState) {
+  const svgBB = svg.node()?.getBoundingClientRect();
+
+  const dpr = window.devicePixelRatio || 1;
+  const h = svgBB?.height || HEIGHT;
+  const w = svgBB?.width || WIDTH;
+
+  const canvas = root
+    .selectAll('canvas')
+    .data([null])
+    .join((enter) =>
+      enter
+        .append('canvas')
+        .style('position', 'absolute')
+        .style('top', 0)
+        .style('left', 0)
+        .style('z-index', -1)
+        .style('pointer-events', 'none')
+    )
+    .attr('width', w * dpr)
+    .attr('height', h * dpr)
+    .style('width', `${w}px`)
+    .style('height', `${h}px`);
+
+  const node = canvas.node() as HTMLCanvasElement;
+  const ctx = node.getContext('2d')!;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.translate(w / 2, h / 2);
+
+  const scale = Math.min(w / WIDTH, h / HEIGHT);
+  ctx.scale(scale, scale);
+
+  const GLOW_COLOR = '#FFFFFF48';
+
+  if (selectedProjectionType === projections['Orthographic']) {
+    // Draw glow around the edge of the globe
+    const r = geoProjection.scale();
+    ctx.strokeStyle = GLOW_COLOR;
+    ctx.lineWidth = 1;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.shadowBlur = 10; // Adjust blur amount for desired glow spread
+    ctx.shadowColor = GLOW_COLOR; // Set the glow color
+
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+  }
+
+  if (ENABLE_GRATICULE) {
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(51, 51, 51, 0.5)';
+
+    const feature = getFeature(state);
+    const path = d3.geoPath().projection(geoProjection).context(ctx);
+
+    ctx.beginPath();
+    path(feature);
+    ctx.stroke();
+  }
+}
+
+function getFeature(state: GameState): GeoJSON.MultiLineString {
   const geoGraticuleGenerator = d3.geoGraticule();
   const playersHome = getPlayersHomeworld(state);
 
@@ -213,32 +290,12 @@ function getFeature(state: GameState) {
   return geoGraticuleGenerator();
 }
 
-function drawGraticule(state: GameState) {
-  const feature = getFeature(state);
-
-  const g = svg
-    .selectAll('g#graticule')
-    .data([feature])
-    .join((enter) => enter.append('g').attr('id', 'graticule'));
-
-  g.selectAll('path')
-    .data([feature])
-    .join((enter) =>
-      enter
-        .append('path')
-        .attr('class', 'graticule')
-        .style('fill', 'none')
-        .style('stroke', '#333')
-    )
-    .attr('d', geoPathGenerator);
-}
-
 export function scaleZoom(scale: number) {
   const newScale = geoProjection.scale() * scale;
   if (newScale < initialScale * MIN_ZOOM_SCALE) return;
   if (newScale > initialScale * MAX_ZOOM_SCALE) return;
   geoProjection.scale(newScale);
-  rerender();
+  requestRerender();
 }
 
 export function centerOnHome() {
@@ -268,24 +325,24 @@ export function centerOnSystem(systemId: string) {
 
 export function centerOnCoordinates(coords: Coordinates) {
   geoProjection.rotate([-coords[0], -coords[1], 0]);
-  rerender();
-}
-
-function _rerender() {
-  if (!svg) return;
-
-  const ctx = globalThis.gameManager.getContext();
-  if (ENABLE_GRATICULE) drawGraticule(ctx.S);
-  if (ENABLE_MESH) drawRegions(ctx);
-
-  drawSystems(ctx);
-  drawLanes(ctx);
+  requestRerender();
 }
 
 let requestID: number | null = null;
-export function rerender() {
+export function requestRerender() {
   cancelAnimationFrame(requestID!);
-  requestID = requestAnimationFrame(_rerender);
+  return (requestID = requestAnimationFrame(() => rerender()));
+
+  function rerender(ctx?: FnContext) {
+    if (!svg) return;
+    ctx ??= globalThis.gameManager.getContext();
+
+    if (ENABLE_MESH) drawRegions(ctx);
+
+    drawCanvas(ctx.S);
+    drawSystems(ctx);
+    drawLanes(ctx);
+  }
 }
 
 function drawSystems({ S, C, P }: FnContext) {
@@ -322,12 +379,12 @@ function drawSystems({ S, C, P }: FnContext) {
         .attr('id', (d) => d.id)
         .on('click', (ev: PointerEvent, d: System) => {
           onClickSystem(ev, d);
-          rerender();
+          requestRerender();
         })
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
           onClickSystem(ev, d);
-          rerender();
+          requestRerender();
         });
 
       g.append('circle')
@@ -418,12 +475,12 @@ function drawRegions({ S, C, P }: FnContext) {
         .classed('region', true)
         .on('click', (ev: PointerEvent, d: System) => {
           onClickSystem(ev, d);
-          rerender();
+          requestRerender();
         })
         .on('contextmenu', (ev: PointerEvent, d: System) => {
           ev.preventDefault();
           onClickSystem(ev, d);
-          rerender();
+          requestRerender();
         });
     });
 
@@ -459,12 +516,12 @@ function drawLanes({ S, C, P }: FnContext) {
         .attr('id', (d) => d.id)
         .on('click', (ev: PointerEvent, d: Lane) => {
           onClickLane(ev, d);
-          rerender();
+          requestRerender();
         })
         .on('contextmenu', (ev: PointerEvent, d: Lane) => {
           ev.preventDefault();
           onClickLane(ev, d);
-          rerender();
+          requestRerender();
         });
 
       g.append('path').attr('class', 'lane');

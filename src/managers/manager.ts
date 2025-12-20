@@ -87,6 +87,9 @@ export abstract class GameManager {
   protected gameStart() {
     this.status = 'PLAYING';
     this.tick = 0;
+
+    this.events.emit('GAME_START', undefined);
+
     this.#runGameLoop();
   }
 
@@ -137,10 +140,6 @@ export abstract class GameManager {
   #registerEventListeners() {
     this.events.on('GAME_STOP', () => {
       this.gameStop();
-    });
-
-    this.events.on('GAME_START', () => {
-      this.gameStart();
     });
 
     this.events.on('TAKE_ORDER', (order: Order) => {

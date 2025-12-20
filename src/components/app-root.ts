@@ -2,11 +2,13 @@ import { provide } from '@lit/context';
 import { LitElement } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 
-import { gameManager } from './app-context.ts';
+// import { PlayroomGameManager } from '../managers/playroom.ts';
 
 import { LocalGameManager } from '../managers/local.ts';
+
+import { gameManager } from './app-context.ts';
+
 // import { ConvexGameManager } from '../managers/convex.ts';
-// import { PlayroomGameManager } from '../managers/playroom.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {

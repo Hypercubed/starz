@@ -7,7 +7,7 @@ import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Player, ScoreInterface } from '../types';
+import type { Player } from '../types';
 
 const createId = init({ length: 5 });
 
@@ -32,9 +32,8 @@ export class LocalGameManager extends GameManager {
     }
 
     this.gameSetup(thisPlayerPartial);
-    ui.setupUI();
     this.gameStart();
-    ui.rerender();
+    ui.requestRerender();
   }
 
   protected gameSetup(player: Partial<Player> & { id: string }) {
@@ -94,7 +93,7 @@ export class LocalGameManager extends GameManager {
     super.gameStop();
 
     ui.clearSelection();
-    ui.rerender();
+    ui.requestRerender();
   }
 
   protected onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
