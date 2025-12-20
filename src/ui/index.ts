@@ -3,7 +3,7 @@ import {
   onClickSystem,
   setupKeboardControls
 } from './controls.ts';
-import { addMessage, clearMessages, updateMessageBox } from './messages.ts';
+import { addMessage, clearMessages } from './messages.ts';
 import {
   drawMap,
   rerender,
@@ -16,25 +16,19 @@ import {
 import { clearSelection, deselect, select } from './selection.ts';
 import {
   showHelp,
-  updateInfoBox,
-  updateLeaderbox,
   showStartGame,
   showEndGame,
-  setupDialogs
+  setupDialogs,
+  openOptions
 } from './ui.ts';
 
+// TODO: This shoudl become a component
 export function setupUI() {
   drawMap();
-  updateInfoBox();
-  updateLeaderbox();
-  updateMessageBox();
 
   // Subscribe to updates
   globalThis.gameManager.events.on('STATE_UPDATED', () => {
     rerender();
-    updateInfoBox();
-    updateLeaderbox();
-    updateMessageBox();
   });
 }
 
@@ -45,9 +39,6 @@ export {
   centerOnHome,
   setupDialogs,
   drawMap,
-  updateInfoBox,
-  updateLeaderbox,
-  updateMessageBox,
   scaleZoom,
   rotateProjection,
   changeView,
@@ -60,5 +51,6 @@ export {
   rerender,
   select,
   clearSelection,
-  deselect
+  deselect,
+  openOptions
 };

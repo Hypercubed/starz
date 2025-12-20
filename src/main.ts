@@ -1,12 +1,5 @@
-import { version } from '../package.json';
-
-import { LocalGameManager } from './managers/local.ts';
-// import { PlayroomGameManager } from './managers/playroom.ts';
-
-console.log(`starz.io version ${version}`);
-
-globalThis.onload = async () => {
-  const gameManager = new LocalGameManager();
-  globalThis.gameManager = gameManager;
-  await gameManager.connect();
-};
+import './components/app-root.ts';
+import './components/leader-board.ts';
+import './components/tick-box.ts';
+import './components/start-dialog-content.ts';
+import './components/message-box.ts';

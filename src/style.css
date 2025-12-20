@@ -20,6 +20,7 @@
   padding: 0;
 }
 
+#tickBox,
 #infobox {
   position: absolute;
   top: 10px;
@@ -370,4 +371,23 @@ svg {
   --pico-border-color: var(--pico-primary-hover-border);
   --pico-box-shadow: var(--pico-button-hover-box-shadow, 0 0 0 rgba(0, 0, 0, 0));
   --pico-color: var(--pico-primary-inverse);
+}
+
+#startDialog {
+  article {
+    margin: auto;
+    position: relative;
+    width: 80%;
+  }
+
+  .lore {
+    margin: auto; text-align: left; font-size: small;
+  }
+  .version {
+    position: absolute; top: 10px; right: 10px; font-size: small;
+  }
+  #playerNameInput {
+    width: 300px;
+    text-align: center;
+  }
 }

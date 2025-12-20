@@ -9,7 +9,6 @@ export interface Messages {
   id: number;
   message: string;
   tick: number;
-  html: string;
 }
 
 export interface BotInterface {
@@ -17,11 +16,17 @@ export interface BotInterface {
   makeMoves(): void;
 }
 
+interface scoreInterface {
+  score: number; // win-loss score
+  tick?: number; // best tick achieved
+}
+
 export interface Player {
   id: string;
   name: string;
   bot?: BotInterface;
   stats: PlayerStats;
+  score: scoreInterface;
   color: string;
   isAlive: boolean;
   visitedSystems: Set<string>;

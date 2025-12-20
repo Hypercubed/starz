@@ -1,73 +1,15 @@
-import * as d3 from 'd3';
-
-const formatSIInteger = d3.format('.3~s');
-
-export function updateInfoBox() {
-  const { C } = globalThis.gameManager.getContext();
-
-  const div = d3
-    .select('#app')
-    .selectAll('#infobox')
-    .data([null])
-    .join((enter) =>
-      enter.append('div').attr('id', 'infobox').html('Turn: <span>0</span>')
-    );
-
-  div.select('span').text(`${~~(C.tick / 2)}${C.tick % 2 === 1 ? '.' : ''}`);
-}
-
-export function updateLeaderbox() {
-  const state = globalThis.gameManager.getState();
-
-  const table = d3
-    .select('#app')
-    .selectAll('#leaderbox')
-    .data([null])
-    .join((enter) => {
-      const table = enter.append('table').attr('id', 'leaderbox');
-      table.html(
-        '<thead><tr><th>Player</th><th>Systems</th><th>Ships</th></tr></thead><tbody></tbody>'
-      );
-      return table;
-    });
-
-  const players = Array.from(state.playerMap.values()); // TODO: optimize?
-  const stats = players.sort(
-    (a, b) => b.stats.systems - a.stats.systems || b.stats.ships - a.stats.ships
-  );
-
-  const row = table
-    .select('tbody')
-    .selectAll('tr')
-    .data(stats, (d: any) => d.id)
-    .join('tr')
-    .style('--owner-color', (d) => {
-      const player = state.playerMap.get(d.id);
-      return player ? player.color : null;
-    })
-    .attr('title', (d) => (d.bot ? d.bot.name : 'Human'))
-    .classed('eliminated', (d) => !d.isAlive);
-
-  row
-    .selectAll('td')
-    .data((d) => [d.name, d.stats.systems, formatSIInteger(d.stats.ships)])
-    .join('td')
-    // eslint-disable-next-line no-irregular-whitespace
-    .text((d) => ` ${d} `);
-}
-
 export function setupDialogs() {
   const optionsButton = document.getElementById(
     'optionsButton'
   ) as HTMLButtonElement;
 
-  optionsButton.addEventListener('click', openOptions);
+  optionsButton?.addEventListener('click', openOptions);
 
   const helpButton = document.getElementById('helpButton') as HTMLButtonElement;
   helpButton.addEventListener('click', showHelp);
 }
 
-async function openOptions() {
+export async function openOptions() {
   const ret = await showOptions();
   if (ret) {
     const form = document.getElementById('optionsForm') as HTMLFormElement;

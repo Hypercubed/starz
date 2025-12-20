@@ -124,7 +124,7 @@ export class PlayroomGameManager extends GameManager {
       this.state.world = this.game.worldFromJson(world);
 
       for (const player of players) {
-        this.addPlayer(player.name, player.id, undefined, player.color);
+        this.addPlayer(player);
       }
     }
 
@@ -168,7 +168,6 @@ export class PlayroomGameManager extends GameManager {
 
   protected setupThisPlayer(playerId: string) {
     this.playerId = playerId;
-    console.log('Setting up this player:', playerId, this.state.playerMap);
     if (!this.state.playerMap.has(playerId)) return;
 
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
@@ -265,8 +264,6 @@ export class PlayroomGameManager extends GameManager {
       return;
     }
 
-    console.log(`Player joined: ${playerState.id}`);
-
     this.playerStates.set(playerState.id, playerState);
 
     if (PR.isHost()) {
@@ -274,31 +271,28 @@ export class PlayroomGameManager extends GameManager {
     }
 
     playerState.onQuit(() => {
-      console.log(`Player quit: ${playerState.id}`);
       this.playerStates.delete(playerState.id);
     });
   }
 
-  protected addPlayer(
-    name: string,
-    playerId: string,
-    bot: Bot | undefined,
-    color: string
-  ) {
-    const player = super.addPlayer(name, playerId, bot, color);
-    if (!player) return;
-
-    document.documentElement.style.setProperty(`--player-${player.id}`, color);
-    return player;
+  protected addPlayer(player: Partial<Player> & { id: string }): Player {
+    const _player = super.addPlayer({ ...player });
+    document.documentElement.style.setProperty(
+      `--player-${player.id}`,
+      _player.color
+    );
+    return _player;
   }
 
   private async addPlayerProfile(playerState: PR.PlayerState) {
     if (this.state.playerMap.has(playerState.id)) return;
 
     const profile = playerState.getProfile();
+    const name = profile.name || playerState.id;
+    const id = playerState.id;
     const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
     const color = profile.color?.hexString ?? COLORS[this.state.playerMap.size];
-    this.addPlayer(profile.name || playerState.id, playerState.id, bot, color);
+    this.addPlayer({ name, id, bot, color });
   }
 
   protected onEliminatePlayer(loserId: string, winnerId: string | null) {
@@ -399,7 +393,6 @@ export class PlayroomGameManager extends GameManager {
         `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
       );
     }
-    console.log('restart?', restart);
     if (restart) this.reload();
   }
 

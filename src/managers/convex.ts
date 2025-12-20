@@ -1,5 +1,7 @@
 import { init } from '@paralleldrive/cuid2';
+import { ConvexClient } from 'convex/browser';
 
+import { api } from '../../convex/_generated/api';
 import { COLORS, NumHumanPlayers, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
@@ -9,23 +11,32 @@ import { GameManager } from './manager.ts';
 
 import type { Player } from '../types';
 
+const client = new ConvexClient(import.meta.env.VITE_CONVEX_URL);
+
 const createId = init({ length: 5 });
 
-export class LocalGameManager extends GameManager {
-  constructor() {
-    super();
-    this.registerUIEvents();
-  }
-
+export class ConvexGameManager extends GameManager {
   async connect() {
     this.gameStop();
     this.status = 'WAITING';
 
-    // Create and add this player to make it available during setup
-    const thisPlayerPartial = this.getInitalPlayer();
-    this.addPlayer(thisPlayerPartial);
+    const playerId = (this.playerId =
+      localStorage.getItem('starz_playerId') ?? createId());
+    const playerName = this.config.playerName;
 
-    this.events.emit('GAME_INIT', undefined);
+    localStorage.setItem('starz_playerId', playerId);
+    localStorage.setItem('starz_playerName', playerName);
+
+    const score = await client.query(api.leaderboard.getMyBestScore, {
+      playerId
+    });
+    const thisPlayer = this.onPlayerJoin(1, {
+      id: playerId,
+      name: playerName,
+      score: score ?? undefined
+    })!;
+
+    this.registerUIEvents();
 
     if (START_PAUSED) {
       await ui.showStartGame();
@@ -35,39 +46,25 @@ export class LocalGameManager extends GameManager {
     this.state = this.game.setup(ctx);
     ui.clearMessages();
 
-    // Add this player first
-    const thisPlayer = this.onPlayerJoin(1, thisPlayerPartial);
-    this.game.assignSystem(this.state, thisPlayerPartial.id);
+    // Re-add thisPlayer
+    this.onPlayerJoin(1, thisPlayer);
+    this.game.assignSystem(this.state, playerId);
 
-    // Add Bots
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
     for (let i = 2; i <= totalPlayers; i++) {
-      const player = this.onPlayerJoin(i)!;
+      const player = this.onPlayerJoin(
+        i,
+        i === 1 ? { id: playerId, name: playerName } : undefined
+      )!;
       this.game.assignSystem(this.state, player.id);
     }
 
-    this.setupThisPlayer(thisPlayer.id);
+    const name = NumHumanPlayers > 0 ? this.config.playerName : '1';
+    this.setupThisPlayer(thisPlayer.id, name);
     ui.setupUI();
 
     this.gameStart();
     ui.rerender();
-  }
-
-  private getInitalPlayer() {
-    const playerId = (this.playerId =
-      localStorage.getItem('starz_playerId') ?? createId());
-    const playerName = this.config.playerName;
-    const score = +(localStorage.getItem('starz_score') ?? 0);
-
-    localStorage.setItem('starz_playerId', playerId);
-    localStorage.setItem('starz_playerName', playerName);
-    localStorage.setItem('starz_score', score.toString());
-
-    return {
-      id: playerId,
-      name: playerName,
-      score: { score }
-    } satisfies Partial<Player>;
   }
 
   protected gameStart() {
@@ -77,9 +74,7 @@ export class LocalGameManager extends GameManager {
     ui.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
-    if (player) {
-      ui.addMessage(`You are Player ${player.name}.`);
-    }
+    if (player) ui.addMessage(`You are Player ${player.name}.`);
   }
 
   protected gameStop() {
@@ -90,10 +85,10 @@ export class LocalGameManager extends GameManager {
   }
 
   private onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
-    const color = COLORS[playerIndex];
+    const color = player.color ?? COLORS[playerIndex];
     const playerName = player.name ?? `Bot ${playerIndex}`;
 
-    const id = createId();
+    const id = player.id ?? createId();
     const bot: Bot | undefined =
       playerIndex > NumHumanPlayers
         ? new Bot({ playerIndex, id, name: playerName })
@@ -127,19 +122,13 @@ export class LocalGameManager extends GameManager {
         `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
       );
     }
-
-    if (restart) {
-      this.restart();
-    }
+    if (restart) this.reload();
   }
 
-  private restart() {
-    this.stopGameLoop();
-    ui.clearSelection();
-
-    this.tick = 0;
-    this.state = this.game.initalState();
-    this.connect();
+  private reload() {
+    const newURL = window.location.href.split('#')[0];
+    window.history.replaceState(null, '', newURL);
+    window.location.reload();
   }
 
   protected onEliminatePlayer(loserId: string, winnerId: string | null) {
@@ -161,16 +150,13 @@ export class LocalGameManager extends GameManager {
     }
   }
 
-  private submitWinLoss(deltaScore: number) {
-    const score = +(localStorage.getItem('starz_score') ?? 0) + deltaScore;
-    localStorage.setItem('starz_score', score.toString());
-  }
-
-  protected addPlayer(player: Partial<Player> & { id: string }): Player {
+  protected addPlayer(player: Partial<Player> & { id: string }) {
     const _player = super.addPlayer({
       color: player.color ?? getRandomColor(),
       ...player
     });
+
+    console.log(`Added player ${_player.name} (${_player.id})`);
 
     document.documentElement.style.setProperty(
       `--player-${_player.id}`,
@@ -179,10 +165,10 @@ export class LocalGameManager extends GameManager {
     return _player;
   }
 
-  private setupThisPlayer(playerId: string) {
+  private setupThisPlayer(playerId: string, name?: string) {
     this.playerId = playerId;
     const player = this.state.playerMap.get(playerId)!;
-
+    player.name = name ?? player.name;
     const homeworld = this.game.getPlayersHomeworld(this.state)!;
     this.game.visitSystem(this.state, homeworld);
     ui.centerOnHome();
@@ -190,6 +176,25 @@ export class LocalGameManager extends GameManager {
     if (!player.bot) {
       ui.clearSelection();
       ui.select(homeworld.id);
+    }
+  }
+
+  private async submitWinLoss(deltaScore: number) {
+    const playerId = this.playerId;
+    const player = this.state.playerMap.get(this.playerId)!;
+    const playerName = player.name;
+    const tick = this.tick;
+
+    try {
+      await client.mutation(api.leaderboard.submitScore, {
+        playerId,
+        playerName,
+        tick,
+        deltaScore
+      });
+      console.log('Score submitted!');
+    } catch (error) {
+      console.error('Failed to submit:', error);
     }
   }
 

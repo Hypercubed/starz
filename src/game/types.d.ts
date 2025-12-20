@@ -5,9 +5,11 @@ export interface GameEventMap {
   GAME_INIT: undefined;
   GAME_START: undefined;
   GAME_STOP: undefined;
+  GAME_TICK: { tick: number };
 
   // State Updates
   STATE_UPDATED: { state: GameState; status: GameStatus };
+  MESSAGES_UPDATED: { messages: Messages[] };
 
   // Player Events
   PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };

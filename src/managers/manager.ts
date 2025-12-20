@@ -3,7 +3,6 @@ import { DEV_MODE, TICK_DURATION_MS } from '../constants.ts';
 import * as game from '../game/index.ts';
 
 import type { FnContext, GameStatus } from './types.d.ts';
-import type { Bot } from '../game/bots.ts';
 import type {
   GameConfig,
   GameEventMap,
@@ -57,27 +56,32 @@ export abstract class GameManager {
     };
   }
 
-  protected addPlayer(
-    name: string,
-    playerId: string,
-    bot: Bot | undefined,
-    color: string
-  ): Player | undefined {
-    if (this.state.playerMap.has(playerId)) return;
+  protected addPlayer(player: Partial<Player> & { id: string }): Player {
+    if (this.state.playerMap.has(player.id)) {
+      return this.state.playerMap.get(player.id)!;
+    }
 
-    const player = {
-      name,
-      id: playerId,
-      bot,
-      stats: { playerId: playerId, systems: 0, ships: 0, homeworld: 0 },
-      color,
+    const score = player.score ?? {
+      userId: player.id,
+      playerName: player.name ?? `Player ${this.state.playerMap.size + 1}`,
+      score: 0,
+      tick: 0,
+      timestamp: Date.now()
+    };
+
+    const _player = {
+      name: player.name ?? `Player ${this.state.playerMap.size + 1}`,
+      score,
+      color: '#000000',
+      ...player,
+      stats: { playerId: player.id, systems: 0, ships: 0, homeworld: 0 },
       isAlive: true,
       visitedSystems: new Set<string>(),
       revealedSystems: new Set<string>()
     } satisfies Player;
-    game.addPlayer(this.state, player);
+    game.addPlayer(this.state, _player);
 
-    return player;
+    return _player;
   }
 
   protected gameStart() {
@@ -110,6 +114,8 @@ export abstract class GameManager {
 
     this.stopGameLoop();
     this.gameTick();
+
+    this.events.emit('GAME_TICK', { tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),

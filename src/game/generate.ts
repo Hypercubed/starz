@@ -127,8 +127,6 @@ export function assignSystem(state: GameState, playerId: string) {
   system.ownerId = system.homeworld = playerId;
   system.type = 'INHABITED';
 
-  console.log(`Assigned system ${system.id} to player ${playerId}`);
-
   return system;
 }
 

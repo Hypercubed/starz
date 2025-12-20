@@ -42,11 +42,16 @@
     "vitest": "^4.0.13"
   },
   "dependencies": {
+    "@auth/core": "^0.37.0",
+    "@convex-dev/auth": "^0.0.90",
+    "@lit/context": "^1.1.6",
     "@paralleldrive/cuid2": "^3.0.4",
     "@picocss/pico": "^2.1.1",
+    "convex": "^1.31.2",
     "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",
     "d3-geo-zoom": "^1.5.5",
+    "lit": "^3.3.1",
     "playroomkit": "^0.0.91",
     "svg-smoother": "^2.1.0",
     "versor": "^0.2.0"
