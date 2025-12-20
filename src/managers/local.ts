@@ -7,7 +7,7 @@ import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Player } from '../types';
+import type { Player, ScoreInterface } from '../types';
 
 const createId = init({ length: 5 });
 
@@ -22,7 +22,7 @@ export class LocalGameManager extends GameManager {
     this.status = 'WAITING';
 
     // Create and add this player to make it available during setup
-    const thisPlayerPartial = this.getInitalPlayer();
+    const thisPlayerPartial = await this.initializePlayer();
     this.addPlayer(thisPlayerPartial);
 
     this.events.emit('GAME_INIT', undefined);
@@ -31,13 +31,23 @@ export class LocalGameManager extends GameManager {
       await ui.showStartGame();
     }
 
+    this.gameSetup(thisPlayerPartial);
+    ui.setupUI();
+    this.gameStart();
+    ui.rerender();
+  }
+
+  protected gameSetup(player: Partial<Player> & { id: string }) {
     const ctx = this.getContext();
     this.state = this.game.setup(ctx);
     ui.clearMessages();
 
+    // Get players name from config in case it changed
+    player.name = this.config.playerName;
+
     // Add this player first
-    const thisPlayer = this.onPlayerJoin(1, thisPlayerPartial);
-    this.game.assignSystem(this.state, thisPlayerPartial.id);
+    const thisPlayer = this.onPlayerJoin(1, player);
+    this.game.assignSystem(this.state, player.id);
 
     // Add Bots
     const totalPlayers = NumHumanPlayers + +this.config.numBots;
@@ -47,13 +57,13 @@ export class LocalGameManager extends GameManager {
     }
 
     this.setupThisPlayer(thisPlayer.id);
-    ui.setupUI();
 
-    this.gameStart();
-    ui.rerender();
+    localStorage.setItem('starz_playerId', thisPlayer.id);
+    localStorage.setItem('starz_playerName', thisPlayer.name);
+    localStorage.setItem('starz_score', thisPlayer.score.score.toString());
   }
 
-  private getInitalPlayer() {
+  protected async initializePlayer() {
     const playerId = (this.playerId =
       localStorage.getItem('starz_playerId') ?? createId());
     const playerName = this.config.playerName;
@@ -77,9 +87,7 @@ export class LocalGameManager extends GameManager {
     ui.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
-    if (player) {
-      ui.addMessage(`You are Player ${player.name}.`);
-    }
+    if (player) ui.addMessage(`You are Player ${player.name}.`);
   }
 
   protected gameStop() {
@@ -89,7 +97,7 @@ export class LocalGameManager extends GameManager {
     ui.rerender();
   }
 
-  private onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
+  protected onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
     const color = COLORS[playerIndex];
     const playerName = player.name ?? `Bot ${playerIndex}`;
 
@@ -128,12 +136,10 @@ export class LocalGameManager extends GameManager {
       );
     }
 
-    if (restart) {
-      this.restart();
-    }
+    if (restart) this.restart();
   }
 
-  private restart() {
+  protected restart() {
     this.stopGameLoop();
     ui.clearSelection();
 
@@ -161,7 +167,7 @@ export class LocalGameManager extends GameManager {
     }
   }
 
-  private submitWinLoss(deltaScore: number) {
+  protected async submitWinLoss(deltaScore: number) {
     const score = +(localStorage.getItem('starz_score') ?? 0) + deltaScore;
     localStorage.setItem('starz_score', score.toString());
   }
@@ -179,7 +185,7 @@ export class LocalGameManager extends GameManager {
     return _player;
   }
 
-  private setupThisPlayer(playerId: string) {
+  protected setupThisPlayer(playerId: string) {
     this.playerId = playerId;
     const player = this.state.playerMap.get(playerId)!;
 
@@ -193,7 +199,7 @@ export class LocalGameManager extends GameManager {
     }
   }
 
-  private registerUIEvents() {
+  protected registerUIEvents() {
     ui.setupDialogs();
     ui.setupKeboardControls();
 

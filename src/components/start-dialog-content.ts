@@ -75,6 +75,9 @@ export class StartDialogContentElement extends LitElement {
             type="text"
             value="${this.playerName}"
             placeholder="Player Name"
+            minlength="1"
+            maxlength="30"
+            required
           />
 
           <br /><button type="button" @click="${this.onPlay}">Play</button>

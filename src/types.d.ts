@@ -16,9 +16,10 @@ export interface BotInterface {
   makeMoves(): void;
 }
 
-interface scoreInterface {
+export interface ScoreInterface {
   score: number; // win-loss score
   tick?: number; // best tick achieved
+  rank?: number; // current rank
 }
 
 export interface Player {
@@ -26,7 +27,7 @@ export interface Player {
   name: string;
   bot?: BotInterface;
   stats: PlayerStats;
-  score: scoreInterface;
+  score: ScoreInterface;
   color: string;
   isAlive: boolean;
   visitedSystems: Set<string>;
