@@ -23,10 +23,16 @@ export class StartDialogContentElement extends LitElement {
   protected version = version;
 
   @property()
-  protected playerName: string = 'Player 1';
+  protected playerName: string = 'Player';
 
   @property()
   protected playerScore: number = 0;
+
+  @property()
+  protected playerRank: number | null = null;
+
+  @property()
+  protected shortId: string = '';
 
   connectedCallback() {
     super.connectedCallback();
@@ -66,19 +72,29 @@ export class StartDialogContentElement extends LitElement {
         </div>
 
         <h3>Protect our homeworld. Capture the enemy systems.</h3>
-        <span>✶ ${this.playerScore}</span>
-
         <form method="dialog">
-          <br /><input
-            name="playerName"
-            id="playerNameInput"
-            type="text"
-            value="${this.playerName}"
-            placeholder="Player Name"
-            minlength="1"
-            maxlength="30"
-            required
-          />
+          <div class="grid">
+            <div>
+              <input
+                name="playerName"
+                id="playerNameInput"
+                type="text"
+                value="${this.playerName}"
+                placeholder="Player Name"
+                minlength="1"
+                maxlength="30"
+                required
+              />
+              <small>(Name will be used in leaderboard)</small>
+            </div>
+            <div>
+              ${this.playerName} [${this.shortId}]
+              <span>✶ ${this.playerScore}</span>
+              <br /><small
+                >${this.playerRank ? `Rank: ${this.playerRank}` : ''}</small
+              >
+            </div>
+          </div>
 
           <br /><button type="button" @click="${this.onPlay}">Play</button>
           <br /><button type="button" @click="${this.onOptions}">
@@ -91,13 +107,15 @@ export class StartDialogContentElement extends LitElement {
 
   private updatePlayerInfo() {
     const { P, C } = this.gameManager.getContext();
-    this.playerName = P?.name ?? C.config?.playerName ?? 'Player 1';
+    this.playerName = P?.name ?? C.config?.playerName ?? 'Player';
     this.playerScore = P?.score.score ?? 0;
+    this.playerRank = (P?.score as any)?.rank ?? null;
+    this.shortId = generateShortId(C.playerId);
   }
 
   private onPlay() {
     const input = this.querySelector('#playerNameInput') as HTMLInputElement;
-    const playerName = input.value.trim() || 'Player 1';
+    const playerName = input.value.trim() || 'Player';
 
     this.gameManager.setConfig({ playerName });
     (this.closest('dialog') as HTMLDialogElement).close();
@@ -106,4 +124,12 @@ export class StartDialogContentElement extends LitElement {
   private onOptions() {
     ui.openOptions();
   }
+}
+
+function generateShortId(uid: string): string {
+  const combined = uid + name;
+  const hash = Array.from(combined).reduce((hashAcc, char) => {
+    return (hashAcc << 5) - hashAcc + char.charCodeAt(0);
+  }, 0);
+  return Math.abs(hash).toString(36).substring(0, 4);
 }

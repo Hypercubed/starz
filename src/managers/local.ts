@@ -24,6 +24,7 @@ export class LocalGameManager extends GameManager {
     // Create and add this player to make it available during setup
     const thisPlayerPartial = await this.initializePlayer();
     this.addPlayer(thisPlayerPartial);
+    this.playerId = thisPlayerPartial.id!;
 
     this.events.emit('GAME_INIT', undefined);
 

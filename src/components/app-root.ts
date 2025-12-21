@@ -4,7 +4,9 @@ import { customElement, state } from 'lit/decorators.js';
 
 // import { PlayroomGameManager } from '../managers/playroom.ts';
 
-import { LocalGameManager } from '../managers/local.ts';
+// import { LocalGameManager } from '../managers/local.ts';
+
+import { FirebaseGameManager } from '../managers/firebase.ts';
 
 import { gameManager } from './app-context.ts';
 
@@ -14,7 +16,7 @@ import { gameManager } from './app-context.ts';
 export class AppRootElement extends LitElement {
   @provide({ context: gameManager })
   @state()
-  private gameManager = new LocalGameManager();
+  private gameManager = new FirebaseGameManager();
 
   connectedCallback() {
     super.connectedCallback();

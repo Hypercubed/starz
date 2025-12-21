@@ -1,0 +1,137 @@
+import { init } from '@paralleldrive/cuid2';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously } from 'firebase/auth';
+import { get, increment, ref, set, getDatabase } from 'firebase/database';
+
+import { LocalGameManager } from './local.ts';
+
+import type { Player } from '../types';
+
+const createId = init({ length: 5 });
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+interface LeaderboardEntry {
+  userId: string;
+  playerName: string;
+  score: number;
+}
+
+export class FirebaseGameManager extends LocalGameManager {
+  private app = initializeApp(firebaseConfig);
+  private auth = getAuth(this.app);
+  private database = getDatabase(this.app);
+
+  protected async initializePlayer() {
+    this.playerId = localStorage.getItem('starz_playerId') ?? createId();
+    const playerName =
+      localStorage.getItem('starz_playerName') ?? this.config.playerName;
+    const score = +(localStorage.getItem('starz_score') ?? '0');
+
+    try {
+      await signInAnonymously(this.auth);
+      this.playerId = this.auth.currentUser!.uid;
+      console.log('Signed in anonymously as:', this.playerId);
+    } catch (error) {
+      console.error('Firebase anonymous sign-in failed:', error);
+    }
+
+    let scoreObj: (LeaderboardEntry & { rank?: number }) | null = null;
+    if (this.auth.currentUser) {
+      scoreObj = await this.getUserLeaderboardData(this.playerId);
+      if (!scoreObj) {
+        await this.createScore();
+        scoreObj = await this.getUserLeaderboardData(this.playerId);
+      } else {
+        const loadLeaderboard = await this.loadLeaderboard();
+        console.log('Player leaderboard data:');
+        console.table(loadLeaderboard);
+
+        const playerEntry = loadLeaderboard.find(
+          (entry) => entry.userId === this.playerId
+        );
+        if (playerEntry) {
+          scoreObj.rank = playerEntry!.rank;
+        }
+
+        console.log('Current player entry:', playerEntry);
+      }
+    }
+
+    return {
+      id: this.playerId,
+      name: playerName,
+      score: scoreObj ?? { score }
+    } satisfies Partial<Player>;
+  }
+
+  async createScore() {
+    if (!this.auth.currentUser) return;
+
+    const playerRef = ref(this.database, `leaderboard/${this.auth.currentUser.uid}`);
+    await set(playerRef, {
+      playerName: this.config.playerName,
+      score: 0,
+      timestamp: Date.now()
+    });
+  }
+
+  protected async submitWinLoss(deltaScore: number) {
+    if (!this.auth.currentUser) return;
+
+    const playerRef = ref(
+      this.database,
+      `leaderboard/${this.auth.currentUser.uid}`
+    );
+
+    // Increment existing score
+    await set(playerRef, {
+      playerName: this.config.playerName,
+      score: increment(deltaScore),
+      timestamp: Date.now()
+    });
+  }
+
+  async getUserLeaderboardData(
+    userId: string
+  ): Promise<{ userId: string; playerName: string; score: number } | null> {
+    const playerRef = ref(this.database, `leaderboard/${userId}`);
+    const snapshot = await get(playerRef);
+
+    if (snapshot.exists()) {
+      return {
+        userId: userId,
+        ...snapshot.val()
+      };
+    } else {
+      return null; // Player not found
+    }
+  }
+
+  async loadLeaderboard() {
+    const scoresRef = ref(this.database, `leaderboard`);
+
+    const scores: Array<LeaderboardEntry & { rank: number }> = [];
+    const snapshot = await get(scoresRef);
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnapshot) => {
+        scores.push({
+          userId: childSnapshot.key,
+          ...childSnapshot.val()
+        });
+      });
+    }
+
+    scores.sort((a, b) => b.score - a.score);
+    scores.forEach((score, index) => (score.rank = index + 1));
+
+    return scores;
+  }
+}

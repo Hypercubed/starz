@@ -65,7 +65,7 @@ test.describe('Game Initialization', () => {
 
     const homeworld = await getHomeworld(page);
 
-    // Homeworld should be visible and owned by player 1
+    // Homeworld should be visible and owned by player
     await expect(homeworld).toBeVisible();
     await expect(homeworld).toHaveClass(/inhabited/)
     await expect(homeworld).toHaveClass(/visited/)

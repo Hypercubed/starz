@@ -7,7 +7,7 @@ import type { GameConfig, GameState, System } from './types.d.ts';
 
 export function defaultConfig(): GameConfig {
   return {
-    playerName: localStorage.getItem('starz_playerName') ?? 'Player 1',
+    playerName: localStorage.getItem('starz_playerName') ?? 'Player',
     numBots: NumBots,
     fow: ENABLE_FOG_OF_WAR,
     numSystems: NumOfSystems,

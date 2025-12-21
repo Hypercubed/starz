@@ -7,9 +7,9 @@ import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Player, PlayerStats } from '../types.d.ts';
-import type { GameStatus, WorldJSON } from './types.d.ts';
-import type { Move, Order, System } from '../game/types.d.ts';
+import type { Player, PlayerStats } from '../types';
+import type { GameStatus, WorldJSON } from './types';
+import type { Move, Order, System } from '../game/types';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -377,10 +377,7 @@ export class PlayroomGameManager extends GameManager {
   }
 
   protected async onPlayerWin(winnerId: string, message?: string) {
-    console.log('onPlayerWin', { winnerId, message }, this.playerId);
-    if (message) {
-      ui.addMessage(message);
-    }
+    if (message) ui.addMessage(message);
 
     this.game.revealAllSystems(this.state);
     ui.clearSelection();
