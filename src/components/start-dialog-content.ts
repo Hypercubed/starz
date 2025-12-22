@@ -110,7 +110,8 @@ export class StartDialogContentElement extends LitElement {
     this.playerName = P?.name ?? C.config?.playerName ?? 'Player';
     this.playerScore = P?.score.score ?? 0;
     this.playerRank = (P?.score as any)?.rank ?? null;
-    this.shortId = generateShortId(C.playerId);
+    this.shortId =
+      C.playerId.length === 4 ? C.playerId : generateShortId(C.playerId);
   }
 
   private onPlay() {

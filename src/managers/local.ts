@@ -14,7 +14,7 @@ const createId = init({ length: 5 });
 export class LocalGameManager extends GameManager {
   constructor() {
     super();
-    this.registerUIEvents();
+    this.#registerUIEvents();
   }
 
   async connect() {
@@ -199,7 +199,7 @@ export class LocalGameManager extends GameManager {
     }
   }
 
-  protected registerUIEvents() {
+  #registerUIEvents() {
     ui.setupDialogs();
     ui.setupKeboardControls();
 

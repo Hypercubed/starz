@@ -75,7 +75,10 @@ export class FirebaseGameManager extends LocalGameManager {
   async createScore() {
     if (!this.auth.currentUser) return;
 
-    const playerRef = ref(this.database, `leaderboard/${this.auth.currentUser.uid}`);
+    const playerRef = ref(
+      this.database,
+      `leaderboard/${this.auth.currentUser.uid}`
+    );
     await set(playerRef, {
       playerName: this.config.playerName,
       score: 0,

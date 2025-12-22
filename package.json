@@ -35,6 +35,7 @@
     "globals": "^16.5.0",
     "happy-dom": "^20.0.10",
     "jiti": "^2.6.1",
+    "partykit": "0.0.115",
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
@@ -53,6 +54,8 @@
     "d3-geo-zoom": "^1.5.5",
     "firebase": "^12.7.0",
     "lit": "^3.3.1",
+    "msgpackr": "^1.11.8",
+    "partysocket": "1.1.10",
     "playroomkit": "^0.0.94",
     "svg-smoother": "^2.1.0",
     "versor": "^0.2.0"
