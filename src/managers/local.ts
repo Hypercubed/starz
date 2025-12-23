@@ -87,7 +87,7 @@ export class LocalGameManager extends GameManager {
     ui.addMessage(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
-    if (player) ui.addMessage(`You are Player ${player.name}.`);
+    if (player) ui.addMessage(`You are ${player.name}.`);
   }
 
   protected gameStop() {

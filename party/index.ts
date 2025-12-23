@@ -73,10 +73,6 @@ export default class Server implements Party.Server {
 
     this.onPlayerJoin(playerName, conn);
 
-    // for (const conn of this.room.getConnections()) {
-    //   console.log(`Connection: ${conn.id}:`, conn);
-    // }
-
     conn.send(JSON.stringify({
       type: 'init',
       playerId: playerId,
@@ -94,12 +90,26 @@ export default class Server implements Party.Server {
   }
 
   async onRequest(req: Party.Request) {
+    if (req.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+        },
+      });
+    }
+
     const url = new URL(req.url);
 
     if (req.method === "GET") {  // Get leaderboard
       return new Response(JSON.stringify(this.getPublicLeaderboard()), {
         status: 200,
-        headers: { "Content-Type": "application/json" }
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
       });
     }
 
@@ -130,7 +140,12 @@ export default class Server implements Party.Server {
       playerEntry.playerName = playerName; // Update name on score change
 
       await this.saveLeaderboard();
-      return new Response("OK");
+      return new Response("OK", {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*"
+        }
+      });
     }
 
     return new Response("Method not allowed", { status: 405 });

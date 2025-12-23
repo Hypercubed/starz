@@ -5,7 +5,7 @@ import { LocalGameManager } from './local.ts';
 
 import type { LeaderboardPostBody } from '../../party/types.d.ts';
 import type { Player } from '../types.d.ts';
-import { unpack } from 'msgpackr/unpack';
+import { unpack } from 'msgpackr';
 
 const createPlayerId = init({ length: 4 });
 const createPlayerToken = init({ length: 28 });
@@ -15,7 +15,7 @@ const PARTYKIT_REST_URL = import.meta.env.VITE_PARTYKIT_REST_URL;
 const PARTYKIT_LEADERBOARD = import.meta.env.VITE_PARTYKIT_LEADERBOARD;
 
 export class PlaykitGameManager extends LocalGameManager {
-  partySocket!: PartySocket;
+  partySocket?: PartySocket;
 
   playerToken!: string;
 
@@ -37,12 +37,13 @@ export class PlaykitGameManager extends LocalGameManager {
     });
 
     return new Promise<void>((resolve, reject) => {
-      this.partySocket.onopen = () => {
+      this.partySocket!.onopen = () => {
         console.log('Connected to PartyKit');
         resolve();
       };
-      this.partySocket.onerror = (err) => {
+      this.partySocket!.onerror = (err) => {
         console.error('PartyKit connection error:', err);
+        this.partySocket = undefined;
         reject(err);
       };
     });
@@ -51,12 +52,13 @@ export class PlaykitGameManager extends LocalGameManager {
   protected async initializePlayer() {
     console.log('Initializing player...');
 
-    this.playerId = localStorage.getItem('starz_playerId') ?? createPlayerId();
-    localStorage.setItem('starz_playerId', this.playerId);
-
     this.playerToken =
       localStorage.getItem('starz_playerToken') ?? createPlayerToken();
     localStorage.setItem('starz_playerToken', this.playerToken);
+    // TODO: Use this token to authenticate with PartyKit and load player data
+
+    this.playerId = localStorage.getItem('starz_playerId') ?? createPlayerId();
+    localStorage.setItem('starz_playerId', this.playerId);
 
     const playerName =
       localStorage.getItem('starz_playerName') ?? this.config.playerName;
@@ -66,25 +68,34 @@ export class PlaykitGameManager extends LocalGameManager {
     localStorage.setItem('starz_score', score.toString());
 
     if (!this.partySocket) {
-      await this.playkitConnect(this.playerId, this.playerToken, playerName);
+      try {
+        // TODO: Get playerId and playerName from server using playerToken
+        await this.playkitConnect(this.playerId, this.playerToken, playerName);
+      } catch (err) {
+        console.error('Failed to connect to PartyKit');
+      }
 
-      this.#registerPlaykitEvents();
-
-      score = await new Promise((resolve) => {
-        // TODO: Get ranking and score from PartyKit
-        const onMessage = (event: MessageEvent) => {
-          const data = JSON.parse(event.data);
-          if (data.type === 'init') {
-            score = data.playerEntry.score;
-            localStorage.setItem('starz_score', score.toString());
-            this.partySocket.removeEventListener('message', onMessage);
-            resolve(score);
-          }
-        };
-
-        this.partySocket.addEventListener('message', onMessage);
-      });
+      if (this.partySocket) {
+        this.#registerPlaykitEvents();
+  
+        score = await new Promise((resolve) => {
+          // TODO: Get ranking and score from PartyKit
+          const onMessage = (event: MessageEvent) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'init') {
+              score = data.playerEntry?.score ?? 0;
+              localStorage.setItem('starz_score', score.toString());
+              this.partySocket!.removeEventListener('message', onMessage);
+              resolve(score);
+            }
+          };
+  
+          this.partySocket!.addEventListener('message', onMessage);
+        });
+      }
     }
+
+    console.log(`Player initialized: ${this.playerId} (${playerName}) with score ${score}`);
 
     return {
       id: this.playerId,
@@ -95,6 +106,8 @@ export class PlaykitGameManager extends LocalGameManager {
 
   protected async submitWinLoss(deltaScore: number) {
     super.submitWinLoss(deltaScore);
+
+    if (!this.partySocket) return;
 
     console.assert(
       deltaScore === 1 || deltaScore === -1,
@@ -121,6 +134,8 @@ export class PlaykitGameManager extends LocalGameManager {
   }
 
   async loadLeaderboard() {
+    if (!this.partySocket) return null;
+
     const response = await PartySocket.fetch(
       { host: PARTYKIT_REST_URL, room: PARTYKIT_LEADERBOARD },
       {
@@ -134,6 +149,8 @@ export class PlaykitGameManager extends LocalGameManager {
   }
 
   #registerPlaykitEvents() {
+    if (!this.partySocket) return null;
+
     this.partySocket.addEventListener('message', async (event) => {
       const data =
         event.data instanceof Blob ?

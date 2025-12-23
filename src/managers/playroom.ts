@@ -108,7 +108,7 @@ export class PlayroomGameManager extends GameManager {
 
     const player = this.state.playerMap.get(this.playerId!);
     if (player) {
-      ui.addMessage(`You are Player ${player.name}.`);
+      ui.addMessage(`You are ${player.name}.`);
     } else {
       ui.addMessage(`You are a Spectator.`);
     }

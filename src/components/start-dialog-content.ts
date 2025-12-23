@@ -8,6 +8,7 @@ import * as ui from '../ui';
 import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../managers/manager';
+import { pack, unpack } from 'msgpackr';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -23,7 +24,7 @@ export class StartDialogContentElement extends LitElement {
   protected version = version;
 
   @property()
-  protected playerName: string = 'Player';
+  protected playerName: string = '';
 
   @property()
   protected playerScore: number = 0;
@@ -32,7 +33,13 @@ export class StartDialogContentElement extends LitElement {
   protected playerRank: number | null = null;
 
   @property()
+  protected playerToken: string = '';
+
+  @property()
   protected shortId: string = '';
+
+  private playerId: string = '';
+  private keyText = 'Use this key to restore your player data later.  Click to copy.';
 
   connectedCallback() {
     super.connectedCallback();
@@ -79,10 +86,11 @@ export class StartDialogContentElement extends LitElement {
                 name="playerName"
                 id="playerNameInput"
                 type="text"
-                value="${this.playerName}"
-                placeholder="Player Name"
+                .value=${this.playerName}
+                @keydown="${this.onKeydown}"
+                placeholder="Name or Save Key"
                 minlength="1"
-                maxlength="30"
+                maxlength="3000"
                 required
               />
               <small>(Name will be used in leaderboard)</small>
@@ -92,6 +100,9 @@ export class StartDialogContentElement extends LitElement {
               <span>✶ ${this.playerScore}</span>
               <br /><small
                 >${this.playerRank ? `Rank: ${this.playerRank}` : ''}</small
+              >
+              <small data-tooltip="${this.keyText}" @click="${this.copyText}" style="cursor: copy;">
+                ${this.playerToken ? `Token` : ''}</small
               >
             </div>
           </div>
@@ -107,16 +118,21 @@ export class StartDialogContentElement extends LitElement {
 
   private updatePlayerInfo() {
     const { P, C } = this.gameManager.getContext();
-    this.playerName = P?.name ?? C.config?.playerName ?? 'Player';
+    this.playerName = P?.name ?? C.config?.playerName ?? '';
     this.playerScore = P?.score.score ?? 0;
     this.playerRank = (P?.score as any)?.rank ?? null;
+    this.playerId = C.playerId;
     this.shortId =
       C.playerId.length === 4 ? C.playerId : generateShortId(C.playerId);
+
+    this.playerToken= this.genertateToken();
   }
 
   private onPlay() {
     const input = this.querySelector('#playerNameInput') as HTMLInputElement;
-    const playerName = input.value.trim() || 'Player';
+    let playerName = input.value.trim() || 'Anonymous';
+
+    playerName = playerName.substring(0, 30);
 
     this.gameManager.setConfig({ playerName });
     (this.closest('dialog') as HTMLDialogElement).close();
@@ -124,6 +140,69 @@ export class StartDialogContentElement extends LitElement {
 
   private onOptions() {
     ui.openOptions();
+  }
+
+  private onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+
+      const input = this.querySelector('#playerNameInput') as HTMLInputElement;
+      const inputText = input.value.trim();
+      this.readToken(inputText);
+
+      input.value = this.playerName;
+    }
+  }
+
+  private readToken(token: string) {
+    // Attempt to decode player save key
+    try {
+      const decoded = (Uint8Array as any).fromBase64(token);
+      const parsed = unpack(decoded);
+
+      this.playerName = parsed.starz_playerName ?? this.playerName;
+      this.playerScore = parsed.starz_score ?? this.playerScore;
+      this.shortId = parsed.starz_playerId.length === 4 ? parsed.starz_playerId : generateShortId(parsed.starz_playerId);
+      this.requestUpdate();
+
+      Object.entries(parsed).forEach(([key, value]) => {
+        if (key.startsWith('starz_')) {
+          localStorage.setItem(key, value as string);
+        }
+      });
+
+      setTimeout(() => {
+        this.requestUpdate();
+      }, 100);
+
+      // window.location.reload();
+    } catch {
+      this.playerName = token ?? this.playerName;
+    }
+  }
+
+  private genertateToken() {
+    const t = {
+      starz_playerId: this.playerId,
+      starz_playerName: this.playerName,
+      starz_version: this.version,
+      starz_score: this.playerScore
+    };
+    return pack(t).toBase64();
+  }
+
+  async copyText() {
+    try {
+      await navigator.clipboard.writeText(this.playerToken);
+      this.keyText = 'Copied to clipboard!';
+      this.requestUpdate();
+      setTimeout(() => {
+        this.keyText = 'Use this key to restore your player data later.  Click to copy.';
+        this.requestUpdate();
+      }, 2000);
+    } catch {
+      // Ignore
+    }
   }
 }
 
