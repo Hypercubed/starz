@@ -24,6 +24,7 @@
     "fix": "npm run eslint -- --fix && npm run prettier:fix"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20251223.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
     "@types/d3": "^7.4.3",
@@ -35,12 +36,12 @@
     "globals": "^16.5.0",
     "happy-dom": "^20.0.10",
     "jiti": "^2.6.1",
-    "partykit": "0.0.115",
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.1.7",
-    "vitest": "^4.0.13"
+    "vitest": "^4.0.13",
+    "wrangler": "^4.56.0"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -55,7 +56,8 @@
     "firebase": "^12.7.0",
     "lit": "^3.3.1",
     "msgpackr": "^1.11.8",
-    "partysocket": "1.1.10",
+    "partyserver": "^0.1.0",
+    "partysocket": "^1.1.10",
     "playroomkit": "^0.0.94",
     "svg-smoother": "^2.1.0",
     "versor": "^0.2.0"

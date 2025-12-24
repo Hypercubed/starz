@@ -1,0 +1,23 @@
+{
+  "name": "starz-io-party",
+  "main": "party/lobby.ts",
+  "compatibility_date": "2025-12-17",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "LobbyServer",
+        "class_name": "LobbyServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["LobbyServer"]
+    }
+  ],
+  "assets": {
+    "directory": "./docs/",
+    "not_found_handling": "single-page-application"
+  }
+}

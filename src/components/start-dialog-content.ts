@@ -8,7 +8,6 @@ import * as ui from '../ui';
 import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../managers/manager';
-import { pack, unpack } from 'msgpackr';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -39,7 +38,8 @@ export class StartDialogContentElement extends LitElement {
   protected shortId: string = '';
 
   private playerId: string = '';
-  private keyText = 'Use this key to restore your player data later.  Click to copy.';
+  private keyText =
+    'Use this key to restore your player data later.  Click to copy.';
 
   connectedCallback() {
     super.connectedCallback();
@@ -101,7 +101,11 @@ export class StartDialogContentElement extends LitElement {
               <br /><small
                 >${this.playerRank ? `Rank: ${this.playerRank}` : ''}</small
               >
-              <small data-tooltip="${this.keyText}" @click="${this.copyText}" style="cursor: copy;">
+              <small
+                data-tooltip="${this.keyText}"
+                @click="${this.copyText}"
+                style="cursor: copy;"
+              >
                 ${this.playerToken ? `Token` : ''}</small
               >
             </div>
@@ -118,14 +122,17 @@ export class StartDialogContentElement extends LitElement {
 
   private updatePlayerInfo() {
     const { P, C } = this.gameManager.getContext();
+
     this.playerName = P?.name ?? C.config?.playerName ?? '';
     this.playerScore = P?.score.score ?? 0;
-    this.playerRank = (P?.score as any)?.rank ?? null;
+    this.playerRank = P?.score?.rank ?? null;
     this.playerId = C.playerId;
     this.shortId =
       C.playerId.length === 4 ? C.playerId : generateShortId(C.playerId);
 
-    this.playerToken= this.genertateToken();
+    this.playerToken = this.generateToken(
+      (this.gameManager as any).playerToken
+    );
   }
 
   private onPlay() {
@@ -148,47 +155,25 @@ export class StartDialogContentElement extends LitElement {
 
       const input = this.querySelector('#playerNameInput') as HTMLInputElement;
       const inputText = input.value.trim();
-      this.readToken(inputText);
+      this.setName(inputText);
 
       input.value = this.playerName;
     }
   }
 
-  private readToken(token: string) {
-    // Attempt to decode player save key
-    try {
-      const decoded = (Uint8Array as any).fromBase64(token);
-      const parsed = unpack(decoded);
+  private setName(playerName: string) {
+    this.gameManager.setConfig({
+      playerName
+    });
 
-      this.playerName = parsed.starz_playerName ?? this.playerName;
-      this.playerScore = parsed.starz_score ?? this.playerScore;
-      this.shortId = parsed.starz_playerId.length === 4 ? parsed.starz_playerId : generateShortId(parsed.starz_playerId);
+    setTimeout(() => {
+      this.updatePlayerInfo();
       this.requestUpdate();
-
-      Object.entries(parsed).forEach(([key, value]) => {
-        if (key.startsWith('starz_')) {
-          localStorage.setItem(key, value as string);
-        }
-      });
-
-      setTimeout(() => {
-        this.requestUpdate();
-      }, 100);
-
-      // window.location.reload();
-    } catch {
-      this.playerName = token ?? this.playerName;
-    }
+    }, 600);
   }
 
-  private genertateToken() {
-    const t = {
-      starz_playerId: this.playerId,
-      starz_playerName: this.playerName,
-      starz_version: this.version,
-      starz_score: this.playerScore
-    };
-    return pack(t).toBase64();
+  private generateToken(playerToken: string) {
+    return `${this.playerId}::${playerToken}`;
   }
 
   async copyText() {
@@ -197,7 +182,8 @@ export class StartDialogContentElement extends LitElement {
       this.keyText = 'Copied to clipboard!';
       this.requestUpdate();
       setTimeout(() => {
-        this.keyText = 'Use this key to restore your player data later.  Click to copy.';
+        this.keyText =
+          'Use this key to restore your player data later.  Click to copy.';
         this.requestUpdate();
       }, 2000);
     } catch {
