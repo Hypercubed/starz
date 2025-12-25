@@ -1,4 +1,4 @@
-import { init } from '@paralleldrive/cuid2';
+import { nanoid } from 'nanoid';
 
 import { COLORS, NumHumanPlayers, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
@@ -10,7 +10,7 @@ import { GameManager } from './manager.ts';
 import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 
-const createId = init({ length: 5 });
+const createId = () => nanoid(5);
 
 export class LocalGameManager extends GameManager {
   protected appRoot!: AppRootElement;
@@ -247,5 +247,3 @@ function getRandomColor() {
   }
   return color;
 }
-
-export { GameManager };

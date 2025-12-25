@@ -22,7 +22,7 @@
     }
   ],
   "assets": {
-    "directory": "./docs/",
+    "directory": "./dist/",
     "not_found_handling": "single-page-application"
   }
 }

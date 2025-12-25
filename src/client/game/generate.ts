@@ -1,5 +1,5 @@
-import { init } from '@paralleldrive/cuid2';
 import * as d3 from 'd3';
+import { nanoid } from 'nanoid';
 
 import {
   HEIGHT,
@@ -21,7 +21,7 @@ import {
 import type { GameState, Coordinates, System } from './types';
 import type { FnContext } from '../managers/types';
 
-const createId = init({ length: 5 });
+const createId = () => nanoid(5);
 
 export function generateMap({ S, C }: FnContext) {
   S.world = createWorld();

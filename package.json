@@ -23,7 +23,8 @@
     "eslint": "eslint ./src/client ./src/server --ext .ts,.js",
     "prettier": "prettier --check \"src/client/**/*.{ts,js,json,md}\"",
     "prettier:fix": "prettier --write \"src/client/**/*.{ts,js,json,md}\"",
-    "fix": "npm run eslint -- --fix && npm run prettier:fix"
+    "fix": "npm run eslint -- --fix && npm run prettier:fix",
+    "knip": "knip"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.19.0",
@@ -31,7 +32,7 @@
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
     "@types/d3": "^7.4.3",
-    "@types/node": "^24.10.1",
+    "@types/node": "^24.10.4",
     "@vitest/coverage-v8": "^4.0.13",
     "@vitest/ui": "^4.0.13",
     "eslint": "^9.39.1",
@@ -48,22 +49,16 @@
     "wrangler": "^4.56.0"
   },
   "dependencies": {
-    "@auth/core": "^0.37.0",
-    "@convex-dev/auth": "^0.0.90",
     "@lit/context": "^1.1.6",
-    "@paralleldrive/cuid2": "^3.0.4",
     "@picocss/pico": "^2.1.1",
-    "convex": "^1.31.2",
     "d3": "^7.9.0",
     "d3-geo-voronoi": "^2.1.0",
-    "d3-geo-zoom": "^1.5.5",
-    "firebase": "^12.7.0",
     "lit": "^3.3.1",
     "msgpackr": "^1.11.8",
+    "nanoid": "^5.1.6",
     "partyserver": "^0.1.0",
     "partysocket": "^1.1.10",
     "playroomkit": "^0.0.94",
-    "svg-smoother": "^2.1.0",
     "versor": "^0.2.0"
   }
 }
