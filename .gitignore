@@ -25,3 +25,7 @@ coverage
 
 # Others
 .notes
+.env
+.env.*
+dist
+.wrangler
