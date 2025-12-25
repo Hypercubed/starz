@@ -20,9 +20,9 @@ import rootHtml from './app-root.html?raw';
 const ROTATION_STEP = 5;
 
 import type { GameConfig, GameState } from '../../game/types';
-import type { GameManager } from '../../managers/manager.ts';
 import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
+import type { GameManager } from '../../managers/local.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {
@@ -55,7 +55,7 @@ export class AppRootElement extends LitElement {
   @query('#endDialog')
   private endDialog!: HTMLDialogElement;
 
-  connectedCallback() {
+  async connectedCallback() {
     super.connectedCallback();
 
     this.#setupEvents();
@@ -82,9 +82,9 @@ export class AppRootElement extends LitElement {
       </dialog>
       ${unsafeHTML(rootHtml)}
       <game-canvas id="app"></game-canvas>
-      <tick-box id="tickBox" tick="${this.context?.tick}"></tick-box>
-      <leaderboard-element #leaderbox></leaderboard-element>
-      <message-box id="messagebox"></message-box>
+      <tick-box tick="${this.context?.tick}"></tick-box>
+      <leaderboard-element></leaderboard-element>
+      <message-box></message-box>
       <button id="helpButton" @click=${this.showHelp}>?</button>
     `;
   }
@@ -137,6 +137,9 @@ export class AppRootElement extends LitElement {
   }
 
   private async onKeyup(event: KeyboardEvent) {
+    const tagName = (event.target as HTMLElement)?.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA') return;
+
     switch (event.key) {
       case '?':
         this.showHelp();
@@ -189,6 +192,9 @@ export class AppRootElement extends LitElement {
   }
 
   private async onKeypress(event: KeyboardEvent) {
+    const tagName = (event.target as HTMLElement)?.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA') return;
+
     switch (event.code) {
       case 'Space':
         if ('pauseToggle' in globalThis.gameManager) {

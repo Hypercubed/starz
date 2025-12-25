@@ -247,3 +247,5 @@ function getRandomColor() {
   }
   return color;
 }
+
+export { GameManager };

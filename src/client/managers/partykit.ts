@@ -1,6 +1,6 @@
-import { init } from '@paralleldrive/cuid2';
 import { unpack } from 'msgpackr';
 import { PartySocket } from 'partysocket';
+import { customAlphabet } from 'nanoid';
 
 import { LocalGameManager } from './local.ts';
 
@@ -8,8 +8,10 @@ import type { LeaderboardEntry, LeaderboardPostBody } from '../../server/types';
 import type { GameConfig } from '../game/types';
 import type { Player } from '../types';
 
-const createPlayerId = init({ length: 15 });
-const createPlayerToken = init({ length: 15 });
+const FRIENDLY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567';
+
+const createPlayerId = customAlphabet(FRIENDLY_ALPHABET, 15)
+const createPlayerToken = customAlphabet(FRIENDLY_ALPHABET, 15)
 
 const PartySocketConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
@@ -51,11 +53,18 @@ export class PartykitGameManager extends LocalGameManager {
     const playerName = partialConfig.playerName;
 
     // TODO: Make this seperate from config setting
-    if (playerName && playerName.includes('::')) {
-      const [playerId, playerToken] = playerName.split('::');
-      await this.loadPlayer(playerToken, playerId);
-      delete partialConfig.playerName;
-      partialConfig.playerName = this.user?.name ?? this.config.playerName;
+    if (playerName) {
+      if (playerName.includes('::')) {
+        const [playerId, playerToken] = playerName.split('::');
+        await this.loadPlayer(playerToken, playerId);
+        delete partialConfig.playerName;
+        partialConfig.playerName = this.user?.name ?? this.config.playerName;
+      } else {
+        this.user ??= {};
+        this.user.name = playerName;
+        this.thisPlayer!.name = playerName;
+        localStorage.setItem('starz_playerName', playerName);
+      }
     }
 
     await super.setConfig(partialConfig);
@@ -141,10 +150,6 @@ export class PartykitGameManager extends LocalGameManager {
     localStorage.setItem('starz_score', score.toString());
     localStorage.setItem('starz_rank', rank?.toString() ?? '');
 
-    const leaderboard = await this.loadLeaderboard();
-    console.log('Current Leaderboard:');
-    console.table(leaderboard);
-
     return {
       id: this.playerId,
       name: playerName,
@@ -205,8 +210,8 @@ export class PartykitGameManager extends LocalGameManager {
     );
   }
 
-  async loadLeaderboard() {
-    if (!this.lobbySocket) return null;
+  async loadLeaderboard(): Promise<LeaderboardEntry[]> {
+    if (!this.lobbySocket) return [];
 
     const response = await PartySocket.fetch(
       { ...PartySocketConfig },

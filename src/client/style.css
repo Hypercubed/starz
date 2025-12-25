@@ -1,3 +1,7 @@
+body, html {
+  background-color: black;
+}
+
 app-root {
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -13,73 +17,13 @@ app-root {
   --inhabited: #808080;
 }
 
-body, html {
-  background-color: black;
-}
-
-#app {
+game-canvas {
   height: 100vh;
   width: 100vw;
   margin: 0;
   padding: 0;
-}
 
-#tickBox,
-#infobox {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  font-size: 14px;
-  font-weight: bold;
-}
-
-#leaderbox {
-  position: absolute;
-  width: 300px;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-  font-size: 14px;
-  font-weight: bold;
-
-  th,
-  td {
-    padding: 3px 5px;
-    text-align: center;
-    color: var(--owner-color, var(--unoccupied));
-    background-color: rgb(19 22 30 / 34%);
-  }
-
-  tr.eliminated td {
-    text-decoration: line-through;
-    text-decoration-color: white;
-    text-decoration-thickness: 1px;
-  }
-}
-
-#messagebox {
-  position: absolute;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  font-size: 16px;
-  font-weight: bold;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px 20px;
-  border-radius: 5px;
-  max-width: 80%;
-  text-align: center;
-
-  small {
-    font-size: 12px;
-    color: #999;
-  }
-}
-
-canvas {
+  canvas {
   position: absolute;
   top: 0;
   left: 0;
@@ -293,9 +237,69 @@ svg {
     }
   }
 }
+}
+
+tick-box {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+lobby-leaderboard-element,
+leaderboard-element {
+  position: absolute;
+  width: 300px;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  font-size: 14px;
+  font-weight: bold;
+
+  th,
+  td {
+    padding: 3px 5px;
+    text-align: center;
+    color: var(--owner-color, var(--unoccupied));
+    background-color: rgb(19 22 30 / 34%);
+  }
+
+  tr.eliminated td {
+    text-decoration: line-through;
+    text-decoration-color: white;
+    text-decoration-thickness: 1px;
+  }
+}
+
+message-box {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  font-size: 16px;
+  font-weight: bold;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 5px;
+  max-width: 80%;
+  text-align: center;
+
+  small {
+    font-size: 12px;
+    color: #999;
+  }
+}
 
 .hidden {
   display: none;
+}
+
+dialog {
+  outline: none !important;
 }
 
 #helpDialog article {
@@ -384,7 +388,7 @@ svg {
   --pico-color: var(--pico-primary-inverse);
 }
 
-#startDialog {
+start-dialog-content {
   outline: none !important;
 
   article {
@@ -400,6 +404,11 @@ svg {
 
   .version {
     position: absolute; top: 10px; right: 10px; font-size: small;
+  }
+
+  .short-id {
+    font-size: smaller;
+    color: #666;
   }
 
   #playerNameInput {

@@ -143,7 +143,7 @@ export class LobbyServer extends Server {
     if (type === 'increment') {
       entry.score += 1;
     } else if (type === 'decrement') {
-      entry.score = Math.max(0, entry.score - 1);
+      entry.score -= 1;
     } else {
       return new Response('Bad Request: Invalid type', { status: 400 });
     }

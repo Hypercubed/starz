@@ -10,24 +10,7 @@ import lore from './lore.html?raw';
 
 import type { GameManager } from '../../managers/manager.ts';
 import type { Player } from '../../types';
-
-const shortIdCache = new Map<string, string>();
-
-function shortId(uid: string): string {
-  if (shortIdCache.has(uid)) {
-    return shortIdCache.get(uid)!;
-  }
-  const id = get(uid);
-  shortIdCache.set(uid, id);
-  return id;
-
-  function get(uid: string): string {
-    const hash = Array.from(uid).reduce((hashAcc, char) => {
-      return (hashAcc << 5) - hashAcc + char.charCodeAt(0);
-    }, 0);
-    return Math.abs(hash).toString(36).substring(0, 4);
-  }
-}
+import type { PartykitGameManager } from '../../managers/partykit.ts';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -57,10 +40,11 @@ export class StartDialogContentElement extends LitElement {
   }
 
   render() {
-    const sId = shortId(this.player?.id ?? '');
-    const token = this.generateToken((this.gameManager as any).playerToken);
-
+    const sId = generateShortId(this.player?.id);
+    const token = generateToken(this.player?.id, (this.gameManager as PartykitGameManager).playerToken);
+``
     return html`
+      <lobby-leaderboard-element></lobby-leaderboard-element>
       <article>
         <h1>STARZ!</h1>
         <small class="version">v${this.version}</small>
@@ -75,7 +59,7 @@ export class StartDialogContentElement extends LitElement {
                 id="playerNameInput"
                 type="text"
                 .value=${this.player?.name ?? ''}
-                @keydown="${this.onKeydown}"
+                @input="${this.onChange}"
                 placeholder="Name or Save Key"
                 minlength="1"
                 maxlength="3000"
@@ -84,7 +68,7 @@ export class StartDialogContentElement extends LitElement {
               <small>(Name will be used in leaderboard)</small>
             </div>
             <div>
-              ${this.player?.name ?? ''} [${sId}]
+              <span>${this.player?.name ?? ''}</span><span class="short-id">#${sId}</span>
               ${this.player?.score
                 ? html`<span>✶ ${this.player.score!.score}</span>`
                 : ''}
@@ -157,26 +141,18 @@ export class StartDialogContentElement extends LitElement {
     });
   }
 
-  private onKeydown(e: KeyboardEvent) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-
-      const input = this.querySelector('#playerNameInput') as HTMLInputElement;
-      const inputText = input.value.trim();
-      this.setName(inputText);
-    }
+  private onChange(e: Event) {
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    this.setName((e.target as HTMLInputElement).value);
   }
 
   private async setName(playerName: string) {
+    playerName = playerName.trim();
     await this.gameManager.setConfig({
       playerName
     });
     this.requestUpdate();
-  }
-
-  private generateToken(playerToken: string) {
-    if (!playerToken) return '';
-    return `${this.player?.id}::${playerToken}`;
   }
 
   async copyText(token: string) {
@@ -205,4 +181,13 @@ export class StartDialogContentElement extends LitElement {
       this.player = this.gameManager.getPlayer();
     });
   }
+}
+
+function generateShortId(playerId: string | undefined): string {
+  return playerId?.slice(0, 4) ?? '';
+}
+
+function generateToken(playerId: string | undefined, playerToken: string): string {
+  if (!playerId || !playerToken) return '';
+  return `${playerId}::${playerToken}`;
 }
