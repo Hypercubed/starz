@@ -1,6 +1,7 @@
-import type { Coordinates, Lane, System } from "../src/game/types.d.ts";
-import { SimGameManager } from "../src/managers/simulation.ts";
-import type { Player } from "../src/types.d.ts";
+import { SimGameManager } from '../client/managers/simulation.ts';
+
+import type { Coordinates, Lane, System } from '../client/game/types';
+import type { Player } from '../client/types';
 
 export function createMockManager() {
   const manager = new SimGameManager();
@@ -53,7 +54,9 @@ export function createMockLane(
   to: System,
   overrides: Partial<Lane> = {}
 ): Lane {
-  const id = [from.id, to.id].sort((a: string, b: string) => a.localeCompare(b)).join('-');
+  const id = [from.id, to.id]
+    .sort((a: string, b: string) => a.localeCompare(b))
+    .join('-');
 
   const defaultLane: Lane = {
     id,
@@ -95,11 +98,21 @@ export function createMockCoordinates(
   return [longitude, latitude];
 }
 
-
 export function createMockWorld() {
-  const system1 = createMockSystem({ id: '1', location: createMockCoordinates() });
-  const system2 = createMockSystem({ id: '2', location: createMockCoordinates(), ships: 10 });
-  const system3 = createMockSystem({ id: '3', location: createMockCoordinates(), ships: 5 });
+  const system1 = createMockSystem({
+    id: '1',
+    location: createMockCoordinates()
+  });
+  const system2 = createMockSystem({
+    id: '2',
+    location: createMockCoordinates(),
+    ships: 10
+  });
+  const system3 = createMockSystem({
+    id: '3',
+    location: createMockCoordinates(),
+    ships: 5
+  });
   const lane = createMockLane(system1, system2);
 
   return {

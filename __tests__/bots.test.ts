@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+
 import { Bot, PERSONALITIES } from '../src/game/bots';
+
 import { createMockSystem } from './setup';
 
 describe('bots', () => {

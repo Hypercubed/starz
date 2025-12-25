@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { startGame, pauseGame, openHelpDialog, getHomeworld } from './utils';
 
 test.describe('User Interactions', () => {
@@ -82,7 +83,7 @@ test.describe('User Interactions', () => {
     const transformAfter = await homeworld.getAttribute('transform');
 
     // It's hard to predict exact transform, but it should be different from initial if we rotated enough
-    // However, since we don't have the initial transform here easily without refactoring, 
+    // However, since we don't have the initial transform here easily without refactoring,
     // we can at least assert that the system is still part of the DOM and visible
     await expect(homeworld).toBeVisible();
   });
@@ -101,7 +102,7 @@ test.describe('User Interactions', () => {
     await expect(svg).toBeVisible();
 
     // Verify scale changed by checking a system's transform or similar
-    // For now, just ensuring no crash and map visibility is a basic check, 
+    // For now, just ensuring no crash and map visibility is a basic check,
     // but let's check if the system is still there
     const homeworld = await getHomeworld(page);
     await expect(homeworld).toBeVisible();

@@ -6,7 +6,7 @@ import { defineConfig } from "eslint/config";
 
 export default defineConfig([
   {
-    files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+    files: ["client/**/*.{js,mjs,cjs,ts,mts,cts}"],
     plugins: { js },
     extends: [
       "js/recommended",
@@ -21,6 +21,12 @@ export default defineConfig([
           "newlines-between": "always",
           "alphabetize": { "order": "asc", "caseInsensitive": true }
         }],
+        "import/no-unresolved": [
+          "error",
+          {
+            "ignore": ["\\?raw$"]
+          }
+        ]
       },
   },
   tseslint.configs.recommended,
@@ -29,7 +35,7 @@ export default defineConfig([
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }]
     },
   },
 ]);

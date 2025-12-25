@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import {
   startGame,
   pauseGame,
@@ -7,7 +8,7 @@ import {
   getCurrentTick,
   waitForTick,
   getLeaderboardData,
-  getRecentMessages,
+  getRecentMessages
 } from './utils';
 
 test.describe('Gameplay Mechanics', () => {

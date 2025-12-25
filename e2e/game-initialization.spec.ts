@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
+
 import {
   startGame,
   waitForMapGeneration,
   getAllSystems,
   getHomeworld,
-  getLeaderboardData,
+  getLeaderboardData
 } from './utils';
 
 test.describe('Game Initialization', () => {
@@ -34,7 +35,9 @@ test.describe('Game Initialization', () => {
     await expect(startButton).toHaveText('Start');
   });
 
-  test('should close dialog and initialize game when start button is clicked', async ({ page }) => {
+  test('should close dialog and initialize game when start button is clicked', async ({
+    page
+  }) => {
     await page.goto('/');
 
     await startGame(page);
@@ -48,7 +51,9 @@ test.describe('Game Initialization', () => {
     await expect(svg).toBeVisible();
   });
 
-  test('should generate map with correct number of systems', async ({ page }) => {
+  test('should generate map with correct number of systems', async ({
+    page
+  }) => {
     await page.goto('/');
     await startGame(page);
 
@@ -67,8 +72,8 @@ test.describe('Game Initialization', () => {
 
     // Homeworld should be visible and owned by player
     await expect(homeworld).toBeVisible();
-    await expect(homeworld).toHaveClass(/inhabited/)
-    await expect(homeworld).toHaveClass(/visited/)
+    await expect(homeworld).toHaveClass(/inhabited/);
+    await expect(homeworld).toHaveClass(/visited/);
   });
 
   test('should display info box with turn counter', async ({ page }) => {
@@ -135,6 +140,8 @@ test.describe('Game Initialization', () => {
     const laterTick = await page.locator('#infobox span').textContent();
 
     // Tick should have advanced (game is running)
-    expect(parseFloat(laterTick || '0')).toBeGreaterThan(parseFloat(initialTick || '0'));
+    expect(parseFloat(laterTick || '0')).toBeGreaterThan(
+      parseFloat(initialTick || '0')
+    );
   });
 });

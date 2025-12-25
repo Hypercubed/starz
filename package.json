@@ -18,12 +18,13 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "lint": "npm run eslint && npm run prettier",
-    "eslint": "eslint ./src/",
-    "prettier": "prettier --check \"src/**/*.{ts,js,json,md}\"",
-    "prettier:fix": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "eslint": "eslint ./client ./server --ext .ts,.js",
+    "prettier": "prettier --check \"client/**/*.{ts,js,json,md}\"",
+    "prettier:fix": "prettier --write \"client/**/*.{ts,js,json,md}\"",
     "fix": "npm run eslint -- --fix && npm run prettier:fix"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.19.0",
     "@cloudflare/workers-types": "^4.20251223.0",
     "@eslint/js": "^9.39.1",
     "@playwright/test": "^1.57.0",
@@ -39,7 +40,7 @@
     "prettier": "3.6.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.1.7",
+    "vite": "^7.3.0",
     "vitest": "^4.0.13",
     "wrangler": "^4.56.0"
   },

@@ -1,6 +1,7 @@
 import { defineConfig } from "vitest/config";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
-export default defineConfig({
+export default defineConfig(({ command, mode }) => ({
   base: "./",
   build: {
     outDir: "docs"
@@ -20,13 +21,5 @@ export default defineConfig({
       ],
     },
   },
-  server: {
-    proxy: {
-      '/api': {
-        target: 'http://localhost:1999/',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      }
-    }
-  }
-});
+  plugins: command === 'serve' ? [cloudflare()] : []
+}));

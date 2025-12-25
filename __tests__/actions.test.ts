@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-import type { GameManager } from '../src/managers/manager';
-
 import { createMockManager } from './setup';
+
+import type { GameManager } from '../client/managers/manager';
 
 // Mock the logging module
 vi.mock('../src/utils/logging', () => ({
@@ -12,7 +12,7 @@ vi.mock('../src/utils/logging', () => ({
 
 describe('actions', () => {
   let manager: GameManager;
-  let game: typeof import('../src/game/index');
+  let game: typeof import('../client/game/index');
 
   beforeEach(() => {
     manager = createMockManager();
@@ -21,7 +21,7 @@ describe('actions', () => {
 
   describe('visitSystem', () => {
     it('should mark system as revealed and visited', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
       const system = S.world.systemMap.values().next().value;
 
       game.visitSystem(S, system!);
@@ -33,7 +33,7 @@ describe('actions', () => {
 
   describe('queueMove', () => {
     it("should add a move to the system's move queue", () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const systems = S.world.systemMap.values();
       const fromSystem = systems.next().value!;
@@ -48,10 +48,11 @@ describe('actions', () => {
         toId: toSystem.id,
         fromId: fromSystem.id
       });
-    });``
+    });
+    ``;
 
     it('should support optional message parameter', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const systems = S.world.systemMap.values();
       const fromSystem = systems.next().value!;
@@ -63,7 +64,7 @@ describe('actions', () => {
     });
 
     it('should allow multiple queued moves', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const systems = S.world.systemMap.values();
       const fromSystem = systems.next().value!;
@@ -79,7 +80,7 @@ describe('actions', () => {
 
   describe('doQueuedMoves', () => {
     it('should process the first queued move for each system', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const from = S.world.systemMap.get('1')!;
       const to = S.world.systemMap.get('2')!;
@@ -89,20 +90,20 @@ describe('actions', () => {
       to.ships = 5;
 
       game.queueMove(from, to, 3, P.id);
-      game.doQueuedMoves(manager.getContext());
+      game.doQueuedMoves(manager.getFnContext());
 
       expect(from.ships).toBe(7); // 10 - 3
       expect(to.ships).toBe(8); // 5 + 3
     });
 
     it('should set lastMove on the system', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const from = S.world.systemMap.get('1')!;
       const to = S.world.systemMap.get('2')!;
 
       game.queueMove(from, to, 3, P.id, 'Moving ships');
-      game.doQueuedMoves(manager.getContext());
+      game.doQueuedMoves(manager.getFnContext());
 
       expect(from.lastMove).toBeDefined();
       expect(from.lastMove?.ships).toBe(3);
@@ -110,7 +111,7 @@ describe('actions', () => {
     });
 
     it('should process all moves per system per call', () => {
-      const { S, P } = manager.getContext();
+      const { S, P } = manager.getFnContext();
 
       const from = S.world.systemMap.get('1')!;
       const to = S.world.systemMap.get('2')!;
@@ -122,7 +123,7 @@ describe('actions', () => {
       game.queueMove(from, to, 3, P.id);
       game.queueMove(from, to, 5, P.id);
 
-      game.doQueuedMoves(manager.getContext());
+      game.doQueuedMoves(manager.getFnContext());
 
       expect(from.moveQueue).toHaveLength(0); // All moves processed
       expect(from.ships).toBe(12); // 20 - 3 - 5, all moves processed

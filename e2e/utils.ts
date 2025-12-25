@@ -24,7 +24,10 @@ export async function waitForMapGeneration(page: Page) {
   await page.waitForSelector('#app svg', { state: 'attached' });
 
   // Wait for systems to be rendered (circles)
-  await page.waitForSelector('#app svg g.system', { state: 'attached', timeout: 10000 });
+  await page.waitForSelector('#app svg g.system', {
+    state: 'attached',
+    timeout: 10000
+  });
 
   // Give a moment for D3 transitions to complete
   await page.waitForTimeout(500);
@@ -41,8 +44,13 @@ export async function getAllSystems(page: Page): Promise<Locator[]> {
 /**
  * Get all visible systems owned by a specific player
  */
-export async function getSystemsByOwner(page: Page, owner: number): Promise<Locator[]> {
-  const systems = await page.locator(`#app svg g.system[data-owner="${owner}"]`).all();
+export async function getSystemsByOwner(
+  page: Page,
+  owner: number
+): Promise<Locator[]> {
+  const systems = await page
+    .locator(`#app svg g.system[data-owner="${owner}"]`)
+    .all();
   return systems;
 }
 
@@ -66,7 +74,11 @@ export async function selectSystem(page: Page, system: Locator) {
 /**
  * Move ships from one system to another via right-click
  */
-export async function moveShips(page: Page, fromSystem: Locator, toSystem: Locator) {
+export async function moveShips(
+  page: Page,
+  fromSystem: Locator,
+  toSystem: Locator
+) {
   await fromSystem.click(); // Select source
   await page.waitForTimeout(100);
   await toSystem.click({ button: 'right' }); // Right click to move
@@ -139,7 +151,7 @@ export async function getLeaderboardData(page: Page) {
     data.push({
       player: parseInt(cells[0], 10),
       systems: parseInt(cells[1], 10),
-      ships: parseInt(cells[2], 10),
+      ships: parseInt(cells[2], 10)
     });
   }
 

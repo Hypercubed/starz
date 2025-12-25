@@ -1,0 +1,263 @@
+import { provide } from '@lit/context';
+import { html, LitElement } from 'lit';
+import { customElement, property, query, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+
+import { ENABLE_CHEATS } from '../../constants.ts';
+import * as game from '../../game/index.ts';
+import { debugLog } from '../../utils/logging.ts';
+import * as ui from '../index.ts';
+
+import {
+  configContext,
+  gameContext,
+  gameManager,
+  playerContext,
+  stateContext
+} from './app-context.ts';
+import rootHtml from './app-root.html?raw';
+
+const ROTATION_STEP = 5;
+
+import type { GameConfig, GameState } from '../../game/types';
+import type { GameManager } from '../../managers/manager.ts';
+import type { GameContext } from '../../managers/types';
+import type { Player } from '../../types';
+
+@customElement('app-root')
+export class AppRootElement extends LitElement {
+  @provide({ context: gameManager })
+  @property({ attribute: false })
+  gameManager!: GameManager;
+
+  @provide({ context: configContext })
+  @state()
+  protected config!: GameConfig;
+
+  @provide({ context: stateContext })
+  @state()
+  protected state!: GameState;
+
+  @provide({ context: playerContext })
+  @state()
+  protected player!: Player | null;
+
+  @provide({ context: gameContext })
+  @state()
+  protected context!: GameContext;
+
+  @query('#helpDialog')
+  private helpDialog!: HTMLDialogElement;
+
+  @query('#startDialog')
+  private startDialog!: HTMLDialogElement;
+
+  @query('#endDialog')
+  private endDialog!: HTMLDialogElement;
+
+  connectedCallback() {
+    super.connectedCallback();
+
+    this.#setupEvents();
+    this.#setupListeners();
+  }
+
+  createRenderRoot() {
+    return this;
+  }
+
+  render() {
+    // Replace this once everything is a component
+    return html`
+      <dialog id="startDialog" closedby="none">
+        <start-dialog-content
+          @startClicked=${this.onStart}
+        ></start-dialog-content>
+      </dialog>
+      <dialog id="endDialog">
+        <p id="endMessage"></p>
+        <form method="dialog">
+          <button id="restartButton">Yes</button>
+        </form>
+      </dialog>
+      ${unsafeHTML(rootHtml)}
+      <game-canvas id="app"></game-canvas>
+      <tick-box id="tickBox" tick="${this.context?.tick}"></tick-box>
+      <leaderboard-element #leaderbox></leaderboard-element>
+      <message-box id="messagebox"></message-box>
+      <button id="helpButton" @click=${this.showHelp}>?</button>
+    `;
+  }
+
+  #setupEvents() {
+    window.document.addEventListener('keyup', (e: KeyboardEvent) =>
+      this.onKeyup(e)
+    );
+    window.document.addEventListener('keypress', (e: KeyboardEvent) =>
+      this.onKeypress(e)
+    );
+  }
+
+  #setupListeners() {
+    this.config = this.gameManager.getConfig();
+    this.state = this.gameManager.getState();
+    this.player = this.gameManager.getPlayer();
+    this.context = this.gameManager.getContext();
+
+    this.gameManager.events.on('GAME_INIT', () => {
+      this.config = this.gameManager.getConfig();
+      this.state = this.gameManager.getState();
+      this.player = this.gameManager.getPlayer();
+      this.context = this.gameManager.getContext();
+    });
+
+    this.gameManager.events.on('CONFIG_UPDATED', ({ config }) => {
+      this.config = config;
+      this.player = this.gameManager.getPlayer();
+      this.context = this.gameManager.getContext();
+    });
+
+    this.gameManager.events.on(
+      'STATE_UPDATED',
+      ({ state }) => (this.state = state)
+    );
+
+    this.gameManager.events.on('GAME_TICK', () => {
+      this.context = this.gameManager.getContext();
+    });
+  }
+
+  showStartDialog() {
+    this.startDialog?.showModal();
+  }
+
+  private onStart() {
+    this.startDialog.close();
+    this.gameManager.start();
+  }
+
+  private async onKeyup(event: KeyboardEvent) {
+    switch (event.key) {
+      case '?':
+        this.showHelp();
+        return;
+      case 'Escape':
+        ui.clearSelection();
+        ui.requestRerender();
+        return;
+      case 'x': {
+        if (!event.ctrlKey) return;
+        this.gameManager.quit();
+        return;
+      }
+    }
+
+    if (ENABLE_CHEATS && event.altKey) {
+      event.preventDefault();
+
+      const { S, C } = globalThis.gameManager.getFnContext();
+
+      switch (event.code) {
+        case 'KeyC':
+          for (const system of S.world.systemMap.values()) {
+            if (system.ownerId === C.playerId) {
+              system.ships *= 2;
+            }
+          }
+          ui.requestRerender();
+          return;
+        case 'KeyR':
+          game.revealAllSystems(S);
+          ui.requestRerender();
+          return;
+        case 'NumpadAdd':
+        case 'Equal': {
+          const timeScale = Math.min(16, C.config.timeScale * 2);
+          globalThis.gameManager.setConfig({ timeScale });
+          debugLog(`Time scale increased to ${C.config.timeScale}x`);
+          return;
+        }
+        case 'NumpadSubtract':
+        case 'Minus': {
+          const timeScale = Math.max(0.25, C.config.timeScale / 2);
+          globalThis.gameManager.setConfig({ timeScale });
+          debugLog(`Time scale decreased to ${C.config.timeScale}x`);
+          return;
+        }
+      }
+    }
+  }
+
+  private async onKeypress(event: KeyboardEvent) {
+    switch (event.code) {
+      case 'Space':
+        if ('pauseToggle' in globalThis.gameManager) {
+          (globalThis.gameManager.pauseToggle as () => void)();
+        }
+        return;
+      case 'Equal':
+      case 'NumpadAdd':
+        ui.scaleZoom(1.2);
+        ui.requestRerender();
+        return;
+      case 'Minus':
+      case 'NumpadSubtract':
+        ui.scaleZoom(0.8);
+        ui.requestRerender();
+        return;
+      case 'KeyW':
+        ui.rotateProjection([0, ROTATION_STEP]);
+        ui.requestRerender();
+        return;
+      case 'KeyA':
+        ui.rotateProjection([-ROTATION_STEP, 0]);
+        ui.requestRerender();
+        return;
+      case 'KeyS':
+        ui.rotateProjection([0, -ROTATION_STEP]);
+        ui.requestRerender();
+        return;
+      case 'KeyD':
+        ui.rotateProjection([ROTATION_STEP, 0]);
+        ui.requestRerender();
+        return;
+      case 'KeyQ':
+        ui.rotateProjection([0, 0, ROTATION_STEP]);
+        ui.requestRerender();
+        break;
+      case 'KeyE':
+        ui.rotateProjection([0, 0, -ROTATION_STEP]);
+        ui.requestRerender();
+        break;
+      case 'KeyH':
+        ui.centerOnHome();
+        ui.requestRerender();
+        return;
+      case 'KeyC':
+        if (ui.selection.last) {
+          ui.centerOnSystem(ui.selection.last);
+          ui.requestRerender();
+        }
+        return;
+      case 'KeyP':
+        ui.changeView();
+        ui.centerOnHome();
+        ui.requestRerender();
+        return;
+    }
+  }
+
+  private showHelp() {
+    this.helpDialog.showModal();
+  }
+
+  async showEndGame(message: string) {
+    this.endDialog.showModal();
+    this.endDialog.querySelector('p#endMessage')!.textContent = message;
+
+    return new Promise<boolean>((resolve) => {
+      this.endDialog.addEventListener('close', () => resolve(true));
+      this.endDialog.addEventListener('cancel', () => resolve(false));
+    });
+  }
+}

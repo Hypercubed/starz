@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+
 import { startGame, openHelpDialog, closeHelpDialog } from './utils';
 
 test.describe('Dialog Interactions', () => {

@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createMockSystem, createMockCoordinates } from './setup';
+
 import { createWorld, findClosestSystem } from '../src/game/world';
+
+import { createMockSystem, createMockCoordinates } from './setup';
 
 describe('world', () => {
   let world: ReturnType<typeof createWorld>;
@@ -103,7 +105,6 @@ describe('world', () => {
 
       world.systemMap.set(system1.id, system1);
       world.systemMap.set(system2.id, system2);
-
 
       const result = findClosestSystem(world, location);
 
