@@ -1,6 +1,6 @@
 import '@picocss/pico/css/pico.zinc.min.css';
 
-import { version } from '../package.json';
+import { version } from '../../package.json';
 import './ui/components/index.ts';
 
 // import { PartykitGameManager } from './managers/partykit.ts';

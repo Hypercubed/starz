@@ -3,7 +3,7 @@ import { LitElement, html } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
-import { version } from '../../../package.json';
+import { version } from '../../../../package.json';
 
 import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';

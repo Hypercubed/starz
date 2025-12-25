@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { createWorld, findClosestSystem } from '../src/game/world';
+import { createWorld, findClosestSystem } from '../client/game/world';
 
 import { createMockSystem, createMockCoordinates } from './setup';
 

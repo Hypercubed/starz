@@ -28,8 +28,8 @@
     "useDefineForClassFields": false,
   },
   "include": [
-    "client",
-    "client/globals.d.ts",
-    "server"
+    "src/client",
+    "src/client/globals.d.ts",
+    "src/server"
   ]
 }

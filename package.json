@@ -1,12 +1,13 @@
 {
   "name": "starz.io",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "scripts": {
     "start": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy",
     "test": "npm run lint && npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
@@ -18,9 +19,9 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
     "lint": "npm run eslint && npm run prettier",
-    "eslint": "eslint ./client ./server --ext .ts,.js",
-    "prettier": "prettier --check \"client/**/*.{ts,js,json,md}\"",
-    "prettier:fix": "prettier --write \"client/**/*.{ts,js,json,md}\"",
+    "eslint": "eslint ./src/client ./src/server --ext .ts,.js",
+    "prettier": "prettier --check \"src/client/**/*.{ts,js,json,md}\"",
+    "prettier:fix": "prettier --write \"src/client/**/*.{ts,js,json,md}\"",
     "fix": "npm run eslint -- --fix && npm run prettier:fix"
   },
   "devDependencies": {

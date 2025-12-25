@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { EventBus } from '../src/classes/EventBus.ts';
+import { EventBus } from '../client/classes/EventBus.ts';
 
 interface TestEvents {
   item: string;
