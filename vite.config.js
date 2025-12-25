@@ -3,9 +3,6 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig(({ command, mode }) => ({
   base: "./",
-  build: {
-    outDir: "docs"
-  },
   test: {
     globals: true,
     environment: "happy-dom",
