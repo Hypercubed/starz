@@ -8,6 +8,8 @@ import * as game from '../../game/index.ts';
 import { debugLog } from '../../utils/logging.ts';
 import * as ui from '../index.ts';
 
+import githubIcon from 'lucide-static/icons/github.svg?raw';
+
 import {
   configContext,
   gameContext,
@@ -22,7 +24,7 @@ const ROTATION_STEP = 5;
 import type { GameConfig, GameState } from '../../game/types';
 import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
-import type { GameManager } from '../../managers/local.ts';
+import type { GameManager } from '../../managers/manager.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {
@@ -80,6 +82,7 @@ export class AppRootElement extends LitElement {
           <button id="restartButton">Yes</button>
         </form>
       </dialog>
+      <dialog id="helpDialog">${this.renderHelp()}</dialog>
       ${unsafeHTML(rootHtml)}
       <game-canvas id="app"></game-canvas>
       <tick-box tick="${this.context?.tick}"></tick-box>
@@ -87,6 +90,74 @@ export class AppRootElement extends LitElement {
       <message-box></message-box>
       <button id="helpButton" @click=${this.showHelp}>?</button>
     `;
+  }
+
+  renderHelp() {
+    return html`<article>
+      <h2>Introduction</h2>
+
+      <p>
+        This is a simple strategy game where you control a number of star
+        systems and try to conquer the the Bubble. The Bubble is a cluster of
+        star systems connected by hyperspace lanes. You start with one system
+        and must expand your control by sending ships to capture other systems.
+      </p>
+
+      <h3>Gameplay</h3>
+      <ul>
+        <li>
+          The game is played in real-time, with each turn lasting 1 second.
+        </li>
+        <li>You begin the game controlling one system, your homeworld.</li>
+        <li>
+          Each turn, your homeworld and any other inhabited systems you control,
+          will produce an additional ship.
+        </li>
+        <li>You can send these ships to other systems to capture them.</li>
+        <li>
+          Each controlled system receives an additional ship each 25 turns.
+        </li>
+        <li>
+          To transfer ships, left click on a system you control and then right
+          click on a target system.
+        </li>
+        <li>
+          This will send all available ships, less one, from the source system
+          to the target system.
+        </li>
+        <li>
+          Right click on the hyperspace lane between the systems to send half of
+          the available ships.
+        </li>
+        <li>
+          If the target system is uninhabited, you will capture it
+          automatically.
+        </li>
+        <li>
+          If the target system is controlled by another player, a battle will
+          ensue.
+        </li>
+        <li>
+          The player with the most ships on the target system after all ships
+          have arrived will take control of the system.
+        </li>
+      </ul>
+      <h3>Objective</h3>
+      <p>
+        The goal is to eliminate all other player's homeworlds and control the
+        entire Bubble.
+      </p>
+
+      <p>
+        <a href="https://github.com/Hypercubed/starz">
+          ${unsafeHTML(githubIcon)}
+        </a>
+      </p>
+
+      <form method="dialog">
+        <button>Exit</button>
+      </form>
+    </article>`;
   }
 
   #setupEvents() {

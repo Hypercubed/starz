@@ -13,6 +13,10 @@ export interface GameEventMap {
   MESSAGES_UPDATED: { messages: Messages[] };
 
   // Player Events
+  PLAYER_ADDED: { player: Player };
+  PLAYER_REMOVED: { playerId: string };
+  PLAYER_UPDATED: { player: Player };
+
   PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };
   PLAYER_WIN: { playerId: string; message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };

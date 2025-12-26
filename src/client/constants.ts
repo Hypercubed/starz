@@ -17,8 +17,9 @@ export const MAX_SHIPS_PER_SYSTEM = 40; // Max ships for pre-spaceflight systems
 export const ENABLE_FOG_OF_WAR = true; // Whether to enable fog of war
 
 export const NumOfSystems = 384; // Number of systems
-export const NumHumanPlayers = 1; // Number of human players (should be 1 or 0)
-export const NumBots = 4; // Total number of players (must be < N * fracOccupied)
+export const MAX_HUMAN_PLAYERS = 1; // Number of human players (should be 1 or 0)
+export const MAX_BOTS = 8; // Total number of players (must be < N * fracOccupied)
+export const MAX_PLAYERS = MAX_HUMAN_PLAYERS + MAX_BOTS;
 
 export const FP = 0.1; // Fraction of systems that are occupied at start
 // export const PC = 0.15; // Probability of an inhabited system being a homeworld (per tick)
@@ -41,5 +42,12 @@ export const COLORS = [
   '#9b59b6', // Purple
   '#00b386', // Green
   '#cc6600', // Orange
-  '#0a4c8c' // Blue
+  '#0a4c8c', // Blue
+
+  '#e74c3c', // Red
+  '#f39c12', // Yellow
+  '#8e44ad', // Purple
+  '#27ae60', // Green
+  '#d35400', // Orange
+  '#2980b9' // Blue
 ] as const;

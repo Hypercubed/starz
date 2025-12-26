@@ -1,4 +1,4 @@
-import { ENABLE_FOG_OF_WAR, NumBots, NumOfSystems } from '../constants.ts';
+import { ENABLE_FOG_OF_WAR, NumOfSystems } from '../constants.ts';
 
 import { createWorld, getAdjacentSystems } from './world.ts';
 
@@ -8,7 +8,7 @@ import type { GameConfig, GameState, System } from './types';
 export function defaultConfig(): GameConfig {
   return {
     playerName: '',
-    numBots: NumBots,
+    numBots: 0,
     fow: ENABLE_FOG_OF_WAR,
     numSystems: NumOfSystems,
     timeScale: 1

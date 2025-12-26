@@ -1,6 +1,6 @@
 import { consume } from '@lit/context';
 import { LitElement, html } from 'lit';
-import { customElement, query, state } from 'lit/decorators.js';
+import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 import { version } from '../../../../package.json';
@@ -8,9 +8,13 @@ import { version } from '../../../../package.json';
 import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';
 
+import playIcon from 'lucide-static/icons/play.svg?raw';
+import cogIcon from 'lucide-static/icons/cog.svg?raw';
+import plusIcon from 'lucide-static/icons/plus.svg?raw';
+
 import type { GameManager } from '../../managers/manager.ts';
 import type { Player } from '../../types';
-import type { PartykitGameManager } from '../../managers/partykit.ts';
+import { PartykitGameManager } from '../../managers/partykit.ts';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -21,6 +25,9 @@ export class StartDialogContentElement extends LitElement {
   @state()
   private player!: Player | null;
 
+  @state()
+  private players: Player[] = [];
+
   createRenderRoot() {
     return this;
   }
@@ -28,82 +35,120 @@ export class StartDialogContentElement extends LitElement {
   @state()
   protected version = version;
 
-  @query('#playerNameInput')
-  private playerNameInput!: HTMLInputElement;
+  @state()
+  page: 'start' | 'room' = 'start';
 
   private keyText =
-    'Use this key to restore your player data later.  Click to copy.';
+    'Click to copy your save key. Use this key to restore your player data later.';
 
   connectedCallback() {
     super.connectedCallback();
     this.#setupListeners();
   }
 
+  startPage() {
+    const sId = generateShortId(this.player);
+    const token = generateToken(
+      this.player?.id,
+      (this.gameManager as PartykitGameManager).playerToken
+    );
+
+    return html` <h1>STARZ!</h1>
+      <small class="version">v${this.version}</small>
+
+      ${unsafeHTML(lore)}
+
+      <form method="dialog">
+        <div class="grid">
+          <div>
+            <input
+              name="playerName"
+              id="playerNameInput"
+              type="text"
+              .value=${this.player?.name ?? ''}
+              @input="${this.onChange}"
+              placeholder="Name or Save Key"
+              minlength="1"
+              maxlength="32"
+              required
+            />
+            <small>(Name will be used in leaderboard)</small>
+          </div>
+          <div>
+            <span>${this.player?.name ?? ''}</span
+            ><span
+              class="short-id"
+              data-tooltip="${this.keyText}"
+              @click="${() => this.copyText(token)}"
+              >${sId}</span
+            >
+            ${this.player?.score
+              ? html`<span>✶ ${this.player.score!.score}</span>`
+              : ''}
+            <br /><small
+              >${this.player?.score?.rank
+                ? `Rank: ${this.player.score.rank}`
+                : ''}</small
+            >
+          </div>
+        </div>
+
+        <button type="button" @click="${this.onTest}">Name Game</button>
+      </form>`;
+  }
+
+  roomPage() {
+    return html` <h4>Welcome, ${this.player?.name ?? ''}</h4>
+      <p>Players ${this.players.length}</p>
+      <ul class="player-list">
+        ${this.players.map(
+          (player) =>
+            html`<li>
+              ${player.name}<span class="short-id"
+                >${generateShortId(player)}</span
+              >
+            </li>`
+        )}
+      </ul>
+      <button type="button" @click="${this.onAddBot}">
+        ${unsafeHTML(plusIcon)} Add Bot
+      </button>
+      <button type="button" @click="${this.onPlay}">
+        ${unsafeHTML(playIcon)}
+      </button>
+      <button type="button" @click="${this.onOptions}">
+        ${unsafeHTML(cogIcon)}
+      </button>`;
+  }
+
+  renderInner() {
+    switch (this.page) {
+      case 'start':
+        return this.startPage();
+      case 'room':
+        return this.roomPage();
+    }
+  }
+
   render() {
-    const sId = generateShortId(this.player?.id);
-    const token = generateToken(this.player?.id, (this.gameManager as PartykitGameManager).playerToken);
-``
     return html`
       <lobby-leaderboard-element></lobby-leaderboard-element>
-      <article>
-        <h1>STARZ!</h1>
-        <small class="version">v${this.version}</small>
-
-        ${unsafeHTML(lore)}
-
-        <form method="dialog">
-          <div class="grid">
-            <div>
-              <input
-                name="playerName"
-                id="playerNameInput"
-                type="text"
-                .value=${this.player?.name ?? ''}
-                @input="${this.onChange}"
-                placeholder="Name or Save Key"
-                minlength="1"
-                maxlength="3000"
-                required
-              />
-              <small>(Name will be used in leaderboard)</small>
-            </div>
-            <div>
-              <span>${this.player?.name ?? ''}</span><span class="short-id">#${sId}</span>
-              ${this.player?.score
-                ? html`<span>✶ ${this.player.score!.score}</span>`
-                : ''}
-              <br /><small
-                >${this.player?.score?.rank
-                  ? `Rank: ${this.player.score.rank}`
-                  : ''}</small
-              >
-              <small
-                data-tooltip="${this.keyText}"
-                @click="${() => this.copyText(token)}"
-                style="cursor: copy;"
-              >
-                ${token ? `Token` : ''}</small
-              >
-            </div>
-          </div>
-
-          <br /><button type="button" @click="${this.onPlay}">
-            Start Game
-          </button>
-          <br /><button type="button" @click="${this.onOptions}">
-            Options
-          </button>
-        </form>
-      </article>
+      <article>${this.renderInner()}</article>
     `;
   }
 
+  onTest() {
+    this.page = 'room';
+  }
+
+  private async onAddBot() {
+    if (this.gameManager instanceof PartykitGameManager) {
+      this.gameManager.addBot();
+    }
+  }
+
   private async onPlay() {
-    let playerName = this.playerNameInput.value.trim() || 'Anonymous';
-
-    playerName = playerName.substring(0, 30);
-
-    await this.gameManager.setConfig({ playerName });
+    await this.gameManager.setConfig({ playerName: this.player?.name ?? '' });
     this.dispatchEvent(new Event('startClicked'));
   }
 
@@ -172,6 +217,11 @@ export class StartDialogContentElement extends LitElement {
 
   #setupListeners() {
     this.player = this.gameManager.getPlayer();
+    this.players = Array.from(this.gameManager.getState().playerMap.values());
+
+    this.gameManager.events.on('PLAYER_ADDED', () => {
+      this.players = Array.from(this.gameManager.getState().playerMap.values());
+    });
 
     this.gameManager.events.on('CONFIG_UPDATED', () => {
       this.player = this.gameManager.getPlayer();
@@ -183,11 +233,16 @@ export class StartDialogContentElement extends LitElement {
   }
 }
 
-function generateShortId(playerId: string | undefined): string {
-  return playerId?.slice(0, 4) ?? '';
+function generateShortId(player: Player | null): string {
+  if (!player) return '';
+  if (player.bot) return '';
+  return player.id ? '#' + player.id.slice(0, 4) : '';
 }
 
-function generateToken(playerId: string | undefined, playerToken: string): string {
+function generateToken(
+  playerId: string | undefined,
+  playerToken: string
+): string {
   if (!playerId || !playerToken) return '';
   return `${playerId}::${playerToken}`;
 }

@@ -3,20 +3,41 @@ import * as d3 from 'd3';
 import { LitElement, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 
-import { stateContext } from './app-context.ts';
+import { gameManager } from './app-context.ts';
 
-import type { GameState } from '../../game/types';
+import type { GameManager } from '../../managers/manager.ts';
+import type { Player } from '../../types';
 
 const formatSIInteger = d3.format('.3~s');
 
 @customElement('leaderboard-element')
 export class LeaderboardElement extends LitElement {
-  @consume({ context: stateContext, subscribe: true })
+  @consume({ context: gameManager })
   @state()
-  state!: GameState;
+  gameManager!: GameManager;
+
+  @state()
+  private stats!: Player[];
 
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+
+    this.gameManager.events.on('GAME_TICK', () => this.updateStats());
+    this.gameManager.events.on('STATE_UPDATED', () => this.updateStats());
+  }
+
+  private updateStats() {
+    const playerMap = this.gameManager.getState()?.playerMap;
+    if (!playerMap) return;
+
+    this.stats = Array.from(playerMap.values()).sort(
+      (a, b) =>
+        b.stats.systems - a.stats.systems || b.stats.ships - a.stats.ships
+    );
   }
 
   render() {
@@ -28,14 +49,9 @@ export class LeaderboardElement extends LitElement {
   }
 
   private renderBody() {
-    const stats = Array.from(this.state.playerMap.values()).sort(
-      (a, b) =>
-        b.stats.systems - a.stats.systems || b.stats.ships - a.stats.ships
-    );
-
     const SP = ' '; // non-breaking space
     return html`<tbody>
-      ${stats.map(
+      ${this.stats?.map(
         (player) =>
           html`<tr
             style="--owner-color: ${player.color || null}"

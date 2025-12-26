@@ -28,9 +28,13 @@ export class LobbyLeaderboardElement extends LitElement {
     super.connectedCallback();
 
     if (this.gameManager instanceof PartykitGameManager) {
-      this.leaderboard = await (this.gameManager as PartykitGameManager).loadLeaderboard();
+      this.leaderboard = await (
+        this.gameManager as PartykitGameManager
+      ).loadLeaderboard();
       this.gameManager.events.on('GAME_INIT', async () => {
-        this.leaderboard = await (this.gameManager as PartykitGameManager).loadLeaderboard();
+        this.leaderboard = await (
+          this.gameManager as PartykitGameManager
+        ).loadLeaderboard();
         this.requestUpdate();
       });
     }
@@ -47,16 +51,14 @@ export class LobbyLeaderboardElement extends LitElement {
   private renderBody() {
     const SP = ' '; // non-breaking space
     return html`<tbody>
-      ${this.leaderboard.map(
-        (player) => {
-          const sid = player.uid?.slice(0, 4) ?? '';
-          return html`<tr>
-            <td>${SP}${player.rank}${SP}</td>
-            <td>${SP}${player.name}<span class="short-id">#${sid}</span>${SP}</td>
-            <td>${SP}${formatSIInteger(player.score)}${SP}</td>
-          </tr>`
-        }
-      )}
+      ${this.leaderboard.map((player) => {
+        const sid = player.uid?.slice(0, 4) ?? '';
+        return html`<tr>
+          <td>${SP}${player.rank}${SP}</td>
+          <td>${SP}${player.name}<span class="short-id">#${sid}</span>${SP}</td>
+          <td>${SP}${formatSIInteger(player.score)}${SP}</td>
+        </tr>`;
+      })}
     </tbody>`;
   }
 

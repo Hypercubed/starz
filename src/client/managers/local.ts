@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import { COLORS, NumHumanPlayers, START_PAUSED } from '../constants.ts';
+import { COLORS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -53,25 +53,40 @@ export class LocalGameManager extends GameManager {
     ui.requestRerender();
   }
 
+  addBot() {
+    const index = this.state.playerMap.size;
+    if (index >= MAX_PLAYERS) return;
+
+    const id = createId();
+    const name = `Bot ${index}`;
+    const bot = new Bot({ id, name });
+    return this.onPlayerJoin(index, { id, name, bot })!;
+  }
+
   protected gameSetup(player: Partial<Player> & { id: string }) {
     const ctx = this.getFnContext();
+
+    const players = Array.from(ctx.S.playerMap.values());
+
     this.state = this.game.setup(ctx);
     ui.clearMessages();
 
     // Get players name from config in case it changed
     player.name = this.config.playerName;
 
-    // Add this player first
-    const thisPlayer = this.onPlayerJoin(1, player);
-    this.game.assignSystem(this.state, player.id);
+    // Ensure players are added, IDs may have changed
+    console.log('Starting game with players:', players);
 
-    // Add Bots
-    const totalPlayers = NumHumanPlayers + +this.config.numBots;
-    for (let i = 2; i <= totalPlayers; i++) {
-      const player = this.onPlayerJoin(i)!;
-      this.game.assignSystem(this.state, player.id);
+    this.state.playerMap.clear();
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      this.onPlayerJoin(i, p);
+      this.game.assignSystem(this.state, p.id);
+
+      console.log(`Player ${p.name} assigned to homeworld.`, p);
     }
 
+    const thisPlayer = this.state.playerMap.get(player.id)!;
     this.setupThisPlayer(thisPlayer.id);
 
     localStorage.setItem('starz_playerId', thisPlayer.id);
@@ -116,15 +131,10 @@ export class LocalGameManager extends GameManager {
 
   protected onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
     const color = COLORS[playerIndex];
-    const botIndex = playerIndex - NumHumanPlayers;
-    const playerName = player.name ?? `Bot ${botIndex}`;
+    const playerName = player.name ?? `Anonymous Player`;
 
     const id = createId();
-    const bot: Bot | undefined =
-      playerIndex > NumHumanPlayers
-        ? new Bot({ playerIndex: botIndex, id, name: playerName })
-        : undefined;
-    return this.addPlayer({ id, name: playerName, bot, color, ...player });
+    return this.addPlayer({ id, name: playerName, color, ...player });
   }
 
   protected pauseToggle() {
@@ -211,6 +221,9 @@ export class LocalGameManager extends GameManager {
       `--player-${_player.id}`,
       _player.color
     );
+
+    this.events.emit('PLAYER_ADDED', { player: _player });
+
     return _player;
   }
 

@@ -10,8 +10,8 @@ import type { Player } from '../types';
 
 const FRIENDLY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567';
 
-const createPlayerId = customAlphabet(FRIENDLY_ALPHABET, 15)
-const createPlayerToken = customAlphabet(FRIENDLY_ALPHABET, 15)
+const createPlayerId = customAlphabet(FRIENDLY_ALPHABET, 15);
+const createPlayerToken = customAlphabet(FRIENDLY_ALPHABET, 15);
 
 const PartySocketConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
@@ -42,9 +42,6 @@ export class PartykitGameManager extends LocalGameManager {
 
     localStorage.setItem('starz_playerToken', this.playerToken);
     localStorage.setItem('starz_rank', this.user?.rank?.toString() ?? '');
-
-    this.state.playerMap.clear();
-    this.addPlayer(thisPlayer); // Ensure player is added, ID may have changed
 
     super.start();
   }

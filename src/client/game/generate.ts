@@ -3,9 +3,10 @@ import { nanoid } from 'nanoid';
 
 import {
   HEIGHT,
-  NumHumanPlayers,
   MAX_SHIPS_PER_SYSTEM,
-  FP
+  FP,
+  MAX_HUMAN_PLAYERS,
+  MAX_BOTS
 } from '../constants.ts';
 import { debugLog } from '../utils/logging.ts';
 
@@ -85,7 +86,7 @@ export function generateMap({ S, C }: FnContext) {
   // We need enough for all players plus some neutrals
   const totalInhabited = Math.max(
     FP * C.config.numSystems,
-    NumHumanPlayers + C.config.numBots
+    MAX_HUMAN_PLAYERS + MAX_BOTS
   );
 
   for (let i = 0; i < totalInhabited; i++) {
