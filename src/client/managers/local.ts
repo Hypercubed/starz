@@ -1,11 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import {
-  COLORS,
-  MAX_HUMAN_PLAYERS,
-  MAX_PLAYERS,
-  START_PAUSED
-} from '../constants.ts';
+import { COLORS, MAX_BOTS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -19,25 +14,29 @@ import { GameEvents } from '../game/shared.ts';
 
 const createId = () => nanoid(5);
 
-let botIndex = MAX_HUMAN_PLAYERS;
-
 export class LocalGameManager extends GameManager {
   protected appRoot!: AppRootElement;
   protected thisPlayer!: Player;
 
+  getPlayer(): Player | null {
+    return this.thisPlayer;
+  }
+
+  // Mount the manager to the UI
   mount(appRoot: AppRootElement) {
     this.appRoot = appRoot;
     this.appRoot.gameManager = this;
     this.#registerEvents();
   }
 
+  // Connect to the game (setup player, etc)
   async connect() {
     this.gameStop();
     this.status = 'WAITING';
 
     // Create and add this player to make it available during setup
-    const thisPlayerPartial = await this.initializePlayer();
-    this.thisPlayer = this.addPlayer(thisPlayerPartial);
+    const player = await this.initializePlayer();
+    this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
     this.events.emit(GameEvents.GAME_INIT, undefined);
@@ -50,39 +49,22 @@ export class LocalGameManager extends GameManager {
   }
 
   async start() {
-    localStorage.setItem('starz_playerId', this.playerId);
-    localStorage.setItem('starz_playerName', this.thisPlayer.name);
-    localStorage.setItem(
-      'starz_score',
-      this.thisPlayer.score?.toString() ?? '0'
-    );
-
-    this.gameSetup(this.thisPlayer);
+    this.savePlayerData();
+    this.gameSetup();
     this.gameStart();
     ui.requestRerender();
   }
 
-  addBot() {
-    if (this.state.playerMap.size >= MAX_PLAYERS) return;
+  private savePlayerData() {
+    const player = this.state.playerMap.get(this.playerId);
+    if (!player) return;
 
-    const players = Array.from(this.state.playerMap.values());
-
-    const id = createId();
-    const name = getUniqueName(players.map((p) => p.name));
-    const bot = new Bot({ id, name });
-    const color = getUniqueColor(players.map((p) => p.color));
-    return this.onPlayerJoin(botIndex++, { id, name, bot, color })!;
+    localStorage.setItem('starz_playerId', player.id);
+    localStorage.setItem('starz_playerName', player.name);
+    localStorage.setItem('starz_score', player.score?.score?.toString() ?? '0');
   }
 
-  removeBot(id: string) {
-    const player = this.state.playerMap.get(id);
-    if (player?.bot) {
-      this.state.playerMap.delete(id);
-      this.events.emit(GameEvents.PLAYER_REMOVED, { playerId: id });
-    }
-  }
-
-  protected gameSetup(player: Partial<Player> & { id: string }) {
+  protected gameSetup() {
     const ctx = this.getFnContext();
 
     const players = Array.from(ctx.S.playerMap.values());
@@ -90,27 +72,16 @@ export class LocalGameManager extends GameManager {
     this.state = this.game.setup(ctx);
     ui.clearMessages();
 
-    // Get players name from config in case it changed
-    player.name = this.config.playerName;
-
     // Ensure players are added, IDs may have changed
-    console.log('Starting game with players:', players);
-
     this.state.playerMap.clear();
     for (let i = 0; i < players.length; i++) {
       const p = players[i];
-      this.onPlayerJoin(i, p);
+      this.onPlayerJoin(p);
       this.game.assignSystem(this.state, p.id);
-
-      console.log(`Player ${p.name} assigned to homeworld.`, p);
     }
 
-    const thisPlayer = this.state.playerMap.get(player.id)!;
-    this.setupThisPlayer(thisPlayer.id);
-
-    localStorage.setItem('starz_playerId', thisPlayer.id);
-    localStorage.setItem('starz_playerName', thisPlayer.name);
-    localStorage.setItem('starz_score', thisPlayer.score.score.toString());
+    this.thisPlayer = this.state.playerMap.get(this.playerId)!;
+    this.setupThisPlayer(this.playerId);
   }
 
   protected async initializePlayer() {
@@ -119,10 +90,6 @@ export class LocalGameManager extends GameManager {
     const playerName =
       localStorage.getItem('starz_playerName') ?? this.config.playerName;
     const score = +(localStorage.getItem('starz_score') ?? 0);
-
-    localStorage.setItem('starz_playerId', playerId);
-    localStorage.setItem('starz_playerName', playerName);
-    localStorage.setItem('starz_score', score.toString());
 
     return {
       id: playerId,
@@ -146,14 +113,6 @@ export class LocalGameManager extends GameManager {
 
     ui.clearSelection();
     ui.requestRerender();
-  }
-
-  protected onPlayerJoin(playerIndex: number, player: Partial<Player> = {}) {
-    const color = COLORS[playerIndex];
-    const playerName = player.name ?? `Anonymous Player`;
-
-    const id = createId();
-    return this.addPlayer({ id, name: playerName, color, ...player });
   }
 
   protected pauseToggle() {
@@ -230,20 +189,45 @@ export class LocalGameManager extends GameManager {
     localStorage.setItem('starz_score', score.toString());
   }
 
-  protected addPlayer(player: Partial<Player> & { id: string }): Player {
-    const _player = super.addPlayer({
-      color: player.color ?? getRandomColor(),
-      ...player
-    });
+  addBot() {
+    if (this.state.playerMap.size >= MAX_PLAYERS) return;
+
+    const players = Array.from(this.state.playerMap.values());
+    const bots = players.filter((p) => p.bot);
+    if (bots.length >= MAX_BOTS) return;
+
+    const id = createId();
+    const name = getUniqueName(players.map((p) => p.name));
+    const bot = new Bot({ id, name }); // Why does BOT need it's name?
+    return this.onPlayerJoin({ id, name, bot })!;
+  }
+
+  removeBot(id: string) {
+    const player = this.state.playerMap.get(id);
+    if (player?.bot) this.onPlayerLeave(id);
+  }
+
+  protected onPlayerJoin(player: Partial<Player> = {}) {
+    const players = Array.from(this.state.playerMap.values());
+
+    const id = player.id ?? createId();
+    const name = player.name ?? getUniqueName(players.map((p) => p.name));
+    const color = player.color ?? getUniqueColor(players.map((p) => p.color));
+
+    const newPlayer = super.addPlayer({ id, name, color, ...player });
 
     document.documentElement.style.setProperty(
-      `--player-${_player.id}`,
-      _player.color
+      `--player-${newPlayer.id}`,
+      newPlayer.color
     );
 
-    this.events.emit('PLAYER_ADDED', { player: _player });
+    this.events.emit(GameEvents.PLAYER_JOINED, { player: newPlayer });
+    return newPlayer;
+  }
 
-    return _player;
+  protected onPlayerLeave(playerId: string) {
+    this.state.playerMap.delete(playerId);
+    this.events.emit(GameEvents.PLAYER_REMOVED, { playerId });
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -258,6 +242,18 @@ export class LocalGameManager extends GameManager {
       ui.clearSelection();
       ui.select(homeworld.id);
     }
+
+    this.savePlayerData();
+  }
+
+  updatePlayerName(newName: string) {
+    const player = this.state.playerMap.get(this.playerId);
+    if (!player) return;
+
+    player.name = newName;
+    this.events.emit(GameEvents.PLAYER_UPDATED, { player });
+
+    localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {

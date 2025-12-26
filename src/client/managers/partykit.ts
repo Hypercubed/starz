@@ -5,10 +5,8 @@ import { customAlphabet } from 'nanoid';
 import { LocalGameManager } from './local.ts';
 
 import type { LeaderboardEntry, LeaderboardPostBody } from '../../server/types';
-import type { GameConfig } from '../game/types';
 import type { Player } from '../types';
 import { PartyServerMessageTypes } from '../../server/shared.ts';
-import { COLORS } from '../constants.ts';
 
 const FRIENDLY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567';
 
@@ -23,8 +21,6 @@ const PartySocketConfig = {
 
 export class PartykitGameManager extends LocalGameManager {
   lobbySocket?: PartySocket;
-  user: Partial<LeaderboardEntry> | null = null;
-
   playerToken!: string;
 
   private playkitConnect() {
@@ -33,42 +29,8 @@ export class PartykitGameManager extends LocalGameManager {
   }
 
   async start() {
-    const thisPlayer = this.state.playerMap.get(this.playerId)!;
-
-    thisPlayer.name = this.user?.name ?? thisPlayer.name;
-    thisPlayer.score = {
-      score: this.user?.score ?? 0,
-      rank: this.user?.rank ?? undefined
-    };
-    thisPlayer.id = this.user?.uid ?? thisPlayer.id;
-
     localStorage.setItem('starz_playerToken', this.playerToken);
-    localStorage.setItem('starz_rank', this.user?.rank?.toString() ?? '');
-
     super.start();
-  }
-
-  async setConfig(partialConfig: Partial<GameConfig>) {
-    const playerName = partialConfig.playerName;
-
-    // TODO: Make this seperate from config setting
-    if (playerName) {
-      if (playerName.includes('::')) {
-        console.log('Loading player from save key...');
-        const [playerId, playerToken] = playerName.split('::');
-        await this.loadPlayer(playerToken, playerId);
-        delete partialConfig.playerName;
-        partialConfig.playerName = this.user?.name ?? this.config.playerName;
-        this.setPlayerAuth(playerToken);
-      } else {
-        this.user ??= {};
-        this.user.name = playerName;
-        this.thisPlayer!.name = playerName;
-        localStorage.setItem('starz_playerName', playerName);
-      }
-    }
-
-    await super.setConfig(partialConfig);
   }
 
   private getHeaders() {
@@ -78,89 +40,42 @@ export class PartykitGameManager extends LocalGameManager {
     };
   }
 
-  async loadPlayer(playerToken: string, playerId: string) {
-    // TODO: Enforce authentication
-
-    this.playerToken = playerToken;
-
-    this.user ??= { uid: playerId };
-    this.user.score ??= 0;
-
+  async loadPlayerFromPlaykit(
+    playerId: string
+  ): Promise<Partial<Player> | null> {
     const playerEntry = await this.getScore(playerId);
     if (playerEntry) {
-      this.user.uid = playerId;
-      this.user.score = playerEntry.score;
-      this.user.rank = playerEntry.rank;
-      this.user.name = playerEntry.name;
-
-      localStorage.setItem('starz_playerToken', this.playerToken);
-      localStorage.setItem('starz_playerId', playerId);
-      localStorage.setItem(
-        'starz_playerName',
-        this.user.name ?? this.config.playerName
-      );
-      localStorage.setItem('starz_score', this.user.score?.toString() ?? '0');
-      localStorage.setItem('starz_rank', this.user.rank?.toString() ?? '');
-    }
-
-    // Update current player in state if exists
-    const thisPlayer = this.state.playerMap.get(this.playerId);
-    if (thisPlayer) {
-      thisPlayer.id = playerId;
-      thisPlayer.name = this.user.name ?? thisPlayer.name;
-      thisPlayer.score = {
-        score: this.user.score ?? 0,
-        rank: this.user.rank ?? undefined
+      return {
+        id: playerId,
+        name: playerEntry.name,
+        score: { score: playerEntry.score, rank: playerEntry.rank }
       };
-      this.state.playerMap.delete(this.playerId);
-      this.state.playerMap.set(playerId, thisPlayer);
     }
-
-    this.playerId = playerId;
+    return null;
   }
 
   protected async initializePlayer() {
     console.log('Initializing player...');
 
     this.playkitConnect();
-
-    this.playerToken = localStorage.getItem('starz_playerToken')!;
-    this.playerId = localStorage.getItem('starz_playerId')!;
-    let playerName =
-      localStorage.getItem('starz_playerName') ?? this.config.playerName;
-    let score = +(localStorage.getItem('starz_score') ?? '0');
-    let rank = localStorage.getItem('starz_rank')
-      ? +localStorage.getItem('starz_rank')!
-      : undefined;
-
-    if (this.playerToken && this.playerId) {
-      await this.loadPlayer(this.playerToken, this.playerId);
-      this.playerId = this.user?.uid ?? this.playerId;
-      playerName = this.user?.name ?? playerName;
-      score = this.user?.score ?? score;
-      rank = this.user?.rank ?? rank;
-    }
+    const player = await super.initializePlayer();
 
     // Ensure playerToken and playerId are set
     this.playerId ??= createPlayerId();
+    player.id = this.playerId;
+    this.playerToken = localStorage.getItem('starz_playerToken')!;
 
-    localStorage.setItem('starz_playerToken', this.playerToken ?? '');
-    localStorage.setItem('starz_playerId', this.playerId);
-    localStorage.setItem('starz_playerName', playerName);
-    localStorage.setItem('starz_score', score.toString());
-    localStorage.setItem('starz_rank', rank?.toString() ?? '');
+    if (this.playerToken && player.id) {
+      const playerData = await this.loadPlayerFromPlaykit(player.id);
+      player.id = playerData?.id ?? player.id;
+      player.name = playerData?.name ?? player.name;
+      player.score = playerData?.score ?? player.score;
+    }
 
-    return {
-      id: this.playerId,
-      name: playerName,
-      color: COLORS[0],
-      score: { score, rank }
-    } satisfies Partial<Player>;
+    return player;
   }
 
-  private async getScore(
-    playerId: string
-  ): Promise<LeaderboardEntry | undefined> {
+  async getScore(playerId: string): Promise<LeaderboardEntry | undefined> {
     if (!this.lobbySocket) return;
 
     const response = await PartySocket.fetch(
@@ -199,7 +114,7 @@ export class PartykitGameManager extends LocalGameManager {
     } satisfies LeaderboardPostBody;
 
     if (!this.playerToken) {
-      this.setPlayerAuth(createPlayerToken());
+      this.playerToken = createPlayerToken();
     }
 
     PartySocket.fetch(
@@ -215,15 +130,22 @@ export class PartykitGameManager extends LocalGameManager {
     );
   }
 
-  setPlayerAuth(playerToken: string) {
-    this.playerToken = playerToken;
+  async setPlayerAuth(playerId: string, playerToken: string) {
+    if (playerToken && playerId) {
+      this.playerId = playerId;
+      this.playerToken = playerToken;
 
-    this.events.emit('PLAYER_AUTH_UPDATED', {
-      playerId: this.playerId,
-      playerToken: this.playerToken
-    });
+      const playerData = await this.loadPlayerFromPlaykit(playerId);
+      this.thisPlayer.id = playerData?.id ?? this.thisPlayer.id;
+      this.thisPlayer.name = playerData?.name ?? this.thisPlayer.name;
+      this.thisPlayer.score = playerData?.score ?? this.thisPlayer.score;
+
+      this.updatePlayerName(this.thisPlayer.name);
+    }
 
     localStorage.setItem('starz_playerToken', this.playerToken);
+    localStorage.setItem('starz_playerId', this.playerId);
+    localStorage.setItem('starz_playerName', this.thisPlayer.name);
   }
 
   async loadLeaderboard(): Promise<LeaderboardEntry[]> {

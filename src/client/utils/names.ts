@@ -1,19 +1,22 @@
 const adjectives = [
   'Commander',
   'Admiral',
-  'Captain',
   'Marshal',
   'Commodore',
   'General',
   'Colonel',
-  'Major',
   'Warden',
   'Sentinel',
   'Vanguard',
   'Overseer',
   'Legate',
   'Centurion',
-  'Praetor'
+  'Praetor',
+  'Brigadier',
+  'Ambassador',
+  'Director',
+  'Chancellor',
+  'Prefect'
 ];
 
 const names = [
@@ -31,7 +34,11 @@ const names = [
   'Cade',
   'Ryker',
   'Vega',
-  'Nyx'
+  'Nyx',
+  'Crusher',
+  'Wheaton',
+  'Szilard',
+  'Coloma'
 ];
 
 export function generateName() {

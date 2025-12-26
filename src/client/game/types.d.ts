@@ -13,7 +13,7 @@ export interface GameEventMap {
   MESSAGES_UPDATED: { messages: Messages[] };
 
   // Player Events
-  PLAYER_ADDED: { player: Player };
+  PLAYER_JOINED: { player: Player };
   PLAYER_REMOVED: { playerId: string };
   PLAYER_UPDATED: { player: Player };
 

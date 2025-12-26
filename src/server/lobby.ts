@@ -17,18 +17,24 @@ const HEADERS = {
 
 // Define your Server
 export class LobbyServer extends Server {
-  async loadLeaderboard() {
-    return (await this.ctx.storage.get<LeaderboardMap>(STORAGE_LEADERBOARD_KEY)) ??
-      new Map<string, LeaderboardItem>();
+  private _leaderboardCache: LeaderboardMap | null = null;
+
+  async getLeaderboard() {
+    if (!this._leaderboardCache) {
+      this._leaderboardCache = (await this.ctx.storage.get<LeaderboardMap>(STORAGE_LEADERBOARD_KEY)) ??
+        new Map<string, LeaderboardItem>();
+    }
+    return this._leaderboardCache;
   }
 
-  async saveLeaderboard(leaderboard: LeaderboardMap) {
-    leaderboard = leaderboard ?? new Map<string, LeaderboardItem>();
+  async saveLeaderboard() {
+    if (!this._leaderboardCache) return;
+    const leaderboard = await this.getLeaderboard();
     await this.ctx.storage.put<LeaderboardMap>(
       STORAGE_LEADERBOARD_KEY,
       leaderboard
     );
-    this.broadcast(JSON.stringify({ type: PartyServerMessageTypes.LEADERBOARD_UPDATED, data: await this.getRankedLeaderboard() }));
+    this.broadcast(JSON.stringify({ type: PartyServerMessageTypes.LEADERBOARD_UPDATED, data: await this.getPublicLeaderboard() }));
   }
 
   onConnect(connection: Connection) {
@@ -37,7 +43,6 @@ export class LobbyServer extends Server {
 
   onMessage(connection: Connection, message: string) {
     console.log('Message from', connection.id, ':', message);
-    // Send the message to every other connection
     this.broadcast(message, [connection.id]);
   }
 
@@ -79,7 +84,7 @@ export class LobbyServer extends Server {
   // returns the player's rank, name, uid, and score
   // or null if not found
   // does not include the secret field
-  private async onGetScore(req: Request) {
+  async onGetScore(req: Request) {
     // Later enforce authentication?
 
     const query = new URL(req.url).searchParams;
@@ -92,7 +97,11 @@ export class LobbyServer extends Server {
     }
 
     const leaderboard = await this.getRankedLeaderboard();
-    const playerEntry = leaderboard.find((entry) => entry.uid === playerId);
+    const playerIndex = leaderboard.findIndex((entry) => entry.uid === playerId);
+    const playerEntry = playerIndex !== -1 ? {
+      ...leaderboard[playerIndex],
+      rank: playerIndex + 1
+    } : null;
 
     return new Response(JSON.stringify(playerEntry ?? null), {
       status: 200,
@@ -100,10 +109,11 @@ export class LobbyServer extends Server {
     });
   }
 
-  private async onPostScore(req: Request) {
+  async onPostScore(req: Request) {
     const payload: LeaderboardPostBody = await req.json();
     const { type, uid, name } = payload;
 
+    // Simple auth using a secret token in the Authorization header
     const secret = req.headers.get('Authorization')?.replace('Bearer ', '');
     if (!secret) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -112,7 +122,7 @@ export class LobbyServer extends Server {
       });
     }
 
-    const leaderboard = await this.loadLeaderboard();
+    const leaderboard = await this.getLeaderboard();
     let entry = leaderboard.get(uid);
     if (!entry) {
       entry = {
@@ -121,7 +131,6 @@ export class LobbyServer extends Server {
         secret,
         score: 0
       };
-      leaderboard.set(uid, entry);
     } else if (entry.secret !== secret) {
       console.log('Unauthorized score update attempt for uid:', uid);
       console.log('Provided secret:', secret, 'Expected secret:', entry.secret);
@@ -138,39 +147,37 @@ export class LobbyServer extends Server {
 
     entry.uid = uid; // Update uid on score change
     entry.name = name; // Update name on score change
+    leaderboard.set(uid, entry);
 
-    await this.saveLeaderboard(leaderboard);
+    await this.saveLeaderboard();
     return new Response('OK', {
       headers: HEADERS
     });
   }
 
-  private async onGetPublicLeaderboard() {
+  async onGetPublicLeaderboard() {
     return new Response(JSON.stringify(await this.getPublicLeaderboard()), {
       status: 200,
       headers: HEADERS
     });
   }
 
-  private async getPublicLeaderboard(): Promise<LeaderboardEntry[]> {
+  async getPublicLeaderboard(): Promise<LeaderboardEntry[]> {
     const leaderboard = await this.getRankedLeaderboard();
-    return leaderboard.slice(0, 10);
+    return leaderboard.slice(0, 10).map((entry, index) => ({
+      ...entry,
+      secret: undefined,
+      rank: index + 1
+    }));
   }
-
 
   // Returns the full leaderboard sorted by score descending
   // with ranks assigned
   // without the secret field
-  private async getRankedLeaderboard(): Promise<LeaderboardEntry[]> {
-    const leaderboard = await this.loadLeaderboard();
+  async getRankedLeaderboard(): Promise<LeaderboardItem[]> {
+    const leaderboard = await this.getLeaderboard();
     return Array.from(leaderboard.values())
-      .sort((a, b) => b.score - a.score)
-      .map(({ name, uid, score }, index) => ({
-        rank: index + 1,
-        name,
-        uid,
-        score
-      }));
+      .sort((a, b) => b.score - a.score);
   }
 }
 

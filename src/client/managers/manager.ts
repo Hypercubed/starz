@@ -63,6 +63,7 @@ export abstract class GameManager {
     };
   }
 
+  // Add a player to the game state
   protected addPlayer(player: Partial<Player> & { id: string }): Player {
     if (this.state.playerMap.has(player.id)) {
       return this.state.playerMap.get(player.id)!;
@@ -86,6 +87,7 @@ export abstract class GameManager {
       visitedSystems: new Set<string>(),
       revealedSystems: new Set<string>()
     } satisfies Player;
+
     game.addPlayer(this.state, _player);
 
     return _player;

@@ -1,6 +1,6 @@
 import { consume } from '@lit/context';
 import { LitElement, html } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 import { version } from '../../../../package.json';
@@ -40,6 +40,9 @@ export class StartDialogContentElement extends LitElement {
   @state()
   page: 'start' | 'room' = 'start';
 
+  @query('#playerNameInput')
+  private playerNameInput!: HTMLInputElement;
+
   private keyText =
     'Click to copy your save key. Use this key to restore your player data later.';
 
@@ -47,10 +50,10 @@ export class StartDialogContentElement extends LitElement {
     super.connectedCallback();
     this.#setupListeners();
   }
-
   startPage() {
     const sId = generateShortId(this.player, this.playerToken);
     const token = generateToken(this.player?.id, this.playerToken);
+    console.log('Generated token:', { sId, token });
 
     return html` <h1>STARZ!</h1>
       <small class="version">v${this.version}</small>
@@ -222,10 +225,19 @@ export class StartDialogContentElement extends LitElement {
 
   private async setName(playerName: string) {
     playerName = playerName.trim();
-    await this.gameManager.setConfig({
-      playerName
-    });
-    this.requestUpdate();
+
+    if (
+      this.gameManager instanceof PartykitGameManager &&
+      playerName.includes('::')
+    ) {
+      const [playerId, playerToken] = playerName.split('::');
+      await this.gameManager.setPlayerAuth(playerId, playerToken);
+      this.playerToken = playerToken;
+      this.playerNameInput.value = this.gameManager.getPlayer()?.name ?? '';
+    } else if (this.gameManager instanceof LocalGameManager) {
+      this.gameManager.updatePlayerName(playerName);
+      this.playerNameInput.value = this.gameManager.getPlayer()?.name ?? '';
+    }
   }
 
   async copyText(token: string) {
@@ -244,33 +256,22 @@ export class StartDialogContentElement extends LitElement {
   }
 
   #setupListeners() {
-    this.player = this.gameManager.getPlayer();
-    this.players = Array.from(this.gameManager.getState().playerMap.values());
-    this.playerToken =
-      (this.gameManager as PartykitGameManager).playerToken ?? '';
-
-    this.gameManager.events.on(
-      GameEvents.PLAYER_AUTH_UPDATED,
-      ({ playerToken }) => {
-        this.playerToken = playerToken;
-      }
-    );
-
-    this.gameManager.events.on(GameEvents.PLAYER_ADDED, () => {
+    const update = () => {
       this.players = Array.from(this.gameManager.getState().playerMap.values());
-    });
-
-    this.gameManager.events.on(GameEvents.PLAYER_REMOVED, () => {
-      this.players = Array.from(this.gameManager.getState().playerMap.values());
-    });
-
-    this.gameManager.events.on(GameEvents.CONFIG_UPDATED, () => {
       this.player = this.gameManager.getPlayer();
-    });
+      this.playerToken =
+        (this.gameManager as PartykitGameManager).playerToken ?? '';
+      console.log('StartDialogContent updated player:', this.playerToken);
+    };
 
-    this.gameManager.events.on(GameEvents.GAME_INIT, () => {
-      this.player = this.gameManager.getPlayer();
-    });
+    update();
+
+    this.gameManager.events.on(GameEvents.PLAYER_AUTH_UPDATED, update);
+    this.gameManager.events.on(GameEvents.PLAYER_JOINED, update);
+    this.gameManager.events.on(GameEvents.PLAYER_REMOVED, update);
+    this.gameManager.events.on(GameEvents.PLAYER_UPDATED, update);
+    this.gameManager.events.on(GameEvents.CONFIG_UPDATED, update);
+    this.gameManager.events.on(GameEvents.GAME_INIT, update);
   }
 }
 
