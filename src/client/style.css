@@ -1,3 +1,5 @@
+@import '@picocss/pico/css/pico.zinc.min.css';
+
 body, html {
   background-color: black;
 }
@@ -284,21 +286,25 @@ leaderboard-element {
     text-decoration-thickness: 1px;
   }
 
-  details summary {
-    cursor: pointer;
-    text-align: center;
-    font-weight: bold;
-    background-color: rgb(19 22 30 / var(--bg-opacity, 0.34));
-    padding: 5px;
+  details {
+    summary {
+      cursor: pointer;
+      text-align: center;
+      font-weight: bold;
+      background-color: rgb(19 22 30 / var(--bg-opacity, 0.34));
+      padding: 5px;
+      outline-offset: 0px !important
+    }
+
+    >summary::after {
+      transform: rotate(0deg);
+    }
+  
+    &[open]>summary::after {
+      transform: rotate(-180deg);
+    }
   }
 
-  details>summary::after {
-    transform: rotate(0deg);
-  }
-
-  details[open]>summary::after {
-    transform: rotate(-180deg);
-  }
 }
 
 message-box {

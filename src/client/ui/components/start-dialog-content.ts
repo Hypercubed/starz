@@ -53,7 +53,6 @@ export class StartDialogContentElement extends LitElement {
   startPage() {
     const sId = generateShortId(this.player, this.playerToken);
     const token = generateToken(this.player?.id, this.playerToken);
-    console.log('Generated token:', { sId, token });
 
     return html` <h1>STARZ!</h1>
       <small class="version">v${this.version}</small>
@@ -261,7 +260,6 @@ export class StartDialogContentElement extends LitElement {
       this.player = this.gameManager.getPlayer();
       this.playerToken =
         (this.gameManager as PartykitGameManager).playerToken ?? '';
-      console.log('StartDialogContent updated player:', this.playerToken);
     };
 
     update();
