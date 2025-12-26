@@ -7,6 +7,8 @@ import { LocalGameManager } from './local.ts';
 import type { LeaderboardEntry, LeaderboardPostBody } from '../../server/types';
 import type { GameConfig } from '../game/types';
 import type { Player } from '../types';
+import { PartyServerMessageTypes } from '../../server/shared.ts';
+import { COLORS } from '../constants.ts';
 
 const FRIENDLY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ234567';
 
@@ -52,10 +54,12 @@ export class PartykitGameManager extends LocalGameManager {
     // TODO: Make this seperate from config setting
     if (playerName) {
       if (playerName.includes('::')) {
+        console.log('Loading player from save key...');
         const [playerId, playerToken] = playerName.split('::');
         await this.loadPlayer(playerToken, playerId);
         delete partialConfig.playerName;
         partialConfig.playerName = this.user?.name ?? this.config.playerName;
+        this.setPlayerAuth(playerToken);
       } else {
         this.user ??= {};
         this.user.name = playerName;
@@ -138,10 +142,9 @@ export class PartykitGameManager extends LocalGameManager {
     }
 
     // Ensure playerToken and playerId are set
-    this.playerToken ??= createPlayerToken();
     this.playerId ??= createPlayerId();
 
-    localStorage.setItem('starz_playerToken', this.playerToken);
+    localStorage.setItem('starz_playerToken', this.playerToken ?? '');
     localStorage.setItem('starz_playerId', this.playerId);
     localStorage.setItem('starz_playerName', playerName);
     localStorage.setItem('starz_score', score.toString());
@@ -150,6 +153,7 @@ export class PartykitGameManager extends LocalGameManager {
     return {
       id: this.playerId,
       name: playerName,
+      color: COLORS[0],
       score: { score, rank }
     } satisfies Partial<Player>;
   }
@@ -194,6 +198,10 @@ export class PartykitGameManager extends LocalGameManager {
       name: thisPlayer.name
     } satisfies LeaderboardPostBody;
 
+    if (!this.playerToken) {
+      this.setPlayerAuth(createPlayerToken());
+    }
+
     PartySocket.fetch(
       {
         ...PartySocketConfig,
@@ -205,6 +213,17 @@ export class PartykitGameManager extends LocalGameManager {
         headers: this.getHeaders()
       }
     );
+  }
+
+  setPlayerAuth(playerToken: string) {
+    this.playerToken = playerToken;
+
+    this.events.emit('PLAYER_AUTH_UPDATED', {
+      playerId: this.playerId,
+      playerToken: this.playerToken
+    });
+
+    localStorage.setItem('starz_playerToken', this.playerToken);
   }
 
   async loadLeaderboard(): Promise<LeaderboardEntry[]> {
@@ -232,6 +251,9 @@ export class PartykitGameManager extends LocalGameManager {
           : JSON.parse(event.data);
 
       switch (data.type) {
+        case PartyServerMessageTypes.LEADERBOARD_UPDATED:
+          this.events.emit('LEADERBOARD_UPDATED', { leaderboard: data.data });
+          break;
         default:
           if ('message' in data) {
             console.log(data.message);

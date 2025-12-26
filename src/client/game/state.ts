@@ -4,10 +4,11 @@ import { createWorld, getAdjacentSystems } from './world.ts';
 
 import type { Player } from '../types';
 import type { GameConfig, GameState, System } from './types';
+import { generateName } from '../utils/names.ts';
 
 export function defaultConfig(): GameConfig {
   return {
-    playerName: '',
+    playerName: generateName(),
     numBots: 0,
     fow: ENABLE_FOG_OF_WAR,
     numSystems: NumOfSystems,

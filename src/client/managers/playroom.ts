@@ -11,6 +11,7 @@ import type { Player, PlayerStats } from '../types';
 import type { GameStatus, WorldJSON } from './types';
 import type { Move, Order, System } from '../game/types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
+import { GameEvents } from '../game/shared.ts';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;
@@ -61,7 +62,7 @@ export class PlayroomGameManager extends GameManager {
 
     this.registerPlayroomEvents();
     this.gameInit();
-    this.events.emit('GAME_INIT', undefined);
+    this.events.emit(GameEvents.GAME_INIT, undefined);
 
     await PR.insertCoin({
       gameId: 'etTt5RuPbZxwWPXQvYzF',
@@ -92,7 +93,7 @@ export class PlayroomGameManager extends GameManager {
     PR.resetStates();
     ui.clearMessages();
 
-    this.events.emit('GAME_INIT', undefined);
+    this.events.emit(GameEvents.GAME_INIT, undefined);
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -450,19 +451,19 @@ export class PlayroomGameManager extends GameManager {
   }
 
   #registerEvents() {
-    this.events.on('PLAYER_WIN', ({ playerId, message }) => {
+    this.events.on(GameEvents.PLAYER_WIN, ({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this.events.on('TAKE_ORDER', (order: Order) => {
+    this.events.on(GameEvents.TAKE_ORDER, (order: Order) => {
       this.onTakeOrder(order);
     });
 
-    this.events.on('MAKE_MOVE', (move: Move) => {
+    this.events.on(GameEvents.MAKE_MOVE, (move: Move) => {
       this.onMakeMove(move);
     });
 
-    this.events.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
+    this.events.on(GameEvents.PLAYER_ELIMINATED, ({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }

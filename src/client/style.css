@@ -248,6 +248,14 @@ tick-box {
   font-weight: bold;
 }
 
+lobby-leaderboard-element {
+  --bg-opacity: 1;
+}
+
+leaderboard-element {
+  --bg-opacity: 0.34;
+}
+
 lobby-leaderboard-element,
 leaderboard-element {
   position: absolute;
@@ -258,18 +266,38 @@ leaderboard-element {
   font-size: 14px;
   font-weight: bold;
 
+  table {
+    margin: 0;
+  }
+
   th,
   td {
     padding: 3px 5px;
     text-align: center;
     color: var(--owner-color, var(--unoccupied));
-    background-color: rgb(19 22 30 / 34%);
+    background-color: rgb(19 22 30 / var(--bg-opacity, 0.34));
   }
 
   tr.eliminated td {
     text-decoration: line-through;
     text-decoration-color: white;
     text-decoration-thickness: 1px;
+  }
+
+  details summary {
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    background-color: rgb(19 22 30 / var(--bg-opacity, 0.34));
+    padding: 5px;
+  }
+
+  details>summary::after {
+    transform: rotate(0deg);
+  }
+
+  details[open]>summary::after {
+    transform: rotate(-180deg);
   }
 }
 
@@ -398,6 +426,7 @@ start-dialog-content {
     margin: auto;
     position: relative;
     width: 80%;
+    max-width: 850px;
 
     .short-id {
       cursor: copy;
@@ -437,6 +466,21 @@ start-dialog-content {
     li {
       border: 1px solid rgba(255, 255, 255, 0.1);
       text-align: center;
+      color: var(--owner-color, var(--unoccupied));
+
+      &.bot {
+        cursor: pointer;
+
+        &:hover {
+          text-decoration: line-through;
+        }
+      }
+
+      svg {
+        height: 16px;
+        margin-top: 5px;
+        vertical-align: top;
+      }
     }
   }
 }
@@ -444,5 +488,4 @@ start-dialog-content {
 button svg {
   width: 16px;
   height: 35px;
-
 }

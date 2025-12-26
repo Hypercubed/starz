@@ -21,6 +21,10 @@ export interface GameEventMap {
   PLAYER_WIN: { playerId: string; message: string };
   PLAYER_LOSE: { playerId: string; winnerId: string | null };
 
+  PLAYER_AUTH_UPDATED: { playerId: string; playerToken: string };
+
+  LEADERBOARD_UPDATED: { leaderboard: LeaderboardEntry[] };
+
   // Actions
   TAKE_ORDER: Order;
   MAKE_MOVE: Move;

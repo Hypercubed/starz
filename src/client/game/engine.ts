@@ -11,6 +11,7 @@ import { botQueue } from './bots.ts';
 
 import type { GameState } from './types';
 import type { FnContext } from '../managers/types';
+import { GameEvents } from './shared.ts';
 
 export function updateStats(state: GameState) {
   for (const player of state.playerMap.values()) {
@@ -70,11 +71,11 @@ export function checkVictory({ S, C, E, P }: FnContext) {
       const winnerId = players.find((player) => player.stats.homeworld > 0)!.id;
       const winner = S.playerMap.get(winnerId)!;
 
-      E.emit('PLAYER_WIN', {
+      E.emit(GameEvents.PLAYER_WIN, {
         playerId: winnerId,
         message: `${winner.name} has conquered The Bubble!`
       });
-      E.emit('GAME_STOP', undefined);
+      E.emit(GameEvents.GAME_STOP, undefined);
     }
   } else {
     // Check for domination victory
@@ -84,11 +85,11 @@ export function checkVictory({ S, C, E, P }: FnContext) {
     );
 
     if (systems.length === 0) {
-      E.emit('PLAYER_WIN', {
+      E.emit(GameEvents.PLAYER_WIN, {
         playerId: C.playerId,
         message: `${P.name} has conquered The Bubble!`
       });
-      E.emit('GAME_STOP', undefined);
+      E.emit(GameEvents.GAME_STOP, undefined);
     }
   }
 }

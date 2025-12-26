@@ -5,6 +5,7 @@ import * as game from '../game/index.ts';
 import type { FnContext, GameContext, GameStatus } from './types';
 import type { GameConfig, GameEventMap, GameState, Order } from '../game/types';
 import type { Player } from '../types';
+import { GameEvents } from '../game/shared.ts';
 
 export abstract class GameManager {
   public events = new EventBus<GameEventMap>();
@@ -94,7 +95,7 @@ export abstract class GameManager {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this.events.emit('GAME_START', undefined);
+    this.events.emit(GameEvents.GAME_START, undefined);
 
     this.#runGameLoop();
   }
@@ -124,7 +125,7 @@ export abstract class GameManager {
     this.stopGameLoop();
     this.gameTick();
 
-    this.events.emit('GAME_TICK', { tick: this.tick });
+    this.events.emit(GameEvents.GAME_TICK, { tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
@@ -144,11 +145,11 @@ export abstract class GameManager {
   }
 
   #registerEventListeners() {
-    this.events.on('GAME_STOP', () => {
+    this.events.on(GameEvents.GAME_STOP, () => {
       this.gameStop();
     });
 
-    this.events.on('TAKE_ORDER', (order: Order) => {
+    this.events.on(GameEvents.TAKE_ORDER, (order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
 
       this.events.emit('STATE_UPDATED', {

@@ -1,6 +1,11 @@
 import { nanoid } from 'nanoid';
 
-import { COLORS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
+import {
+  COLORS,
+  MAX_HUMAN_PLAYERS,
+  MAX_PLAYERS,
+  START_PAUSED
+} from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -9,8 +14,12 @@ import { GameManager } from './manager.ts';
 
 import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
+import { generateName } from '../utils/names.ts';
+import { GameEvents } from '../game/shared.ts';
 
 const createId = () => nanoid(5);
+
+let botIndex = MAX_HUMAN_PLAYERS;
 
 export class LocalGameManager extends GameManager {
   protected appRoot!: AppRootElement;
@@ -31,7 +40,7 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.addPlayer(thisPlayerPartial);
     this.playerId = this.thisPlayer.id;
 
-    this.events.emit('GAME_INIT', undefined);
+    this.events.emit(GameEvents.GAME_INIT, undefined);
 
     if (START_PAUSED) {
       this.appRoot.showStartDialog();
@@ -54,13 +63,23 @@ export class LocalGameManager extends GameManager {
   }
 
   addBot() {
-    const index = this.state.playerMap.size;
-    if (index >= MAX_PLAYERS) return;
+    if (this.state.playerMap.size >= MAX_PLAYERS) return;
+
+    const players = Array.from(this.state.playerMap.values());
 
     const id = createId();
-    const name = `Bot ${index}`;
+    const name = getUniqueName(players.map((p) => p.name));
     const bot = new Bot({ id, name });
-    return this.onPlayerJoin(index, { id, name, bot })!;
+    const color = getUniqueColor(players.map((p) => p.color));
+    return this.onPlayerJoin(botIndex++, { id, name, bot, color })!;
+  }
+
+  removeBot(id: string) {
+    const player = this.state.playerMap.get(id);
+    if (player?.bot) {
+      this.state.playerMap.delete(id);
+      this.events.emit(GameEvents.PLAYER_REMOVED, { playerId: id });
+    }
   }
 
   protected gameSetup(player: Partial<Player> & { id: string }) {
@@ -242,14 +261,28 @@ export class LocalGameManager extends GameManager {
   }
 
   #registerEvents() {
-    this.events.on('PLAYER_WIN', ({ playerId, message }) => {
+    this.events.on(GameEvents.PLAYER_WIN, ({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this.events.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
+    this.events.on(GameEvents.PLAYER_ELIMINATED, ({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }
+}
+
+function getUniqueColor(existingColors: string[]) {
+  const colors = [...COLORS].filter((c) => !existingColors.includes(c));
+  if (colors.length === 0) return getRandomColor();
+  return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function getUniqueName(existingNames: string[]) {
+  let name = generateName();
+  while (existingNames.includes(name)) {
+    name = generateName();
+  }
+  return name;
 }
 
 function getRandomColor() {

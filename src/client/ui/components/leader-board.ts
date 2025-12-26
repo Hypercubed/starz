@@ -7,6 +7,7 @@ import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../../managers/manager.ts';
 import type { Player } from '../../types';
+import { GameEvents } from '../../game/shared.ts';
 
 const formatSIInteger = d3.format('.3~s');
 
@@ -26,8 +27,10 @@ export class LeaderboardElement extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
 
-    this.gameManager.events.on('GAME_TICK', () => this.updateStats());
-    this.gameManager.events.on('STATE_UPDATED', () => this.updateStats());
+    this.gameManager.events.on(GameEvents.GAME_TICK, () => this.updateStats());
+    this.gameManager.events.on(GameEvents.STATE_UPDATED, () =>
+      this.updateStats()
+    );
   }
 
   private updateStats() {

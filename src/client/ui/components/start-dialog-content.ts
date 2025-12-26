@@ -8,13 +8,12 @@ import { version } from '../../../../package.json';
 import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';
 
-import playIcon from 'lucide-static/icons/play.svg?raw';
-import cogIcon from 'lucide-static/icons/cog.svg?raw';
-import plusIcon from 'lucide-static/icons/plus.svg?raw';
-
 import type { GameManager } from '../../managers/manager.ts';
 import type { Player } from '../../types';
 import { PartykitGameManager } from '../../managers/partykit.ts';
+import { botIcon, cogIcon, playIcon, plusIcon } from './icons.ts';
+import { GameEvents } from '../../game/shared.ts';
+import { LocalGameManager } from '../../managers/local.ts';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -36,6 +35,9 @@ export class StartDialogContentElement extends LitElement {
   protected version = version;
 
   @state()
+  private playerToken: string = '';
+
+  @state()
   page: 'start' | 'room' = 'start';
 
   private keyText =
@@ -47,11 +49,8 @@ export class StartDialogContentElement extends LitElement {
   }
 
   startPage() {
-    const sId = generateShortId(this.player);
-    const token = generateToken(
-      this.player?.id,
-      (this.gameManager as PartykitGameManager).playerToken
-    );
+    const sId = generateShortId(this.player, this.playerToken);
+    const token = generateToken(this.player?.id, this.playerToken);
 
     return html` <h1>STARZ!</h1>
       <small class="version">v${this.version}</small>
@@ -67,6 +66,7 @@ export class StartDialogContentElement extends LitElement {
               type="text"
               .value=${this.player?.name ?? ''}
               @input="${this.onChange}"
+              @keydown="${this.onKeydown}"
               placeholder="Name or Save Key"
               minlength="1"
               maxlength="32"
@@ -103,9 +103,16 @@ export class StartDialogContentElement extends LitElement {
       <ul class="player-list">
         ${this.players.map(
           (player) =>
-            html`<li>
-              ${player.name}<span class="short-id"
-                >${generateShortId(player)}</span
+            html`<li
+              style="--owner-color: ${player.color || null}"
+              class="${player.bot ? 'bot' : 'human'}"
+              @click="${() => {
+                this.removeBot(player.id);
+              }}"
+            >
+              ${player.bot ? unsafeHTML(botIcon) : ''} ${player.name}<span
+                class="short-id"
+                >${generateShortId(player, this.playerToken)}</span
               >
             </li>`
         )}
@@ -141,8 +148,21 @@ export class StartDialogContentElement extends LitElement {
     this.page = 'room';
   }
 
+  private removeBot(id: string) {
+    console.log('Removing bot', id);
+    if (
+      this.gameManager instanceof LocalGameManager ||
+      this.gameManager instanceof PartykitGameManager
+    ) {
+      this.gameManager.removeBot(id);
+    }
+  }
+
   private async onAddBot() {
-    if (this.gameManager instanceof PartykitGameManager) {
+    if (
+      this.gameManager instanceof LocalGameManager ||
+      this.gameManager instanceof PartykitGameManager
+    ) {
       this.gameManager.addBot();
     }
   }
@@ -150,6 +170,7 @@ export class StartDialogContentElement extends LitElement {
   private async onPlay() {
     await this.gameManager.setConfig({ playerName: this.player?.name ?? '' });
     this.dispatchEvent(new Event('startClicked'));
+    this.page = 'start';
   }
 
   private async onOptions() {
@@ -186,6 +207,13 @@ export class StartDialogContentElement extends LitElement {
     });
   }
 
+  private onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.setName((e.target as HTMLInputElement).value);
+    }
+  }
+
   private onChange(e: Event) {
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -218,24 +246,38 @@ export class StartDialogContentElement extends LitElement {
   #setupListeners() {
     this.player = this.gameManager.getPlayer();
     this.players = Array.from(this.gameManager.getState().playerMap.values());
+    this.playerToken =
+      (this.gameManager as PartykitGameManager).playerToken ?? '';
 
-    this.gameManager.events.on('PLAYER_ADDED', () => {
+    this.gameManager.events.on(
+      GameEvents.PLAYER_AUTH_UPDATED,
+      ({ playerToken }) => {
+        this.playerToken = playerToken;
+      }
+    );
+
+    this.gameManager.events.on(GameEvents.PLAYER_ADDED, () => {
       this.players = Array.from(this.gameManager.getState().playerMap.values());
     });
 
-    this.gameManager.events.on('CONFIG_UPDATED', () => {
+    this.gameManager.events.on(GameEvents.PLAYER_REMOVED, () => {
+      this.players = Array.from(this.gameManager.getState().playerMap.values());
+    });
+
+    this.gameManager.events.on(GameEvents.CONFIG_UPDATED, () => {
       this.player = this.gameManager.getPlayer();
     });
 
-    this.gameManager.events.on('GAME_INIT', () => {
+    this.gameManager.events.on(GameEvents.GAME_INIT, () => {
       this.player = this.gameManager.getPlayer();
     });
   }
 }
 
-function generateShortId(player: Player | null): string {
+function generateShortId(player: Player | null, playerToken: string): string {
   if (!player) return '';
   if (player.bot) return '';
+  if (!playerToken) return ''; // no token for local players
   return player.id ? '#' + player.id.slice(0, 4) : '';
 }
 
