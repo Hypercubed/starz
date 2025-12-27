@@ -7,6 +7,10 @@ import { PartyServerMessageTypes } from './shared';
 type LeaderboardItem = Omit<LeaderboardEntry, 'rank'> & { secret: string };
 type LeaderboardMap = Map<string, LeaderboardItem>;
 
+export interface Env {
+  SECRET_KEY: string; // Example secret
+}
+
 const STORAGE_LEADERBOARD_KEY = 'starz-game-room-leaderboard';
 
 const HEADERS = {
@@ -16,7 +20,7 @@ const HEADERS = {
 };
 
 // Define your Server
-export class LobbyServer extends Server {
+export class LobbyServer extends Server<Env> {
   private _leaderboardCache: LeaderboardMap | null = null;
 
   async getLeaderboard() {
@@ -56,12 +60,24 @@ export class LobbyServer extends Server {
 
     const url = new URL(req.url);
 
+    if (url.pathname.endsWith('/admin') && req.method === 'GET') {
+      return this.onGetAdmin(req);
+    }
+
+    if (url.pathname.endsWith('/admin') && req.method === 'DELETE') {
+      return this.onDeleteAdmin(req);
+    }
+
     if (url.pathname.endsWith('/score') && req.method === 'GET') {
       return this.onGetScore(req);
     }
 
     if (url.pathname.endsWith('/score') && req.method === 'POST') {
       return this.onPostScore(req);
+    }
+
+    if (url.pathname.endsWith('/score') && req.method === 'DELETE') {
+      return this.onDeleteScore(req);
     }
 
     if (req.method === 'GET') {
@@ -72,10 +88,7 @@ export class LobbyServer extends Server {
       JSON.stringify({ message: 'Hello from LobbyServer!' }),
       {
         status: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
+        headers: HEADERS
       }
     );
   }
@@ -96,17 +109,21 @@ export class LobbyServer extends Server {
       );
     }
 
-    const leaderboard = await this.getRankedLeaderboard();
-    const playerIndex = leaderboard.findIndex((entry) => entry.uid === playerId);
-    const playerEntry = playerIndex !== -1 ? {
-      ...leaderboard[playerIndex],
-      rank: playerIndex + 1
-    } : null;
-
+    const playerEntry = await this.getPlayerEntry(playerId);
     return new Response(JSON.stringify(playerEntry ?? null), {
       status: 200,
       headers: HEADERS
     });
+  }
+
+  private async getPlayerEntry(playerId: string) {
+    const leaderboard = await this.getRankedLeaderboard();
+    const playerIndex = leaderboard.findIndex((entry) => entry.uid === playerId);
+    return playerIndex !== -1 ? {
+      ...leaderboard[playerIndex],
+      rank: playerIndex + 1,
+      secret: undefined
+    } : null;
   }
 
   async onPostScore(req: Request) {
@@ -133,7 +150,6 @@ export class LobbyServer extends Server {
       };
     } else if (entry.secret !== secret) {
       console.log('Unauthorized score update attempt for uid:', uid);
-      console.log('Provided secret:', secret, 'Expected secret:', entry.secret);
       return new Response('Unauthorized', { status: 401 });
     }
 
@@ -148,7 +164,44 @@ export class LobbyServer extends Server {
     entry.uid = uid; // Update uid on score change
     entry.name = name; // Update name on score change
     leaderboard.set(uid, entry);
+    await this.saveLeaderboard();
 
+    const playerEntry = await this.getPlayerEntry(uid);
+    return new Response(JSON.stringify(playerEntry ?? null), {
+      headers: HEADERS
+    });
+  }
+
+  async onDeleteScore(req: Request) {
+    const query = new URL(req.url).searchParams;
+    const playerId = query.get('playerId');
+    if (!playerId) {
+      return new Response(
+        JSON.stringify({ error: 'Bad Request: Missing playerId' }),
+        { status: 400, headers: HEADERS }
+      );
+    }
+
+    // Simple auth using a secret token in the Authorization header
+    const secret = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!secret) {
+      return new Response(JSON.stringify({ error: 'Unauthorized, Missing token' }), {
+        status: 401,
+        headers: HEADERS
+      });
+    }
+
+    const leaderboard = await this.getLeaderboard();
+    const entry = leaderboard.get(playerId);
+    if (!entry) {
+      return new Response('Error', { status: 400 });
+    }
+
+    if (entry.secret !== secret && secret !== this.env.SECRET_KEY) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+    
+    leaderboard.delete(playerId);
     await this.saveLeaderboard();
     return new Response('OK', {
       headers: HEADERS
@@ -158,6 +211,40 @@ export class LobbyServer extends Server {
   async onGetPublicLeaderboard() {
     return new Response(JSON.stringify(await this.getPublicLeaderboard()), {
       status: 200,
+      headers: HEADERS
+    });
+  }
+
+  async onGetAdmin(req: Request) {
+    // Simple auth using a secret token in the Authorization header
+    const secret = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!secret || secret !== this.env.SECRET_KEY) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: HEADERS
+      });
+    }
+
+    const leaderboard = await this.getLeaderboard();
+    return new Response(JSON.stringify(Array.from(leaderboard.values())), {
+      status: 200,
+      headers: HEADERS
+    });
+  }
+
+  async onDeleteAdmin(req: Request) {
+    // Simple auth using a secret token in the Authorization header
+    const secret = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!secret || secret !== this.env.SECRET_KEY) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: HEADERS
+      });
+    }
+
+    this._leaderboardCache = new Map<string, LeaderboardItem>();
+    await this.saveLeaderboard();
+    return new Response('OK', {
       headers: HEADERS
     });
   }

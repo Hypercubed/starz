@@ -46,3 +46,11 @@ export function generateName() {
   const randomName = names[Math.floor(Math.random() * names.length)];
   return `${randomAdj}-${randomName}`;
 }
+
+export function getUniqueName(existingNames: string[]) {
+  let name = generateName();
+  while (existingNames.includes(name)) {
+    name = generateName();
+  }
+  return name;
+}

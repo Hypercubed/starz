@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid';
 
-import { COLORS, MAX_BOTS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
+import { MAX_BOTS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -9,8 +9,9 @@ import { GameManager } from './manager.ts';
 
 import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { generateName } from '../utils/names.ts';
 import { GameEvents } from '../game/shared.ts';
+import { getUniqueName } from '../utils/names.ts';
+import { getUniqueColor } from '../utils/colors.ts';
 
 const createId = () => nanoid(5);
 
@@ -265,27 +266,4 @@ export class LocalGameManager extends GameManager {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }
-}
-
-function getUniqueColor(existingColors: string[]) {
-  const colors = [...COLORS].filter((c) => !existingColors.includes(c));
-  if (colors.length === 0) return getRandomColor();
-  return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function getUniqueName(existingNames: string[]) {
-  let name = generateName();
-  while (existingNames.includes(name)) {
-    name = generateName();
-  }
-  return name;
-}
-
-function getRandomColor() {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
 }

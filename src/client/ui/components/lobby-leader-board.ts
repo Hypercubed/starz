@@ -54,10 +54,11 @@ export class LobbyLeaderboardElement extends LitElement {
       <table id="leaderbox">
         ${this.renderHeader()} ${this.renderBody()}
       </table>
-      ${ this.leaderboard.length > 5 ? html`
-      <details @toggle="${this.onOpenMore}">
-        <summary>Show More</summary>
-      </details>` : ''}
+      ${this.leaderboard.length > 5
+        ? html` <details @toggle="${this.onOpenMore}">
+            <summary>Show More</summary>
+          </details>`
+        : ''}
     `;
   }
 

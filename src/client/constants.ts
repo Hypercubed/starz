@@ -35,19 +35,3 @@ export const START_PAUSED = true;
 export const ENABLE_CHEATS = DEV_MODE;
 export const ENABLE_BOT_CONTROL = false;
 export const ENABLE_GRATICULE = true;
-
-export const COLORS = [
-  '#c0392b', // Red
-  '#f1c40f', // Yellow
-  '#9b59b6', // Purple
-  '#00b386', // Green
-  '#cc6600', // Orange
-  '#0a4c8c', // Blue
-
-  '#e74c3c', // Red
-  '#f39c12', // Yellow
-  '#8e44ad', // Purple
-  '#27ae60', // Green
-  '#d35400', // Orange
-  '#2980b9' // Blue
-] as const;

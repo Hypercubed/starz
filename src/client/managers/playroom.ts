@@ -1,6 +1,5 @@
 import * as PR from 'playroomkit';
 
-import { COLORS } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 import { trackEvent } from '../utils/logging.ts';
@@ -12,6 +11,7 @@ import type { GameStatus, WorldJSON } from './types';
 import type { Move, Order, System } from '../game/types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { GameEvents } from '../game/shared.ts';
+import { COLORS } from '../utils/colors.ts';
 
 class PlayroomBot extends PR.Bot {
   gameBot: Bot;

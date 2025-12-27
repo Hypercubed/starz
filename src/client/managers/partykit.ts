@@ -16,7 +16,7 @@ const createPlayerToken = customAlphabet(FRIENDLY_ALPHABET, 15);
 const PartySocketConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
   party: 'lobby-server',
-  room: import.meta.env.VITE_PARTYKIT_LEADERBOARD
+  room: 'leaderboard'
 };
 
 export class PartykitGameManager extends LocalGameManager {
@@ -61,12 +61,13 @@ export class PartykitGameManager extends LocalGameManager {
     const player = await super.initializePlayer();
 
     // Ensure playerToken and playerId are set
-    this.playerId ??= createPlayerId();
+    this.playerId = createPlayerId();
     player.id = this.playerId;
     this.playerToken = localStorage.getItem('starz_playerToken')!;
 
     if (this.playerToken && player.id) {
       const playerData = await this.loadPlayerFromPlaykit(player.id);
+      this.playerId = player.id ?? player.id;
       player.id = playerData?.id ?? player.id;
       player.name = playerData?.name ?? player.name;
       player.score = playerData?.score ?? player.score;
@@ -117,7 +118,7 @@ export class PartykitGameManager extends LocalGameManager {
       this.playerToken = createPlayerToken();
     }
 
-    PartySocket.fetch(
+    const res = await PartySocket.fetch(
       {
         ...PartySocketConfig,
         path: 'score'
@@ -128,6 +129,15 @@ export class PartykitGameManager extends LocalGameManager {
         headers: this.getHeaders()
       }
     );
+
+    const updatedEntry = (await res.json()) as LeaderboardEntry | null;
+    if (updatedEntry) {
+      thisPlayer.score = {
+        score: updatedEntry.score,
+        rank: updatedEntry.rank
+      };
+    }
+    this.events.emit('PLAYER_UPDATED', { player: thisPlayer });
   }
 
   async setPlayerAuth(playerId: string, playerToken: string) {
