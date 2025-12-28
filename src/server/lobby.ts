@@ -1,4 +1,5 @@
 import { routePartykitRequest, Server } from 'partyserver';
+import { pack } from 'msgpackr';
 
 import type { LeaderboardEntry, LeaderboardPostBody } from './types';
 import type { Connection } from 'partyserver';
@@ -38,7 +39,9 @@ export class LobbyServer extends Server<Env> {
       STORAGE_LEADERBOARD_KEY,
       leaderboard
     );
-    this.broadcast(JSON.stringify({ type: PartyServerMessageTypes.LEADERBOARD_UPDATED, data: await this.getPublicLeaderboard() }));
+
+    const broadcastData = { type: PartyServerMessageTypes.LEADERBOARD_UPDATED, data: await this.getPublicLeaderboard() };
+    this.broadcast(pack(broadcastData));
   }
 
   onConnect(connection: Connection) {

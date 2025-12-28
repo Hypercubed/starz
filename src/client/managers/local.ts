@@ -25,7 +25,7 @@ const createManagerEvents = () => {
   };
 };
 
-type LocalGameManagerEvents = GameEventsMap &
+export type LocalGameManagerEvents = GameEventsMap &
   ReturnType<typeof createManagerEvents>;
 
 export class LocalGameManager extends GameManager {
