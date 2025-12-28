@@ -37,7 +37,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
 
   async setConfig(partialConfig: Partial<GameConfig>) {
     this.config = { ...this.config, ...partialConfig };
-    this._events.CONFIG_UPDATED.emit({ config: this.config });
+    this._events.CONFIG_UPDATED.dispatch({ config: this.config });
   }
 
   getPlayer(): Player | null {
@@ -96,7 +96,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this._events.GAME_START.emit(undefined);
+    this._events.GAME_START.dispatch(undefined);
 
     this.#runGameLoop();
   }
@@ -111,7 +111,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
 
     this.game.gameTick(this.getFnContext());
     this.game.checkVictory(this.getFnContext());
-    this._events.STATE_UPDATED.emit({
+    this._events.STATE_UPDATED.dispatch({
       state: this.state,
       status: this.status
     });
@@ -126,7 +126,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.stopGameLoop();
     this.gameTick();
 
-    this._events.GAME_TICK.emit({ tick: this.tick });
+    this._events.GAME_TICK.dispatch({ tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
@@ -146,14 +146,14 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   }
 
   #registerEventListeners() {
-    this._events.GAME_STOP.on(() => {
+    this._events.GAME_STOP.add(() => {
       this.gameStop();
     });
 
-    this._events.TAKE_ORDER.on((order: Order) => {
+    this._events.TAKE_ORDER.add((order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
 
-      this._events.STATE_UPDATED.emit({
+      this._events.STATE_UPDATED.dispatch({
         state: this.state,
         status: this.status
       });

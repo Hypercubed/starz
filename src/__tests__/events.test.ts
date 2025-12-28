@@ -1,10 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Event } from 'ts-typed-events';
-import { EventBus } from '../client/classes/event-bus.ts';
+import { MiniSignal } from 'mini-signals';
+
+import { EventBus, EventBusEmit, EventBusOn } from '../client/classes/event-bus.ts';
 
 const testEvents = {
-  item: new Event<string>(),
-  count: new Event<number>()
+  item: new MiniSignal<[string]>(),
+  count: new MiniSignal<[number]>()
+} as const;
+
+class TestEventBus extends EventBus<typeof testEvents> {
+  constructor() {
+    super(testEvents);
+  }
+}
+
+type TestEvents = typeof testEvents;
+type AnotherEventBusEvents = TestEvents & { extra: MiniSignal<[boolean]> };
+
+class AnotherEventBus extends TestEventBus {
+  declare protected _events: AnotherEventBusEvents;
+  declare on: EventBusOn<AnotherEventBusEvents>;
+  declare emit: EventBusEmit<AnotherEventBusEvents>;
+
+  constructor() {
+    super();
+    this.addEvents({ extra: new MiniSignal<[boolean]>() });
+  }
 }
 
 describe('EventBus', () => {
@@ -51,5 +72,26 @@ describe('EventBus', () => {
     bus.emit('item', 'test');
 
     expect(callback).not.toHaveBeenCalled();
+  });
+});
+
+describe('TestEventBus', () => {
+  it('should work with the extended class', () => {
+    const bus = new TestEventBus();
+    const callback = vi.fn();
+
+    bus.on('item', callback);
+    bus.emit('item', 'extended');
+
+    expect(callback).toHaveBeenCalledWith('extended');
+  });
+
+  it('should work with another level of extension', () => {
+    const bus = new AnotherEventBus();
+    const callback = vi.fn();
+    
+    bus.on('extra', callback);
+    bus.emit('extra', true);
+    expect(callback).toHaveBeenCalledWith(true);
   });
 });

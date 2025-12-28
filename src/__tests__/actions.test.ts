@@ -26,8 +26,8 @@ describe('actions', () => {
 
       game.visitSystem(S, system!);
 
-      expect(P.visitedSystems.has(system!.id)).toBe(true);
-      expect(P.revealedSystems.has(system!.id)).toBe(true);
+      expect(P!.visitedSystems.has(system!.id)).toBe(true);
+      expect(P!.revealedSystems.has(system!.id)).toBe(true);
     });
   });
 
@@ -39,7 +39,7 @@ describe('actions', () => {
       const fromSystem = systems.next().value!;
       const toSystem = systems.next().value!;
 
-      game.queueMove(fromSystem, toSystem, 5, P.id);
+      game.queueMove(fromSystem, toSystem, 5, P!.id);
 
       expect(fromSystem.moveQueue).toHaveLength(1);
       expect(fromSystem.moveQueue[0]).toEqual({
@@ -58,7 +58,7 @@ describe('actions', () => {
       const fromSystem = systems.next().value!;
       const toSystem = systems.next().value!;
 
-      game.queueMove(fromSystem, toSystem, 5, P.id, 'Attack!');
+      game.queueMove(fromSystem, toSystem, 5, P!.id, 'Attack!');
 
       expect(fromSystem.moveQueue[0].message).toBe('Attack!');
     });
@@ -71,8 +71,8 @@ describe('actions', () => {
       const toSystem1 = systems.next().value!;
       const toSystem2 = systems.next().value!;
 
-      game.queueMove(fromSystem, toSystem1, 5, P.id);
-      game.queueMove(fromSystem, toSystem2, 3, P.id);
+      game.queueMove(fromSystem, toSystem1, 5, P!.id);
+      game.queueMove(fromSystem, toSystem2, 3, P!.id);
 
       expect(fromSystem.moveQueue).toHaveLength(2);
     });
@@ -89,7 +89,7 @@ describe('actions', () => {
       from.ships = 10;
       to.ships = 5;
 
-      game.queueMove(from, to, 3, P.id);
+      game.queueMove(from, to, 3, P!.id);
       game.doQueuedMoves(manager.getFnContext());
 
       expect(from.ships).toBe(7); // 10 - 3
@@ -102,7 +102,7 @@ describe('actions', () => {
       const from = S.world.systemMap.get('1')!;
       const to = S.world.systemMap.get('2')!;
 
-      game.queueMove(from, to, 3, P.id, 'Moving ships');
+      game.queueMove(from, to, 3, P!.id, 'Moving ships');
       game.doQueuedMoves(manager.getFnContext());
 
       expect(from.lastMove).toBeDefined();
@@ -120,8 +120,8 @@ describe('actions', () => {
       from.ships = 20;
       to.ships = 0;
 
-      game.queueMove(from, to, 3, P.id);
-      game.queueMove(from, to, 5, P.id);
+      game.queueMove(from, to, 3, P!.id);
+      game.queueMove(from, to, 5, P!.id);
 
       game.doQueuedMoves(manager.getFnContext());
 

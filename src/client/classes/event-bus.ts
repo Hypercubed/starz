@@ -1,24 +1,25 @@
-import { Event } from 'ts-typed-events';
+/**
+ * EventBus class to manage event subscriptions and emissions
+ * using MiniSignal for event handling.
+ */
 
-export type EventMap = Record<string, Event<any>>;
+import { MiniSignal } from 'mini-signals';
+
+export type EventMap = Record<string, MiniSignal<[any]>>;
 
 /**
  * Generic types for EventBus methods to reduce repetition
  */
-export type EventBusOn<TEvents extends Record<string, Event<any>>> = <
-  K extends keyof TEvents
->(
+export type EventBusOn<T extends EventMap> = <K extends keyof T>(
   key: K,
-  listener: TEvents[K] extends Event<infer T> ? (data: T) => void : never
+  listener: T[K] extends MiniSignal<infer A> ? (...args: A) => void : never
 ) => () => void;
 
-export type EventBusEmit<TEvents extends Record<string, Event<any>>> = <
-  K extends keyof TEvents
->(
+export type EventBusEmit<T extends EventMap> = <K extends keyof T>(
   key: K,
-  ...args: TEvents[K] extends Event<void>
+  ...args: T[K] extends MiniSignal<[void | undefined]>
     ? [] | [undefined]
-    : [TEvents[K] extends Event<infer T> ? T : never]
+    : [T[K] extends MiniSignal<infer A> ? A[0] : never]
 ) => void;
 
 export class EventBus<T extends EventMap> {
@@ -28,6 +29,13 @@ export class EventBus<T extends EventMap> {
     this._events = eventMap;
   }
 
+  protected addEvents(eventMap: EventMap) {
+    this._events = {
+      ...this._events,
+      ...eventMap
+    };
+  }
+
   /**
    * Register a listener for a specific event
    * @param key - The event key from the map
@@ -35,11 +43,11 @@ export class EventBus<T extends EventMap> {
    */
   on<K extends keyof T>(
     type: K,
-    listener: T[K] extends Event<infer T> ? (data: T) => void : never
+    listener: T[K] extends MiniSignal<infer A> ? (...args: A) => void : never
   ) {
-    this._events[type].on(listener);
+    const binding = this._events[type].add(listener);
     return () => {
-      this._events[type].off(listener);
+      this._events[type].detach(binding);
     };
   }
 
@@ -51,11 +59,11 @@ export class EventBus<T extends EventMap> {
    */
   emit<K extends keyof T>(
     key: K,
-    ...args: T[K] extends Event<void>
+    ...args: T[K] extends MiniSignal<[void | undefined]>
       ? [] | [undefined]
-      : [T[K] extends Event<infer T> ? T : never]
+      : [T[K] extends MiniSignal<infer A> ? A[0] : never]
   ): void {
-    this._events[key].emit(args[0] as any);
+    this._events[key].dispatch(args[0]);
   }
 
   /**
@@ -63,7 +71,11 @@ export class EventBus<T extends EventMap> {
    */
   clear() {
     for (const key in this._events) {
-      this._events[key].offAll();
+      this._events[key].detachAll();
     }
   }
+}
+
+export function createEvent<T>(): MiniSignal<[T]> {
+  return new MiniSignal<[T]>();
 }

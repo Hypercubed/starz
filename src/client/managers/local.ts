@@ -5,18 +5,28 @@ import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Player } from '../types';
+import type { Messages, Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { getUniqueName } from '../utils/names.ts';
 import { getUniqueColor } from '../utils/colors.ts';
 import { createId, createPlayerId } from '../utils/ids.ts';
-import { Event } from 'ts-typed-events';
 import type { GameEventsMap } from '../game/events.ts';
-import { type EventBusEmit, type EventBusOn } from '../classes/event-bus.ts';
+import {
+  createEvent,
+  type EventBusEmit,
+  type EventBusOn
+} from '../classes/event-bus.ts';
 
-export type LocalGameManagerEvents = GameEventsMap & {
-  PLAYER_JOINED: Event<{ player: Player }>;
+const createManagerEvents = () => {
+  return {
+    PLAYER_JOINED: createEvent<{ player: Player }>(),
+    PLAYER_REMOVED: createEvent<{ playerId: string }>(),
+    MESSAGES_UPDATED: createEvent<{ messages: Messages[] }>()
+  };
 };
+
+type LocalGameManagerEvents = GameEventsMap &
+  ReturnType<typeof createManagerEvents>;
 
 export class LocalGameManager extends GameManager {
   declare protected _events: LocalGameManagerEvents;
@@ -29,10 +39,7 @@ export class LocalGameManager extends GameManager {
   constructor() {
     super();
 
-    this._events = {
-      ...this._events,
-      PLAYER_JOINED: new Event<{ player: Player }>()
-    };
+    this.addEvents(createManagerEvents());
   }
 
   getPlayer(): Player | null {
@@ -56,7 +63,7 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
-    this._events.GAME_INIT.emit();
+    this._events.GAME_INIT.dispatch();
 
     if (START_PAUSED) {
       this.appRoot.showStartDialog();
@@ -240,13 +247,13 @@ export class LocalGameManager extends GameManager {
       newPlayer.color
     );
 
-    this._events.PLAYER_JOINED.emit({ player: newPlayer });
+    this._events.PLAYER_JOINED.dispatch({ player: newPlayer });
     return newPlayer;
   }
 
   protected onPlayerLeave(playerId: string) {
     this.state.playerMap.delete(playerId);
-    this._events.PLAYER_REMOVED.emit({ playerId });
+    this._events.PLAYER_REMOVED.dispatch({ playerId });
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -270,17 +277,17 @@ export class LocalGameManager extends GameManager {
     if (!player) return;
 
     player.name = newName;
-    this._events.PLAYER_UPDATED.emit({ player });
+    this._events.PLAYER_UPDATED.dispatch({ player });
 
     localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {
-    this._events.PLAYER_WIN.on(({ playerId, message }) => {
+    this._events.PLAYER_WIN.add(({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this._events.PLAYER_ELIMINATED.on(({ loserId, winnerId }) => {
+    this._events.PLAYER_ELIMINATED.add(({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }

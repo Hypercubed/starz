@@ -1,43 +1,41 @@
-import { Event } from 'ts-typed-events';
 import type { GameConfig, GameState, Move, Order } from './types';
 import type { GameStatus } from '../managers/types';
-import type { Messages, Player } from '../types';
-import type { EventMap } from '../classes/event-bus';
+import type { Player } from '../types';
+import { createEvent, type EventMap } from '../classes/event-bus';
 
 export const createGameEvents = () => {
   return {
-    GAME_INIT: new Event<void>(),
-    GAME_START: new Event<void>(),
-    GAME_STOP: new Event<void>(),
-    GAME_TICK: new Event<{ tick: number }>(),
+    GAME_INIT: createEvent<void>(),
+    GAME_START: createEvent<void>(),
+    GAME_STOP: createEvent<void>(),
+    GAME_TICK: createEvent<{ tick: number }>(),
 
-    STATE_UPDATED: new Event<{
+    STATE_UPDATED: createEvent<{
       state: GameState;
       status: GameStatus;
     }>(),
-    CONFIG_UPDATED: new Event<{ config: GameConfig }>(),
-    MESSAGES_UPDATED: new Event<{ messages: Messages[] }>(),
+    CONFIG_UPDATED: createEvent<{
+      config: GameConfig;
+    }>(),
 
-    // PLAYER_JOINED: new Event<{ player: Player }>(),
-    PLAYER_REMOVED: new Event<{ playerId: string }>(),
-    PLAYER_UPDATED: new Event<{ player: Player }>(),
-    PLAYER_ELIMINATED: new Event<{
+    PLAYER_UPDATED: createEvent<{
+      player: Player;
+    }>(),
+    PLAYER_ELIMINATED: createEvent<{
       loserId: string;
       winnerId: string | null;
     }>(),
-    PLAYER_WIN: new Event<{ playerId: string; message: string }>(),
-    PLAYER_LOSE: new Event<{
+    PLAYER_WIN: createEvent<{
+      playerId: string;
+      message: string;
+    }>(),
+    PLAYER_LOSE: createEvent<{
       playerId: string;
       winnerId: string | null;
     }>(),
 
-    // PLAYER_AUTH_UPDATED: new Event<{
-    //   playerId: string;
-    //   playerToken: string;
-    // }>(),
-
-    TAKE_ORDER: new Event<Order>(),
-    MAKE_MOVE: new Event<Move>()
+    TAKE_ORDER: createEvent<Order>(),
+    MAKE_MOVE: createEvent<Move>()
   } as const satisfies EventMap;
 };
 

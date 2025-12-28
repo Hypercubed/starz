@@ -1,4 +1,4 @@
-import { Event } from 'ts-typed-events';
+import { MiniSignal } from 'mini-signals';
 
 import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
 
@@ -8,11 +8,17 @@ import type { LeaderboardEntry } from '../../server/types';
 import { type EventBusEmit, type EventBusOn } from '../classes/event-bus.ts';
 
 type PartykitGameManagerEvents = LocalGameManagerEvents & {
-  readonly LEADERBOARD_UPDATED: Event<{ leaderboard: LeaderboardEntry[] }>;
-  readonly PLAYER_AUTH_UPDATED: Event<{
-    playerId: string;
-    playerToken: string;
-  }>;
+  readonly LEADERBOARD_UPDATED: MiniSignal<
+    [{ leaderboard: LeaderboardEntry[] }]
+  >;
+  readonly PLAYER_AUTH_UPDATED: MiniSignal<
+    [
+      {
+        playerId: string;
+        playerToken: string;
+      }
+    ]
+  >;
 };
 
 export class PartykitGameManager extends LocalGameManager {
@@ -24,14 +30,19 @@ export class PartykitGameManager extends LocalGameManager {
 
   constructor() {
     super();
-    this._events = {
-      ...this._events,
-      LEADERBOARD_UPDATED: new Event<{ leaderboard: LeaderboardEntry[] }>(),
-      PLAYER_AUTH_UPDATED: new Event<{
-        playerId: string;
-        playerToken: string;
-      }>()
-    };
+    this.addEvents({
+      LEADERBOARD_UPDATED: new MiniSignal<
+        [{ leaderboard: LeaderboardEntry[] }]
+      >(),
+      PLAYER_AUTH_UPDATED: new MiniSignal<
+        [
+          {
+            playerId: string;
+            playerToken: string;
+          }
+        ]
+      >()
+    });
   }
 
   get playerToken() {
@@ -82,7 +93,7 @@ export class PartykitGameManager extends LocalGameManager {
         rank: updatedEntry.rank
       };
     }
-    this._events.PLAYER_UPDATED.emit({ player: this.thisPlayer });
+    this._events.PLAYER_UPDATED.dispatch({ player: this.thisPlayer });
   }
 
   async setPlayerAuth(playerId: string, playerToken: string) {
@@ -118,7 +129,7 @@ export class PartykitGameManager extends LocalGameManager {
     this.partykitLobby.on(
       PartyServerMessageTypes.LEADERBOARD_UPDATED,
       (data) => {
-        this._events.LEADERBOARD_UPDATED.emit(data);
+        this._events.LEADERBOARD_UPDATED.dispatch(data);
       }
     );
   }

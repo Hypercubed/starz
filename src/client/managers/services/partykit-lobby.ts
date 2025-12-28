@@ -6,8 +6,8 @@ import type {
 import { createPlayerToken } from '../../utils/ids';
 import { unpack } from 'msgpackr';
 import { PartyServerMessageTypes } from '../../../server/shared';
-import { Event } from 'ts-typed-events';
 import { EventBus } from '../../classes/event-bus';
+import { MiniSignal } from 'mini-signals';
 
 const PartyLobbyConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
@@ -16,13 +16,17 @@ const PartyLobbyConfig = {
 };
 
 type EventsMap = {
-  readonly LEADERBOARD_UPDATED: Event<{ leaderboard: LeaderboardEntry[] }>;
+  readonly LEADERBOARD_UPDATED: MiniSignal<
+    [{ leaderboard: LeaderboardEntry[] }]
+  >;
 };
 
 export class PartykitGameLobby extends EventBus<EventsMap> {
   constructor() {
     super({
-      LEADERBOARD_UPDATED: new Event<{ leaderboard: LeaderboardEntry[] }>()
+      LEADERBOARD_UPDATED: new MiniSignal<
+        [{ leaderboard: LeaderboardEntry[] }]
+      >()
     });
   }
 
@@ -120,7 +124,7 @@ export class PartykitGameLobby extends EventBus<EventsMap> {
 
       switch (data.type) {
         case PartyServerMessageTypes.LEADERBOARD_UPDATED:
-          this._events.LEADERBOARD_UPDATED.emit({ leaderboard: data.data });
+          this._events.LEADERBOARD_UPDATED.dispatch({ leaderboard: data.data });
           break;
         default:
           if ('message' in data) {
