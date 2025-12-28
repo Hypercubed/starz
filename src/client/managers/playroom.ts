@@ -10,7 +10,6 @@ import type { Player, PlayerStats } from '../types';
 import type { GameStatus, WorldJSON } from './types';
 import type { Move, Order, System } from '../game/types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { GameEvents } from '../game/shared.ts';
 import { COLORS } from '../utils/colors.ts';
 
 class PlayroomBot extends PR.Bot {
@@ -62,7 +61,7 @@ export class PlayroomGameManager extends GameManager {
 
     this.registerPlayroomEvents();
     this.gameInit();
-    this.events.emit(GameEvents.GAME_INIT, undefined);
+    this.emit('GAME_INIT', undefined);
 
     await PR.insertCoin({
       gameId: 'etTt5RuPbZxwWPXQvYzF',
@@ -93,7 +92,7 @@ export class PlayroomGameManager extends GameManager {
     PR.resetStates();
     ui.clearMessages();
 
-    this.events.emit(GameEvents.GAME_INIT, undefined);
+    this.emit('GAME_INIT', undefined);
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -218,7 +217,7 @@ export class PlayroomGameManager extends GameManager {
 
     this.game.checkVictory(this.getFnContext());
 
-    this.events.emit('STATE_UPDATED', {
+    this.emit('STATE_UPDATED', {
       state: this.state,
       status: this.status
     });
@@ -349,7 +348,7 @@ export class PlayroomGameManager extends GameManager {
     PR.RPC.register(PLAYROOM_EVENTS.UPDATE_SYSTEM, async (system: System) => {
       this.onSystemUpdated(system);
 
-      this.events.emit('STATE_UPDATED', {
+      this.emit('STATE_UPDATED', {
         state: this.state,
         status: this.status
       });
@@ -368,7 +367,7 @@ export class PlayroomGameManager extends GameManager {
           this.state.world = this.game.worldFromJson(world);
         }
 
-        this.events.emit('STATE_UPDATED', {
+        this.emit('STATE_UPDATED', {
           state: this.state,
           status: this.status
         });
@@ -451,19 +450,19 @@ export class PlayroomGameManager extends GameManager {
   }
 
   #registerEvents() {
-    this.events.on(GameEvents.PLAYER_WIN, ({ playerId, message }) => {
+    this.on('PLAYER_WIN', ({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this.events.on(GameEvents.TAKE_ORDER, (order: Order) => {
+    this.on('TAKE_ORDER', (order: Order) => {
       this.onTakeOrder(order);
     });
 
-    this.events.on(GameEvents.MAKE_MOVE, (move: Move) => {
+    this.on('MAKE_MOVE', (move: Move) => {
       this.onMakeMove(move);
     });
 
-    this.events.on(GameEvents.PLAYER_ELIMINATED, ({ loserId, winnerId }) => {
+    this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }

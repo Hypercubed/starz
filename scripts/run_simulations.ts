@@ -1,8 +1,8 @@
-import { type BotPersonalities, PERSONALITIES } from '../client/game/bots.ts';
-import { Bot } from '../client/game/bots.ts';
-import { SimGameManager } from '../client/managers/simulation.ts';
+import { type BotPersonalities, PERSONALITIES } from '../src/client/game/bots.ts';
+import { Bot } from '../src/client/game/bots.ts';
+import { SimGameManager } from '../src/client/managers/simulation.ts';
 
-import type { Player } from '../client/types.d.ts';
+import type { Player } from '../src/client/types.d.ts';
 
 const N = 10; // Number of simulations
 const T = 5000; // Max ticks per simulation

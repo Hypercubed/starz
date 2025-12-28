@@ -8,7 +8,6 @@ import { gameManager } from './app-context.ts';
 import type { GameManager } from '../../managers/manager.ts';
 import { PartykitGameManager } from '../../managers/partykit.ts';
 import type { LeaderboardEntry } from '../../../server/types';
-import { GameEvents } from '../../game/shared.ts';
 
 const formatSIInteger = d3.format('.3~s');
 
@@ -36,12 +35,9 @@ export class LobbyLeaderboardElement extends LitElement {
     if (this.gameManager instanceof PartykitGameManager) {
       this.leaderboard = await this.gameManager.loadLeaderboard();
 
-      this.gameManager.events.on(
-        GameEvents.LEADERBOARD_UPDATED,
-        async ({ leaderboard }) => {
-          this.leaderboard = leaderboard;
-        }
-      );
+      this.gameManager.on('LEADERBOARD_UPDATED', async ({ leaderboard }) => {
+        this.leaderboard = leaderboard;
+      });
     }
   }
 

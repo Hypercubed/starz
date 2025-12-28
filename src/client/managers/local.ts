@@ -1,5 +1,3 @@
-import { nanoid } from 'nanoid';
-
 import { MAX_BOTS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
@@ -9,15 +7,33 @@ import { GameManager } from './manager.ts';
 
 import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { GameEvents } from '../game/shared.ts';
 import { getUniqueName } from '../utils/names.ts';
 import { getUniqueColor } from '../utils/colors.ts';
+import { createId, createPlayerId } from '../utils/ids.ts';
+import { Event } from 'ts-typed-events';
+import type { GameEventsMap } from '../game/events.ts';
+import { type EventBusEmit, type EventBusOn } from '../classes/event-bus.ts';
 
-const createId = () => nanoid(5);
+export type LocalGameManagerEvents = GameEventsMap & {
+  PLAYER_JOINED: Event<{ player: Player }>;
+};
 
 export class LocalGameManager extends GameManager {
+  declare protected _events: LocalGameManagerEvents;
+  declare on: EventBusOn<LocalGameManagerEvents>;
+  declare emit: EventBusEmit<LocalGameManagerEvents>;
+
   protected appRoot!: AppRootElement;
   protected thisPlayer!: Player;
+
+  constructor() {
+    super();
+
+    this._events = {
+      ...this._events,
+      PLAYER_JOINED: new Event<{ player: Player }>()
+    };
+  }
 
   getPlayer(): Player | null {
     return this.thisPlayer;
@@ -40,7 +56,7 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
-    this.events.emit(GameEvents.GAME_INIT, undefined);
+    this._events.GAME_INIT.emit();
 
     if (START_PAUSED) {
       this.appRoot.showStartDialog();
@@ -85,9 +101,11 @@ export class LocalGameManager extends GameManager {
     this.setupThisPlayer(this.playerId);
   }
 
-  protected async initializePlayer() {
+  protected async initializePlayer(): Promise<
+    Partial<Player> & { id: string; name: string; score: { score: number } }
+  > {
     const playerId = (this.playerId =
-      localStorage.getItem('starz_playerId') ?? createId());
+      localStorage.getItem('starz_playerId') ?? createPlayerId());
     const playerName =
       localStorage.getItem('starz_playerName') ?? this.config.playerName;
     const score = +(localStorage.getItem('starz_score') ?? 0);
@@ -96,7 +114,7 @@ export class LocalGameManager extends GameManager {
       id: playerId,
       name: playerName,
       score: { score }
-    } satisfies Partial<Player>;
+    };
   }
 
   protected gameStart() {
@@ -211,7 +229,7 @@ export class LocalGameManager extends GameManager {
   protected onPlayerJoin(player: Partial<Player> = {}) {
     const players = Array.from(this.state.playerMap.values());
 
-    const id = player.id ?? createId();
+    const id = player.id ?? createPlayerId();
     const name = player.name ?? getUniqueName(players.map((p) => p.name));
     const color = player.color ?? getUniqueColor(players.map((p) => p.color));
 
@@ -222,13 +240,13 @@ export class LocalGameManager extends GameManager {
       newPlayer.color
     );
 
-    this.events.emit(GameEvents.PLAYER_JOINED, { player: newPlayer });
+    this._events.PLAYER_JOINED.emit({ player: newPlayer });
     return newPlayer;
   }
 
   protected onPlayerLeave(playerId: string) {
     this.state.playerMap.delete(playerId);
-    this.events.emit(GameEvents.PLAYER_REMOVED, { playerId });
+    this._events.PLAYER_REMOVED.emit({ playerId });
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -252,17 +270,17 @@ export class LocalGameManager extends GameManager {
     if (!player) return;
 
     player.name = newName;
-    this.events.emit(GameEvents.PLAYER_UPDATED, { player });
+    this._events.PLAYER_UPDATED.emit({ player });
 
     localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {
-    this.events.on(GameEvents.PLAYER_WIN, ({ playerId, message }) => {
+    this._events.PLAYER_WIN.on(({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this.events.on(GameEvents.PLAYER_ELIMINATED, ({ loserId, winnerId }) => {
+    this._events.PLAYER_ELIMINATED.on(({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
   }

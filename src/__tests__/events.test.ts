@@ -1,15 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
+import { Event } from 'ts-typed-events';
+import { EventBus } from '../client/classes/event-bus.ts';
 
-import { EventBus } from '../client/classes/EventBus.ts';
-
-interface TestEvents {
-  item: string;
-  count: number;
+const testEvents = {
+  item: new Event<string>(),
+  count: new Event<number>()
 }
 
 describe('EventBus', () => {
   it('should allow subscription and emission', () => {
-    const bus = new EventBus<TestEvents>();
+    const bus = new EventBus(testEvents);
     const callback = vi.fn();
 
     bus.on('item', callback);
@@ -19,7 +19,7 @@ describe('EventBus', () => {
   });
 
   it('should allow multiple listeners', () => {
-    const bus = new EventBus<TestEvents>();
+    const bus = new EventBus(testEvents);
     const cb1 = vi.fn();
     const cb2 = vi.fn();
 
@@ -32,7 +32,7 @@ describe('EventBus', () => {
   });
 
   it('should allow unsubscription', () => {
-    const bus = new EventBus<TestEvents>();
+    const bus = new EventBus(testEvents);
     const callback = vi.fn();
     const unsubscribe = bus.on('item', callback);
 
@@ -43,7 +43,7 @@ describe('EventBus', () => {
   });
 
   it('should clear all listeners', () => {
-    const bus = new EventBus<TestEvents>();
+    const bus = new EventBus(testEvents);
     const callback = vi.fn();
 
     bus.on('item', callback);

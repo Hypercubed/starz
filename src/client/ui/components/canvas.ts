@@ -7,7 +7,6 @@ import * as ui from '../index.ts';
 import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../../managers/manager.ts';
-import { GameEvents } from '../../game/shared.ts';
 
 @customElement('game-canvas')
 export class GameCanvas extends LitElement {
@@ -18,18 +17,18 @@ export class GameCanvas extends LitElement {
   connectedCallback() {
     super.connectedCallback();
 
-    this.gameManager.events.on(GameEvents.GAME_START, () => {
+    this.gameManager.on('GAME_START', () => {
       ui.drawMap(
         document.getElementById('app')!,
         this.gameManager.getFnContext()
       );
     });
 
-    this.gameManager.events.on(GameEvents.STATE_UPDATED, () => {
+    this.gameManager.on('STATE_UPDATED', () => {
       ui.requestRerender();
     });
 
-    this.gameManager.events.on(GameEvents.GAME_TICK, () => {
+    this.gameManager.on('GAME_TICK', () => {
       ui.requestRerender();
     });
   }

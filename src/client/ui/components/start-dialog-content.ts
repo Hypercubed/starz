@@ -8,12 +8,11 @@ import { version } from '../../../../package.json';
 import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';
 
-import type { GameManager } from '../../managers/manager.ts';
 import type { Player } from '../../types';
 import { PartykitGameManager } from '../../managers/partykit.ts';
 import { botIcon, cogIcon, playIcon, plusIcon } from './icons.ts';
-import { GameEvents } from '../../game/shared.ts';
 import { LocalGameManager } from '../../managers/local.ts';
+import type { GameManager } from '../../managers/manager.ts';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
@@ -264,12 +263,17 @@ export class StartDialogContentElement extends LitElement {
 
     update();
 
-    this.gameManager.events.on(GameEvents.PLAYER_AUTH_UPDATED, update);
-    this.gameManager.events.on(GameEvents.PLAYER_JOINED, update);
-    this.gameManager.events.on(GameEvents.PLAYER_REMOVED, update);
-    this.gameManager.events.on(GameEvents.PLAYER_UPDATED, update);
-    this.gameManager.events.on(GameEvents.CONFIG_UPDATED, update);
-    this.gameManager.events.on(GameEvents.GAME_INIT, update);
+    if (this.gameManager instanceof LocalGameManager) {
+      this.gameManager.on('PLAYER_JOINED', update);
+      this.gameManager.on('PLAYER_REMOVED', update);
+      this.gameManager.on('PLAYER_UPDATED', update);
+      this.gameManager.on('CONFIG_UPDATED', update);
+      this.gameManager.on('GAME_INIT', update);
+
+      if (this.gameManager instanceof PartykitGameManager) {
+        this.gameManager.on('PLAYER_AUTH_UPDATED', update);
+      }
+    }
   }
 }
 

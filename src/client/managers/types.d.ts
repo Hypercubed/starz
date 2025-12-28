@@ -1,4 +1,3 @@
-import type { EventBus } from '../classes/EventBus.ts';
 import type { GameConfig, GameState } from '../game/types';
 import type { Player } from '../types';
 
@@ -13,7 +12,7 @@ export interface GameContext {
 
 export interface FnContext {
   S: GameState; // TODO: make readonly
-  E: Pick<EventBus<GameEventMap>, 'emit'>;
+  E: Pick<EventBus<typeof gameEvents>, 'emit'>;
   C: Readonly<GameContext>;
   P: Readonly<Player> | null; // Player can be null for spectators
 }

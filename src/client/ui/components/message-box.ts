@@ -7,7 +7,6 @@ import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../../managers/manager.ts';
 import type { Messages } from '../../types';
-import { GameEvents } from '../../game/shared.ts';
 
 @customElement('message-box')
 export class MessageBoxElement extends LitElement {
@@ -20,7 +19,7 @@ export class MessageBoxElement extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.gameManager.events.on(GameEvents.MESSAGES_UPDATED, ({ messages }) => {
+    this.gameManager.on('MESSAGES_UPDATED', ({ messages }) => {
       this.messages = (messages ?? []).slice(-5);
     });
   }

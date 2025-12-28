@@ -1,34 +1,4 @@
-import type { GameStatus } from '../managers/types';
 import type { Move, Order, Player } from '../types';
-
-export interface GameEventMap {
-  GAME_INIT: undefined;
-  GAME_START: undefined;
-  GAME_STOP: undefined;
-  GAME_TICK: { tick: number };
-
-  // State Updates
-  STATE_UPDATED: { state: GameState; status: GameStatus };
-  CONFIG_UPDATED: { config: GameConfig };
-  MESSAGES_UPDATED: { messages: Messages[] };
-
-  // Player Events
-  PLAYER_JOINED: { player: Player };
-  PLAYER_REMOVED: { playerId: string };
-  PLAYER_UPDATED: { player: Player };
-
-  PLAYER_ELIMINATED: { loserId: string; winnerId: string | null };
-  PLAYER_WIN: { playerId: string; message: string };
-  PLAYER_LOSE: { playerId: string; winnerId: string | null };
-
-  PLAYER_AUTH_UPDATED: { playerId: string; playerToken: string };
-
-  LEADERBOARD_UPDATED: { leaderboard: LeaderboardEntry[] };
-
-  // Actions
-  TAKE_ORDER: Order;
-  MAKE_MOVE: Move;
-}
 
 export interface GameConfig {
   playerName: string;

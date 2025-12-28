@@ -61,6 +61,7 @@
     "partyserver": "^0.1.0",
     "partysocket": "^1.1.10",
     "playroomkit": "^0.0.94",
+    "ts-typed-events": "^3.0.0",
     "versor": "^0.2.0"
   }
 }

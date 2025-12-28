@@ -24,7 +24,6 @@ import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
 import type { GameManager } from '../../managers/manager.ts';
 import { githubIcon } from './icons.ts';
-import { GameEvents } from '../../game/shared.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {
@@ -175,25 +174,22 @@ export class AppRootElement extends LitElement {
     this.player = this.gameManager.getPlayer();
     this.context = this.gameManager.getContext();
 
-    this.gameManager.events.on(GameEvents.GAME_INIT, () => {
+    this.gameManager.on('GAME_INIT', () => {
       this.config = this.gameManager.getConfig();
       this.state = this.gameManager.getState();
       this.player = this.gameManager.getPlayer();
       this.context = this.gameManager.getContext();
     });
 
-    this.gameManager.events.on(GameEvents.CONFIG_UPDATED, ({ config }) => {
+    this.gameManager.on('CONFIG_UPDATED', ({ config }) => {
       this.config = config;
       this.player = this.gameManager.getPlayer();
       this.context = this.gameManager.getContext();
     });
 
-    this.gameManager.events.on(
-      'STATE_UPDATED',
-      ({ state }) => (this.state = state)
-    );
+    this.gameManager.on('STATE_UPDATED', ({ state }) => (this.state = state));
 
-    this.gameManager.events.on(GameEvents.GAME_TICK, () => {
+    this.gameManager.on('GAME_TICK', () => {
       this.context = this.gameManager.getContext();
     });
   }

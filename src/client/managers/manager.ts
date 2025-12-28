@@ -1,15 +1,13 @@
-import { EventBus } from '../classes/EventBus.ts';
 import { DEV_MODE, TICK_DURATION_MS } from '../constants.ts';
 import * as game from '../game/index.ts';
 
 import type { FnContext, GameContext, GameStatus } from './types';
-import type { GameConfig, GameEventMap, GameState, Order } from '../game/types';
+import type { GameConfig, GameState, Order } from '../game/types';
 import type { Player } from '../types';
-import { GameEvents } from '../game/shared.ts';
+import { createGameEvents, type GameEventsMap } from '../game/events.ts';
+import { EventBus } from '../classes/event-bus.ts';
 
-export abstract class GameManager {
-  public events = new EventBus<GameEventMap>();
-
+export abstract class GameManager extends EventBus<GameEventsMap> {
   protected game = game;
   protected state = game.initalState();
   protected config = game.defaultConfig();
@@ -18,15 +16,16 @@ export abstract class GameManager {
   protected status: GameStatus = 'WAITING';
   protected playerId!: string;
 
-  constructor() {
-    this.#registerEventListeners();
-  }
-
   private runningInterval: number | null = null;
 
   abstract connect(): Promise<void>;
   abstract start(): Promise<void>;
   abstract quit(): Promise<void>;
+
+  constructor() {
+    super(createGameEvents());
+    this.#registerEventListeners();
+  }
 
   getState(): Readonly<GameState> {
     return DEV_MODE ? Object.freeze({ ...this.state }) : this.state;
@@ -38,7 +37,7 @@ export abstract class GameManager {
 
   async setConfig(partialConfig: Partial<GameConfig>) {
     this.config = { ...this.config, ...partialConfig };
-    this.events.emit('CONFIG_UPDATED', { config: this.config });
+    this._events.CONFIG_UPDATED.emit({ config: this.config });
   }
 
   getPlayer(): Player | null {
@@ -57,7 +56,7 @@ export abstract class GameManager {
   getFnContext(): FnContext {
     return {
       S: this.state, // TODO: make readonly
-      E: this.events,
+      E: this,
       P: this.state.playerMap.get(this.playerId)!,
       C: this.getContext()
     };
@@ -97,7 +96,7 @@ export abstract class GameManager {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this.events.emit(GameEvents.GAME_START, undefined);
+    this._events.GAME_START.emit(undefined);
 
     this.#runGameLoop();
   }
@@ -112,7 +111,7 @@ export abstract class GameManager {
 
     this.game.gameTick(this.getFnContext());
     this.game.checkVictory(this.getFnContext());
-    this.events.emit('STATE_UPDATED', {
+    this._events.STATE_UPDATED.emit({
       state: this.state,
       status: this.status
     });
@@ -127,7 +126,7 @@ export abstract class GameManager {
     this.stopGameLoop();
     this.gameTick();
 
-    this.events.emit(GameEvents.GAME_TICK, { tick: this.tick });
+    this._events.GAME_TICK.emit({ tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
@@ -147,14 +146,14 @@ export abstract class GameManager {
   }
 
   #registerEventListeners() {
-    this.events.on(GameEvents.GAME_STOP, () => {
+    this._events.GAME_STOP.on(() => {
       this.gameStop();
     });
 
-    this.events.on(GameEvents.TAKE_ORDER, (order: Order) => {
+    this._events.TAKE_ORDER.on((order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
 
-      this.events.emit('STATE_UPDATED', {
+      this._events.STATE_UPDATED.emit({
         state: this.state,
         status: this.status
       });
