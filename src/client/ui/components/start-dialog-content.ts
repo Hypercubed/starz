@@ -9,16 +9,16 @@ import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';
 
 import type { Player } from '../../types';
-import { PartykitGameManager } from '../../managers/partykit.ts';
+import type { PartykitGameManager } from '../../managers/partykit.ts';
 import { botIcon, cogIcon, playIcon, plusIcon } from './icons.ts';
-import { LocalGameManager } from '../../managers/local.ts';
-import type { GameManager } from '../../managers/manager.ts';
+import type { LocalGameManager } from '../../managers/local.ts';
+import { isPartykitGameManager } from '../../managers/shared.ts';
 
 @customElement('start-dialog-content')
 export class StartDialogContentElement extends LitElement {
   @consume({ context: gameManager })
   @state()
-  gameManager!: GameManager;
+  gameManager!: LocalGameManager;
 
   @state()
   private player!: Player | null;
@@ -151,21 +151,11 @@ export class StartDialogContentElement extends LitElement {
 
   private removeBot(id: string) {
     console.log('Removing bot', id);
-    if (
-      this.gameManager instanceof LocalGameManager ||
-      this.gameManager instanceof PartykitGameManager
-    ) {
-      this.gameManager.removeBot(id);
-    }
+    this.gameManager.removeBot(id);
   }
 
   private async onAddBot() {
-    if (
-      this.gameManager instanceof LocalGameManager ||
-      this.gameManager instanceof PartykitGameManager
-    ) {
-      this.gameManager.addBot();
-    }
+    this.gameManager.addBot();
   }
 
   private async onPlay() {
@@ -208,31 +198,28 @@ export class StartDialogContentElement extends LitElement {
     });
   }
 
-  private onKeydown(e: KeyboardEvent) {
+  private async onKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.setName((e.target as HTMLInputElement).value);
+      await this.setName((e.target as HTMLInputElement).value);
     }
   }
 
-  private onChange(e: Event) {
+  private async onChange(e: Event) {
     e.stopPropagation();
     e.stopImmediatePropagation();
-    this.setName((e.target as HTMLInputElement).value);
+    await this.setName((e.target as HTMLInputElement).value);
   }
 
   private async setName(playerName: string) {
     playerName = playerName.trim();
 
-    if (
-      this.gameManager instanceof PartykitGameManager &&
-      playerName.includes('::')
-    ) {
+    if (isPartykitGameManager(this.gameManager) && playerName.includes('::')) {
       const [playerId, playerToken] = playerName.split('::');
       await this.gameManager.setPlayerAuth(playerId, playerToken);
       this.playerToken = playerToken;
       this.playerNameInput.value = this.gameManager.getPlayer()?.name ?? '';
-    } else if (this.gameManager instanceof LocalGameManager) {
+    } else {
       this.gameManager.updatePlayerName(playerName);
       this.playerNameInput.value = this.gameManager.getPlayer()?.name ?? '';
     }
@@ -263,16 +250,14 @@ export class StartDialogContentElement extends LitElement {
 
     update();
 
-    if (this.gameManager instanceof LocalGameManager) {
-      this.gameManager.on('PLAYER_JOINED', update);
-      this.gameManager.on('PLAYER_REMOVED', update);
-      this.gameManager.on('PLAYER_UPDATED', update);
-      this.gameManager.on('CONFIG_UPDATED', update);
-      this.gameManager.on('GAME_INIT', update);
+    this.gameManager.on('PLAYER_JOINED', update);
+    this.gameManager.on('PLAYER_REMOVED', update);
+    this.gameManager.on('PLAYER_UPDATED', update);
+    this.gameManager.on('CONFIG_UPDATED', update);
+    this.gameManager.on('GAME_INIT', update);
 
-      if (this.gameManager instanceof PartykitGameManager) {
-        this.gameManager.on('PLAYER_AUTH_UPDATED', update);
-      }
+    if (isPartykitGameManager(this.gameManager)) {
+      this.gameManager.on('PLAYER_AUTH_UPDATED', update);
     }
   }
 }

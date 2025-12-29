@@ -35,7 +35,9 @@ export const createGameEvents = () => {
     }>(),
 
     TAKE_ORDER: createEvent<Order>(),
-    MAKE_MOVE: createEvent<Move>()
+    MAKE_MOVE: createEvent<Move>(),
+
+    LOG: createEvent<{ message: string; params?: any[] }>()
   } as const satisfies EventMap;
 };
 

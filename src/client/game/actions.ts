@@ -1,5 +1,3 @@
-import { debugLog } from '../utils/logging.ts';
-
 import { visitSystem } from './state.ts';
 import { hasLane } from './world.ts';
 
@@ -131,7 +129,7 @@ export function doQueuedMoves(ctx: FnContext) {
 
 function makeMove(ctx: FnContext, move: Move) {
   if (move.playerId === ctx.C.playerId) {
-    debugLog(`player move: ${JSON.stringify(move)}`);
+    ctx.E.emit('LOG', { message: `player move`, params: [move] });
   }
   const from = ctx.S.world.systemMap.get(move.fromId)!;
   const to = ctx.S.world.systemMap.get(move.toId)!;

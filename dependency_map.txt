@@ -4,92 +4,154 @@ This map shows the runtime import relationships between modules in the `src` dir
 
 # Dependency Graph (runtime imports only - grouped by primary folder)
 
-## root
-- src/main.ts
-  - ./managers/local.ts
-
-## classes
-- src/classes/EventBus.ts
+## client/classes
+- src/client/classes/event-bus.ts
   - (No internal dependencies)
 
-## constants
-- src/constants.ts
+## client/constants
+- src/client/constants.ts
   - (No internal dependencies)
 
-## game
-- src/game/actions.ts
+## client/game
+- src/client/game/actions.ts
   - ../utils/logging.ts
   - ./state.ts
   - ./world.ts
-- src/game/bots.ts
+- src/client/game/bots.ts
   - ./state.ts
   - ./world.ts
-- src/game/engine.ts
+- src/client/game/engine.ts
   - ../constants.ts
   - ./actions.ts
   - ./bots.ts
-- src/game/generate.ts
+- src/client/game/events.ts
+  - ../classes/event-bus.ts
+- src/client/game/generate.ts
   - ../constants.ts
   - ../utils/logging.ts
   - ./world.ts
-- src/game/index.ts
+- src/client/game/index.ts
+  - ./actions.ts
   - ./engine.ts
   - ./generate.ts
   - ./state.ts
-  - ./actions.ts
   - ./world.ts
-- src/game/state.ts
+- src/client/game/state.ts
   - ../constants.ts
+  - ../utils/names.ts
   - ./world.ts
-- src/game/world.ts
+- src/client/game/world.ts
   - (No internal dependencies)
 
-## managers
-- src/managers/local.ts
+## client/managers
+- src/client/managers/local.ts
+  - ../classes/event-bus.ts
   - ../constants.ts
   - ../game/bots.ts
+  - ../game/events.ts
+  - ../ui/components/app-root.ts
   - ../ui/index.ts
+  - ../utils/colors.ts
+  - ../utils/ids.ts
   - ../utils/logging.ts
+  - ../utils/names.ts
   - ./manager.ts
-- src/managers/manager.ts
-  - ../classes/EventBus.ts
+- src/client/managers/manager.ts
+  - ../classes/event-bus.ts
   - ../constants.ts
+  - ../game/events.ts
   - ../game/index.ts
-- src/managers/playroom.ts
-  - ../constants.ts
+- src/client/managers/partykit.ts
+  - ../classes/event-bus.ts
+  - ../../server/shared.ts
+  - ./local.ts
+  - ./services/partykit-lobby.ts
+- src/client/managers/playroom.ts
   - ../game/bots.ts
+  - ../ui/components/app-root.ts
   - ../ui/index.ts
+  - ../utils/colors.ts
   - ../utils/logging.ts
   - ./manager.ts
-- src/managers/simulation.ts
+- src/client/managers/services/partykit-lobby.ts
+  - ../../classes/event-bus.ts
+  - ../../server/shared.ts
+  - ../../utils/ids.ts
+- src/client/managers/simulation.ts
   - ./manager.ts
 
-## ui
-- src/ui/controls.ts
+## client/ui
+- src/client/ui/controls.ts
   - ../constants.ts
   - ../game/index.ts
   - ../utils/logging.ts
-  - ./render.ts
   - ./selection.ts
-  - ./ui.ts
-- src/ui/index.ts
+- src/client/ui/index.ts
   - ./controls.ts
   - ./messages.ts
   - ./render.ts
   - ./selection.ts
-  - ./ui.ts
-- src/ui/messages.ts
+- src/client/ui/messages.ts
   - (No internal dependencies)
-- src/ui/render.ts
+- src/client/ui/render.ts
   - ../constants.ts
   - ../game/state.ts
   - ./controls.ts
   - ./selection.ts
-- src/ui/selection.ts
+- src/client/ui/selection.ts
   - ../game/world.ts
-- src/ui/ui.ts
+
+## client/ui/components
+- src/client/ui/components/app-context.ts
+  - ../../managers/manager.ts
+- src/client/ui/components/app-root.ts
+  - ../../constants.ts
+  - ../../game/index.ts
+  - ../../utils/logging.ts
+  - ../index.ts
+  - ./app-context.ts
+  - ./icons.ts
+- src/client/ui/components/canvas.ts
+  - ../index.ts
+  - ./app-context.ts
+- src/client/ui/components/icons.ts
+  - (No internal dependencies)
+- src/client/ui/components/index.ts
+  - ./app-root.ts
+  - ./canvas.ts
+  - ./leader-board.ts
+  - ./lobby-leader-board.ts
+  - ./message-box.ts
+  - ./start-dialog-content.ts
+  - ./tick-box.ts
+- src/client/ui/components/leader-board.ts
+  - ./app-context.ts
+- src/client/ui/components/lobby-leader-board.ts
+  - ./app-context.ts
+  - ../../managers/partykit.ts
+- src/client/ui/components/message-box.ts
+  - ./app-context.ts
+- src/client/ui/components/start-dialog-content.ts
+  - ../../../package.json
+  - ../../managers/local.ts
+  - ../../managers/partykit.ts
+  - ./app-context.ts
+  - ./icons.ts
+- src/client/ui/components/tick-box.ts
   - (No internal dependencies)
 
-## utils
-- src/utils/logging.ts
+## client/utils
+- src/client/utils/colors.ts
+  - (No internal dependencies)
+- src/client/utils/ids.ts
+  - (No internal dependencies)
+- src/client/utils/logging.ts
   - ../constants.ts
+- src/client/utils/names.ts
+  - (No internal dependencies)
+
+## client
+- src/client/main.ts
+  - ./managers/partykit.ts
+  - ./ui/components/app-root.ts
+  - ./ui/components/index.ts

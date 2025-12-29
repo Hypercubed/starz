@@ -5,7 +5,6 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 import { ENABLE_CHEATS } from '../../constants.ts';
 import * as game from '../../game/index.ts';
-import { debugLog } from '../../utils/logging.ts';
 import * as ui from '../index.ts';
 
 import {
@@ -22,14 +21,14 @@ const ROTATION_STEP = 5;
 import type { GameConfig, GameState } from '../../game/types';
 import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
-import type { GameManager } from '../../managers/manager.ts';
 import { githubIcon } from './icons.ts';
+import type { LocalGameManager } from '../../managers/local.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {
   @provide({ context: gameManager })
   @property({ attribute: false })
-  gameManager!: GameManager;
+  gameManager!: LocalGameManager;
 
   @provide({ context: configContext })
   @state()
@@ -225,7 +224,7 @@ export class AppRootElement extends LitElement {
     if (ENABLE_CHEATS && event.altKey) {
       event.preventDefault();
 
-      const { S, C } = globalThis.gameManager.getFnContext();
+      const { S, C, E } = globalThis.gameManager.getFnContext();
 
       switch (event.code) {
         case 'KeyC':
@@ -244,14 +243,18 @@ export class AppRootElement extends LitElement {
         case 'Equal': {
           const timeScale = Math.min(16, C.config.timeScale * 2);
           globalThis.gameManager.setConfig({ timeScale });
-          debugLog(`Time scale increased to ${C.config.timeScale}x`);
+          E.emit('LOG', {
+            message: `Time scale increased to ${C.config.timeScale}x`
+          });
           return;
         }
         case 'NumpadSubtract':
         case 'Minus': {
           const timeScale = Math.max(0.25, C.config.timeScale / 2);
           globalThis.gameManager.setConfig({ timeScale });
-          debugLog(`Time scale decreased to ${C.config.timeScale}x`);
+          E.emit('LOG', {
+            message: `Time scale decreased by ${C.config.timeScale}x`
+          });
           return;
         }
       }

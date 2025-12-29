@@ -18,7 +18,7 @@ type TestEvents = typeof testEvents;
 type AnotherEventBusEvents = TestEvents & { extra: MiniSignal<[boolean]> };
 
 class AnotherEventBus extends TestEventBus {
-  declare protected _events: AnotherEventBusEvents;
+  declare protected events: AnotherEventBusEvents;
   declare on: EventBusOn<AnotherEventBusEvents>;
   declare emit: EventBusEmit<AnotherEventBusEvents>;
 

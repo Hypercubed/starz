@@ -124,7 +124,7 @@ export class PartykitGameLobby extends EventBus<EventsMap> {
 
       switch (data.type) {
         case PartyServerMessageTypes.LEADERBOARD_UPDATED:
-          this._events.LEADERBOARD_UPDATED.dispatch({ leaderboard: data.data });
+          this.events.LEADERBOARD_UPDATED.dispatch({ leaderboard: data.data });
           break;
         default:
           if ('message' in data) {

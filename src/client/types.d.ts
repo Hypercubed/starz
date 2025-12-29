@@ -6,7 +6,6 @@ export interface PlayerStats {
 }
 
 export interface Messages {
-  id: number;
   message: string;
   tick: number;
 }

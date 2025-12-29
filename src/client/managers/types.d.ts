@@ -10,9 +10,11 @@ export interface GameContext {
   playerId: string;
 }
 
-export interface FnContext {
+import type { GameManager } from './manager';
+
+export interface FnContext<T extends GameManager = GameManager> {
   S: GameState; // TODO: make readonly
-  E: Pick<EventBus<typeof gameEvents>, 'emit'>;
+  E: Pick<T, 'emit'>;
   C: Readonly<GameContext>;
   P: Readonly<Player> | null; // Player can be null for spectators
 }

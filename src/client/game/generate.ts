@@ -8,7 +8,6 @@ import {
   MAX_HUMAN_PLAYERS,
   MAX_BOTS
 } from '../constants.ts';
-import { debugLog } from '../utils/logging.ts';
 
 import {
   addLane,
@@ -24,14 +23,14 @@ import type { FnContext } from '../managers/types';
 
 const createId = () => nanoid(5);
 
-export function generateMap({ S, C }: FnContext) {
+export function generateMap({ S, C, E }: FnContext) {
   S.world = createWorld();
 
   const dz = HEIGHT / (C.config.numSystems - 1);
   const z0 = -HEIGHT / 2;
   const zN = HEIGHT / 2;
 
-  debugLog('Generating map...');
+  E.emit('LOG', { message: `Generating map...` });
 
   // Minimum distance between systems
   // Should be < SQRT(PI/NumOfSystems) to ensure spacing
@@ -75,9 +74,9 @@ export function generateMap({ S, C }: FnContext) {
 
   buildNeighborMap(S.world);
 
-  debugLog(
-    `Generated ${S.world.systemMap.size} systems and ${S.world.laneMap.size} lanes.`
-  );
+  E.emit('LOG', {
+    message: `Generated ${S.world.systemMap.size} systems and ${S.world.laneMap.size} lanes.`
+  });
 
   const unoccupied = [...systems]; // Copy all systems
   const occupied = [] as System[];

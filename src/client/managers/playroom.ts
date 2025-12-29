@@ -1,57 +1,23 @@
-import * as PR from 'playroomkit';
-
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
-import { trackEvent } from '../utils/logging.ts';
 
-import { GameManager } from './manager.ts';
-
-import type { Player, PlayerStats } from '../types';
-import type { GameStatus, WorldJSON } from './types';
-import type { Move, Order, System } from '../game/types';
+import type { GameStatus } from './types';
+import type { Move, Order } from '../game/types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { COLORS } from '../utils/colors.ts';
+import { LocalGameManager } from './local.ts';
+import { isHost, myPlayer, type PlayerState } from 'playroomkit';
+import { PlayroomService } from './services/playroom.ts';
 
-class PlayroomBot extends PR.Bot {
-  gameBot: Bot;
+export class PlayroomGameManager extends LocalGameManager {
+  readonly name: string = 'PlayroomGameManager';
 
-  constructor(options: any) {
-    super(options);
-    this.gameBot = new Bot({ id: this.id });
-  }
-}
-
-const PLAYROOM_STATES = {
-  GAME_STATUS: 'GAME_STATUS',
-  WORLD: 'WORLD',
-  TICK: 'TICK',
-  PLAYERS: 'PLAYERS',
-  PLAYER_STATS: 'PLAYER_STATS'
-} as const;
-
-const PLAYER_STATES = {
-  PLAYER: 'PLAYER'
-} as const;
-
-const PLAYROOM_EVENTS = {
-  GAME_STARTED: 'GAME_STARTED',
-  ORDER_GIVEN: 'ORDER_GIVEN',
-  UPDATE_SYSTEM: 'UPDATE_SYSTEM',
-  PLAYER_ELIMINATED: 'PLAYER_ELIMINATED'
-} as const;
-
-type PlayerEliminatedEventData = {
-  loserId: string;
-  winnerId: string;
-};
-
-export class PlayroomGameManager extends GameManager {
-  private playerStates = new Map<string, PR.PlayerState>();
+  private playerStates = new Map<string, PlayerState>();
   protected appRoot!: AppRootElement;
 
+  private playroomService = new PlayroomService(this);
+
   mount(appRoot: AppRootElement) {
-    this.appRoot = appRoot;
-    this.appRoot.gameManager = this;
+    super.mount(appRoot);
     this.#registerEvents();
   }
 
@@ -59,387 +25,91 @@ export class PlayroomGameManager extends GameManager {
     this.gameStop();
     this.status = 'WAITING';
 
-    this.registerPlayroomEvents();
-    this.gameInit();
-    this.emit('GAME_INIT', undefined);
+    // Create and add this player to make it available during setup
+    const player = await this.initializePlayer();
+    this.thisPlayer = this.onPlayerJoin(player);
+    this.playerId = this.thisPlayer.id;
 
-    await PR.insertCoin({
-      gameId: 'etTt5RuPbZxwWPXQvYzF',
-      persistentMode: true,
-      enableBots: true,
-      reconnectGracePeriod: 30000,
-      botOptions: {
-        botClass: PlayroomBot
-      },
-      maxPlayersPerRoom: 5,
-      defaultStates: {
-        [PLAYROOM_STATES.GAME_STATUS]: 'WAITING'
-      }
-    });
+    this.events.GAME_INIT.dispatch();
 
+    await this.playroomService.connect();
+    this.playerId = myPlayer().id;
     this.start();
   }
 
-  async start() {
-    await this.gameSetup();
-    this.gameStart();
-    ui.requestRerender();
-  }
-
-  protected gameInit() {
-    const ctx = this.getFnContext();
-    this.state = this.game.setup(ctx);
-    PR.resetStates();
-    ui.clearMessages();
-
-    this.emit('GAME_INIT', undefined);
-  }
-
-  protected setupThisPlayer(playerId: string) {
-    this.playerId = playerId;
-    if (!this.state.playerMap.has(playerId)) return;
-
-    const homeworld = this.game.getPlayersHomeworld(this.state)!;
-    this.game.visitSystem(this.state, homeworld);
-    ui.centerOnHome();
-    ui.clearSelection();
-    ui.select(homeworld.id);
-  }
-
-  protected gameStart() {
-    PR.setState(PLAYROOM_STATES.GAME_STATUS, 'PLAYING', true);
-
-    trackEvent('starz_gamesStarted');
-    super.gameStart();
-
-    ui.addMessage(`Game started.`);
-
-    const player = this.state.playerMap.get(this.playerId!);
-    if (player) {
-      ui.addMessage(`You are ${player.name}.`);
-    } else {
-      ui.addMessage(`You are a Spectator.`);
-    }
-  }
-
   protected async gameSetup() {
-    this.status = await PR.waitForState<GameStatus>(
-      PLAYROOM_STATES.GAME_STATUS
-    );
+    this.status = await this.playroomService.waitForStatus();
 
     console.log('Connected to Playroom.');
-    console.log('Player ID:', PR.myPlayer().id);
-    console.log('Is Host:', PR.isHost());
+    console.log('Player ID:', myPlayer().id);
+    console.log('Is Host:', isHost());
 
-    // For some reason sometimes host is not added
-    if (
-      this.status === 'WAITING' &&
-      !this.state.playerMap.has(PR.myPlayer().id)
-    ) {
-      await this.addPlayerProfile(PR.myPlayer());
-    }
+    this.playerId = myPlayer().id;
 
-    if (PR.isHost()) {
-      this.game.generateMap(this.getFnContext());
+    this.events.CLEAR_MESSAGES.dispatch();
 
-      for (const player of this.state.playerMap.values()) {
-        this.game.assignSystem(this.state, player.id);
-      }
-
-      console.log('Generated world and players as host.');
-
-      PR.setState(
-        PLAYROOM_STATES.WORLD,
-        this.game.worldToJson(this.state.world),
-        true
-      );
-      PR.setState(
-        PLAYROOM_STATES.PLAYERS,
-        playersToJson(this.state.playerMap),
-        true
-      );
+    if (isHost()) {
+      super.gameSetup();
+      this.playroomService.setSetupState();
     } else {
-      const world = await PR.waitForState<WorldJSON>(PLAYROOM_STATES.WORLD);
-      const players = await PR.waitForState<Player[]>(PLAYROOM_STATES.PLAYERS);
-      this.status = await PR.waitForState<GameStatus>(
-        PLAYROOM_STATES.GAME_STATUS
-      );
+      const { world, players, status } =
+        await this.playroomService.getSetupState();
 
-      console.log('Received world and players from host.', { world, players });
-
+      this.status = status;
       this.state.world = this.game.worldFromJson(world);
 
       for (const player of players) {
         this.addPlayer(player);
       }
-    }
 
-    if (this.state.playerMap.has(PR.myPlayer().id)) {
-      console.log(
-        'Restoring player state from Playroom state.',
-        PR.myPlayer().id
-      );
-      this.setupThisPlayer(PR.myPlayer().id);
-    } else {
-      console.log('Spectating game as non-player.');
-    }
-
-    // const playerJson = PR.myPlayer().getState(PLAYER_STATES.PLAYER) as any;
-    // if (playerJson) {
-    //   const p = playerFromJson(playerJson);
-    //   const localPlayer = state.playerMap.get(state.thisPlayerId!)!;
-    //   console.log('Restoring local player state from Playroom state.', p, localPlayer);
-    //   Object.assign(localPlayer, p);
-    // }
-
-    // Adjust colors as needed
-    const colorsAvailable = new Set<string>(COLORS);
-    const colorsUsed = new Set<string>();
-
-    for (const player of this.state.playerMap.values()) {
-      if (colorsUsed.has(player.color)) {
-        player.color =
-          colorsAvailable.values().next().value || getRandomColor();
-      }
-
-      colorsAvailable.delete(player.color);
-      colorsUsed.add(player.color);
+      this.thisPlayer = this.state.playerMap.get(this.playerId)!;
+      this.setupThisPlayer(this.playerId);
     }
   }
 
   public gameTick() {
     this.tick++;
 
-    this.game.gameTick(this.getFnContext(), !PR.isHost());
+    this.game.gameTick(this.getFnContext(), !isHost());
 
-    this.sendStateToPlayroom();
-    this.getStateFromPlayroom();
+    this.playroomService.sendStateToPlayroom();
+    this.playroomService.getStateFromPlayroom();
 
     this.game.checkVictory(this.getFnContext());
-
-    this.emit('STATE_UPDATED', {
+    this.events.STATE_UPDATED.dispatch({
       state: this.state,
       status: this.status
     });
   }
 
-  private sendStateToPlayroom() {
-    PR.myPlayer().setState(PLAYER_STATES.PLAYER, this.state.playerMap, false);
+  async playerJoin(playerState: PlayerState) {
+    console.log('Player joined:', playerState.id);
 
-    if (PR.isHost()) {
-      PR.setState(PLAYROOM_STATES.TICK, this.tick, false);
-      PR.setState(
-        PLAYROOM_STATES.PLAYER_STATS,
-        Array.from(this.state.playerMap.values()).map((p) => p.stats),
-        false
-      );
-      PR.setState(PLAYROOM_STATES.GAME_STATUS, this.status, false);
-
-      PR.setState(
-        PLAYROOM_STATES.WORLD,
-        this.game.worldToJson(this.state.world),
-        false
-      );
-      PR.setState(
-        PLAYROOM_STATES.PLAYERS,
-        playersToJson(this.state.playerMap),
-        false
-      );
-    }
-  }
-
-  private getStateFromPlayroom() {
-    if (!PR.isHost()) {
-      this.tick = PR.getState(PLAYROOM_STATES.TICK) as number;
-      this.status = PR.getState(PLAYROOM_STATES.GAME_STATUS) as GameStatus;
-
-      // if (this.tick % 10 === 0) {
-      const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
-      if (world) {
-        this.state.world.systemMap = new Map(world.systems);
-        this.state.world.laneMap = new Map(world.lanes);
-      }
-      // }
-
-      const playerStats = PR.getState(
-        PLAYROOM_STATES.PLAYER_STATS
-      ) as PlayerStats[];
-      if (playerStats) {
-        for (const p of this.state.playerMap.values()) {
-          const stats = playerStats.find((s) => s.playerId === p.id);
-          if (stats) p.stats = stats;
-        }
-      }
-    }
-  }
-
-  private async playerJoin(playerState: PR.PlayerState) {
     if (this.status !== 'WAITING') return;
 
     this.playerStates.set(playerState.id, playerState);
 
-    if (PR.isHost()) await this.addPlayerProfile(playerState);
-
     playerState.onQuit(() => {
       this.playerStates.delete(playerState.id);
     });
-  }
 
-  protected addPlayer(player: Partial<Player> & { id: string }): Player {
-    const _player = super.addPlayer({ ...player });
-    document.documentElement.style.setProperty(
-      `--player-${player.id}`,
-      _player.color
-    );
-    return _player;
-  }
-
-  private async addPlayerProfile(playerState: PR.PlayerState) {
     if (this.state.playerMap.has(playerState.id)) return;
 
     const profile = playerState.getProfile();
     const name = profile.name || playerState.id;
     const id = playerState.id;
     const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
-    const color = profile.color?.hexString ?? COLORS[this.state.playerMap.size];
-    this.addPlayer({ name, id, bot, color });
+    const color = profile.color?.hexString ?? undefined;
+    this.onPlayerJoin({ name, id, bot, color });
   }
 
-  protected onEliminatePlayer(loserId: string, winnerId: string | null) {
-    if (PR.isHost()) {
-      const loser = this.state.playerMap.get(loserId)!;
-      const winner = this.state.playerMap.get(winnerId as any);
-
-      const message =
-        winnerId === null
-          ? `${loser.name} has been eliminated!`
-          : `${winner!.name} has eliminated ${loser.name}!`;
-
-      ui.addMessage(message);
-
-      PR.setState(PLAYROOM_STATES.WORLD, this.state.world, false);
-
-      PR.RPC.call(
-        PLAYROOM_EVENTS.PLAYER_ELIMINATED,
-        { loserId, winnerId },
-        PR.RPC.Mode.OTHERS
-      );
-    }
-
-    if (loserId === this.playerId) {
-      this.onPlayerWin(winnerId!);
-    }
-  }
-
-  private onSystemUpdated(system: System) {
-    const from = this.state.world.systemMap.get(system.id)!;
-    Object.assign(from, system);
-
-    if (from.ownerId === this.playerId) {
-      this.game.visitSystem(this.state, from);
-    } else {
-      ui.deselect(from.id);
-    }
-
-    // TODO: Also set data for animation
-  }
-
-  private registerPlayroomEvents() {
-    PR.RPC.register(PLAYROOM_EVENTS.UPDATE_SYSTEM, async (system: System) => {
-      this.onSystemUpdated(system);
-
-      this.emit('STATE_UPDATED', {
-        state: this.state,
-        status: this.status
-      });
-    });
-
-    PR.RPC.register(PLAYROOM_EVENTS.ORDER_GIVEN, async (order: Order) => {
-      this.game.takeOrder(this.getFnContext(), order);
-    });
-
-    PR.RPC.register(
-      PLAYROOM_EVENTS.PLAYER_ELIMINATED,
-      async (data: PlayerEliminatedEventData) => {
-        this.onEliminatePlayer(data.loserId, data.winnerId);
-        const world = PR.getState(PLAYROOM_STATES.WORLD) as WorldJSON;
-        if (world) {
-          this.state.world = this.game.worldFromJson(world);
-        }
-
-        this.emit('STATE_UPDATED', {
-          state: this.state,
-          status: this.status
-        });
-      }
-    );
-
-    PR.onPlayerJoin((playerState) => this.playerJoin(playerState));
-  }
-
-  public async onQuit() {
-    const restart = await this.showEndGame('Are you sure you want to quit?');
-    if (!restart) return false;
-    this.restart();
-    return true;
-  }
-
-  protected async onPlayerWin(winnerId: string, message?: string) {
-    if (message) ui.addMessage(message);
-
-    this.game.revealAllSystems(this.state);
+  protected restart() {
+    this.stopGameLoop();
     ui.clearSelection();
 
-    let restart = false;
-    if (winnerId === this.playerId) {
-      trackEvent('starz_gamesWon');
-      restart = await this.showEndGame(`You have conquered The Bubble!`);
-    } else {
-      trackEvent('starz_gamesLost', { winnerId });
-      restart = await this.showEndGame(
-        `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
-      );
-    }
-    if (restart) this.restart();
-  }
-
-  private async showEndGame(_message: string): Promise<boolean> {
-    return true;
-  }
-
-  private restart() {
-    // PR.me().leaveRoom();
     const newURL = window.location.href.split('#')[0];
     window.history.replaceState(null, '', newURL);
     window.location.reload();
-  }
-
-  private onTakeOrder(order: Order) {
-    // Send order to host
-    if (!PR.isHost()) {
-      PR.RPC.call(PLAYROOM_EVENTS.ORDER_GIVEN, order, PR.RPC.Mode.HOST);
-    }
-  }
-
-  private onMakeMove(move: Move) {
-    // Notify other players of the updated systems.
-    if (PR.isHost()) {
-      PR.RPC.call(
-        PLAYROOM_EVENTS.UPDATE_SYSTEM,
-        this.state.world.systemMap.get(move.fromId),
-        PR.RPC.Mode.OTHERS
-      );
-
-      PR.RPC.call(
-        PLAYROOM_EVENTS.UPDATE_SYSTEM,
-        this.state.world.systemMap.get(move.toId),
-        PR.RPC.Mode.OTHERS
-      );
-
-      // TODO: Also send lane
-    }
-
-    this.sendStateToPlayroom();
   }
 
   async quit() {
@@ -449,43 +119,22 @@ export class PlayroomGameManager extends GameManager {
     }
   }
 
-  #registerEvents() {
-    this.on('PLAYER_WIN', ({ playerId, message }) => {
-      this.onPlayerWin(playerId, message);
-    });
+  setContext({ tick, status }: { tick: number; status: GameStatus }) {
+    this.tick = tick;
+    this.status = status;
+  }
 
+  #registerEvents() {
     this.on('TAKE_ORDER', (order: Order) => {
-      this.onTakeOrder(order);
+      this.playroomService.sendOrder(order);
     });
 
     this.on('MAKE_MOVE', (move: Move) => {
-      this.onMakeMove(move);
+      this.playroomService.sendMove(move);
     });
 
     this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
-      this.onEliminatePlayer(loserId, winnerId);
+      this.playroomService.sendPlayerEliminated(loserId, winnerId);
     });
   }
-}
-
-function getRandomColor() {
-  const letters = '0123456789ABCDEF';
-  let color = '#';
-  for (let i = 0; i < 6; i++) {
-    color += letters[Math.floor(Math.random() * 16)];
-  }
-  return color;
-}
-
-function playersToJson(playerMap: Map<string, Player>) {
-  return Array.from(playerMap.values()).map(playerToJson);
-}
-
-function playerToJson(player: Player) {
-  return {
-    ...player,
-    bot: undefined,
-    visitedSystems: player.visitedSystems,
-    revealedSystems: player.revealedSystems
-  };
 }

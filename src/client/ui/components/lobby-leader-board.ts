@@ -6,8 +6,8 @@ import { customElement, state } from 'lit/decorators.js';
 import { gameManager } from './app-context.ts';
 
 import type { GameManager } from '../../managers/manager.ts';
-import { PartykitGameManager } from '../../managers/partykit.ts';
 import type { LeaderboardEntry } from '../../../server/types';
+import { isPartykitGameManager } from '../../managers/shared.ts';
 
 const formatSIInteger = d3.format('.3~s');
 
@@ -32,7 +32,7 @@ export class LobbyLeaderboardElement extends LitElement {
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
 
-    if (this.gameManager instanceof PartykitGameManager) {
+    if (isPartykitGameManager(this.gameManager)) {
       this.leaderboard = await this.gameManager.loadLeaderboard();
 
       this.gameManager.on('LEADERBOARD_UPDATED', async ({ leaderboard }) => {
@@ -68,9 +68,11 @@ export class LobbyLeaderboardElement extends LitElement {
   private renderHeader() {
     return html`<thead>
       <tr>
-        <th>#</th>
+        <th data-tooltip="Rank" data-placement="right">#</th>
         <th>Name</th>
-        <th>✶</th>
+        <th data-tooltip="Number of Homeworlds Captured" data-placement="left">
+          ✶
+        </th>
       </tr>
     </thead>`;
   }

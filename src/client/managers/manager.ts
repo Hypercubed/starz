@@ -1,4 +1,8 @@
-import { DEV_MODE, TICK_DURATION_MS } from '../constants.ts';
+import {
+  DEBUG_LOGGING_ENABLED,
+  DEV_MODE,
+  TICK_DURATION_MS
+} from '../constants.ts';
 import * as game from '../game/index.ts';
 
 import type { FnContext, GameContext, GameStatus } from './types';
@@ -8,6 +12,8 @@ import { createGameEvents, type GameEventsMap } from '../game/events.ts';
 import { EventBus } from '../classes/event-bus.ts';
 
 export abstract class GameManager extends EventBus<GameEventsMap> {
+  readonly name: string = 'GameManager';
+
   protected game = game;
   protected state = game.initalState();
   protected config = game.defaultConfig();
@@ -37,7 +43,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
 
   async setConfig(partialConfig: Partial<GameConfig>) {
     this.config = { ...this.config, ...partialConfig };
-    this._events.CONFIG_UPDATED.dispatch({ config: this.config });
+    this.events.CONFIG_UPDATED.dispatch({ config: this.config });
   }
 
   getPlayer(): Player | null {
@@ -53,7 +59,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     };
   }
 
-  getFnContext(): FnContext {
+  getFnContext(): FnContext<this> {
     return {
       S: this.state, // TODO: make readonly
       E: this,
@@ -96,7 +102,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this._events.GAME_START.dispatch(undefined);
+    this.events.GAME_START.dispatch(undefined);
 
     this.#runGameLoop();
   }
@@ -110,8 +116,9 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.tick++;
 
     this.game.gameTick(this.getFnContext());
+
     this.game.checkVictory(this.getFnContext());
-    this._events.STATE_UPDATED.dispatch({
+    this.events.STATE_UPDATED.dispatch({
       state: this.state,
       status: this.status
     });
@@ -126,7 +133,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.stopGameLoop();
     this.gameTick();
 
-    this._events.GAME_TICK.dispatch({ tick: this.tick });
+    this.events.GAME_TICK.dispatch({ tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
@@ -146,17 +153,23 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   }
 
   #registerEventListeners() {
-    this._events.GAME_STOP.add(() => {
+    this.events.GAME_STOP.add(() => {
       this.gameStop();
     });
 
-    this._events.TAKE_ORDER.add((order: Order) => {
+    this.events.TAKE_ORDER.add((order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
 
-      this._events.STATE_UPDATED.dispatch({
+      this.events.STATE_UPDATED.dispatch({
         state: this.state,
         status: this.status
       });
     });
+
+    if (DEBUG_LOGGING_ENABLED) {
+      this.events.LOG.add(({ message, params }) => {
+        console.log(`[DEBUG][Tick ${this.tick}] ${message}`, ...(params ?? []));
+      });
+    }
   }
 }

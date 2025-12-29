@@ -23,15 +23,15 @@ export type EventBusEmit<T extends EventMap> = <K extends keyof T>(
 ) => void;
 
 export class EventBus<T extends EventMap> {
-  protected _events: T;
+  protected events: T;
 
   constructor(eventMap: T) {
-    this._events = eventMap;
+    this.events = eventMap;
   }
 
   protected addEvents(eventMap: EventMap) {
-    this._events = {
-      ...this._events,
+    this.events = {
+      ...this.events,
       ...eventMap
     };
   }
@@ -45,9 +45,9 @@ export class EventBus<T extends EventMap> {
     type: K,
     listener: T[K] extends MiniSignal<infer A> ? (...args: A) => void : never
   ) {
-    const binding = this._events[type].add(listener);
+    const binding = this.events[type].add(listener);
     return () => {
-      this._events[type].detach(binding);
+      this.events[type].detach(binding);
     };
   }
 
@@ -63,15 +63,15 @@ export class EventBus<T extends EventMap> {
       ? [] | [undefined]
       : [T[K] extends MiniSignal<infer A> ? A[0] : never]
   ): void {
-    this._events[key].dispatch(args[0]);
+    this.events[key].dispatch(args[0]);
   }
 
   /**
    * Clear all listeners for all events
    */
   clear() {
-    for (const key in this._events) {
-      this._events[key].detachAll();
+    for (const key in this.events) {
+      this.events[key].detachAll();
     }
   }
 }

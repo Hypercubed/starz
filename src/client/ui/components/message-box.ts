@@ -5,22 +5,25 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
 import { gameManager } from './app-context.ts';
 
-import type { GameManager } from '../../managers/manager.ts';
 import type { Messages } from '../../types';
+import type { LocalGameManager } from '../../managers/local.ts';
 
 @customElement('message-box')
 export class MessageBoxElement extends LitElement {
   @consume({ context: gameManager })
   @state()
-  gameManager!: GameManager;
+  gameManager!: LocalGameManager;
 
   @state()
   protected messages: Messages[] = [];
 
   connectedCallback() {
     super.connectedCallback();
-    this.gameManager.on('MESSAGES_UPDATED', ({ messages }) => {
-      this.messages = (messages ?? []).slice(-5);
+    this.gameManager.on('ADD_MESSAGE', (message) => {
+      this.messages = [...this.messages, { message, tick: 0 }];
+    });
+    this.gameManager.on('CLEAR_MESSAGES', () => {
+      this.messages = [];
     });
   }
 
@@ -30,7 +33,8 @@ export class MessageBoxElement extends LitElement {
 
   render() {
     if (this.messages.length > 0) {
-      return html`${this.messages.map((msg) => {
+      const messages = this.messages.slice(-5);
+      return html`${messages.map((msg) => {
         const d = ~~(msg.tick / 2);
         const p = msg.tick % 2 === 1 ? '.' : '';
         return html`<div>

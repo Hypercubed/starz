@@ -22,7 +22,9 @@ type PartykitGameManagerEvents = LocalGameManagerEvents & {
 };
 
 export class PartykitGameManager extends LocalGameManager {
-  declare protected _events: PartykitGameManagerEvents;
+  readonly name: string = 'PartykitGameManager';
+
+  declare protected events: PartykitGameManagerEvents;
   declare on: EventBusOn<PartykitGameManagerEvents>;
   declare emit: EventBusEmit<PartykitGameManagerEvents>;
 
@@ -93,7 +95,7 @@ export class PartykitGameManager extends LocalGameManager {
         rank: updatedEntry.rank
       };
     }
-    this._events.PLAYER_UPDATED.dispatch({ player: this.thisPlayer });
+    this.events.PLAYER_UPDATED.dispatch({ player: this.thisPlayer });
   }
 
   async setPlayerAuth(playerId: string, playerToken: string) {
@@ -129,7 +131,7 @@ export class PartykitGameManager extends LocalGameManager {
     this.partykitLobby.on(
       PartyServerMessageTypes.LEADERBOARD_UPDATED,
       (data) => {
-        this._events.LEADERBOARD_UPDATED.dispatch(data);
+        this.events.LEADERBOARD_UPDATED.dispatch(data);
       }
     );
   }

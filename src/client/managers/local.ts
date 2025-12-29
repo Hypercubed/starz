@@ -1,11 +1,15 @@
-import { MAX_BOTS, MAX_PLAYERS, START_PAUSED } from '../constants.ts';
+import {
+  MAX_BOTS,
+  MAX_PLAYERS,
+  START_PAUSED,
+  EVENT_TRACKING_ENABLED
+} from '../constants.ts';
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
-import { trackEvent } from '../utils/logging.ts';
 
 import { GameManager } from './manager.ts';
 
-import type { Messages, Player } from '../types';
+import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { getUniqueName } from '../utils/names.ts';
 import { getUniqueColor } from '../utils/colors.ts';
@@ -21,7 +25,10 @@ const createManagerEvents = () => {
   return {
     PLAYER_JOINED: createEvent<{ player: Player }>(),
     PLAYER_REMOVED: createEvent<{ playerId: string }>(),
-    MESSAGES_UPDATED: createEvent<{ messages: Messages[] }>()
+    // MESSAGES_UPDATED: createEvent<{ messages: Messages[] }>(),
+    ADD_MESSAGE: createEvent<string>(),
+    CLEAR_MESSAGES: createEvent<void>(),
+    TRACK: createEvent<{ eventName: string; meta?: any }>()
   };
 };
 
@@ -29,7 +36,9 @@ export type LocalGameManagerEvents = GameEventsMap &
   ReturnType<typeof createManagerEvents>;
 
 export class LocalGameManager extends GameManager {
-  declare protected _events: LocalGameManagerEvents;
+  readonly name: string = 'LocalGameManager';
+
+  declare protected events: LocalGameManagerEvents;
   declare on: EventBusOn<LocalGameManagerEvents>;
   declare emit: EventBusEmit<LocalGameManagerEvents>;
 
@@ -63,7 +72,7 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
-    this._events.GAME_INIT.dispatch();
+    this.events.GAME_INIT.dispatch();
 
     if (START_PAUSED) {
       this.appRoot.showStartDialog();
@@ -74,7 +83,7 @@ export class LocalGameManager extends GameManager {
 
   async start() {
     this.savePlayerData();
-    this.gameSetup();
+    await this.gameSetup();
     this.gameStart();
     ui.requestRerender();
   }
@@ -88,13 +97,12 @@ export class LocalGameManager extends GameManager {
     localStorage.setItem('starz_score', player.score?.score?.toString() ?? '0');
   }
 
-  protected gameSetup() {
-    const ctx = this.getFnContext();
+  protected async gameSetup() {
+    const players = Array.from(this.state.playerMap.values());
+    console.log('Setting up game with players:', players);
 
-    const players = Array.from(ctx.S.playerMap.values());
-
-    this.state = this.game.setup(ctx);
-    ui.clearMessages();
+    this.state = this.game.setup(this.getFnContext());
+    this.events.CLEAR_MESSAGES.dispatch();
 
     // Ensure players are added, IDs may have changed
     this.state.playerMap.clear();
@@ -125,13 +133,13 @@ export class LocalGameManager extends GameManager {
   }
 
   protected gameStart() {
-    trackEvent('starz_gamesStarted');
+    this.events.TRACK.dispatch({ eventName: 'starz_gamesStarted' });
     super.gameStart();
 
-    ui.addMessage(`Game started.`);
+    this.events.ADD_MESSAGE.dispatch(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
-    if (player) ui.addMessage(`You are ${player.name}.`);
+    if (player) this.events.ADD_MESSAGE.dispatch(`You are ${player.name}.`);
   }
 
   protected gameStop() {
@@ -163,17 +171,23 @@ export class LocalGameManager extends GameManager {
   }
 
   protected async onPlayerWin(winnerId: string, message?: string) {
-    if (message) ui.addMessage(message);
+    if (message) this.events.ADD_MESSAGE.dispatch(message);
 
     this.game.revealAllSystems(this.state);
     ui.clearSelection();
 
     let restart = false;
     if (winnerId === this.playerId) {
-      trackEvent('starz_gamesWon');
+      this.events.TRACK.dispatch({
+        eventName: 'starz_gamesWon',
+        meta: { winnerId }
+      });
       restart = await this.showEndGame(`You have conquered The Bubble!`);
     } else {
-      trackEvent('starz_gamesLost', { winnerId });
+      this.events.TRACK.dispatch({
+        eventName: 'starz_gamesLost',
+        meta: { winnerId }
+      });
       restart = await this.showEndGame(
         `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
       );
@@ -200,7 +214,7 @@ export class LocalGameManager extends GameManager {
         ? `${loser.name} has been eliminated!`
         : `${winner!.name} has eliminated ${loser.name}!`;
 
-    ui.addMessage(message);
+    this.events.ADD_MESSAGE.dispatch(message);
 
     if (loserId === this.playerId) {
       this.submitWinLoss(-1);
@@ -247,13 +261,13 @@ export class LocalGameManager extends GameManager {
       newPlayer.color
     );
 
-    this._events.PLAYER_JOINED.dispatch({ player: newPlayer });
+    this.events.PLAYER_JOINED.dispatch({ player: newPlayer });
     return newPlayer;
   }
 
   protected onPlayerLeave(playerId: string) {
     this.state.playerMap.delete(playerId);
-    this._events.PLAYER_REMOVED.dispatch({ playerId });
+    this.events.PLAYER_REMOVED.dispatch({ playerId });
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -277,18 +291,33 @@ export class LocalGameManager extends GameManager {
     if (!player) return;
 
     player.name = newName;
-    this._events.PLAYER_UPDATED.dispatch({ player });
+    this.events.PLAYER_UPDATED.dispatch({ player });
 
     localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {
-    this._events.PLAYER_WIN.add(({ playerId, message }) => {
+    this.events.PLAYER_WIN.add(({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this._events.PLAYER_ELIMINATED.add(({ loserId, winnerId }) => {
+    this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
+
+    if (EVENT_TRACKING_ENABLED) {
+      this.on('TRACK', ({ eventName, meta }) => {
+        if (window && window.sa_event) {
+          try {
+            window.sa_event(eventName, {
+              tick: this.tick,
+              ...meta
+            });
+          } catch (e) {
+            console.error('Error tracking event:', e);
+          }
+        }
+      });
+    }
   }
 }

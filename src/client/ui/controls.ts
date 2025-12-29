@@ -1,6 +1,5 @@
 import { ENABLE_BOT_CONTROL, ENABLE_CHEATS } from '../constants.ts';
 import * as game from '../game/index.ts';
-import { debugLog } from '../utils/logging.ts';
 
 import {
   clearSelection,
@@ -65,12 +64,14 @@ export function onClickSystem(event: PointerEvent, system: System) {
   if (ctx.C.status !== 'PLAYING') return;
 
   if (ENABLE_CHEATS && event.altKey) {
-    debugLog(
-      '' + system.id,
-      system.lastMove?.message ?? 'none',
-      system.lastMove?.ships ?? 0
-    );
-    console.log(system);
+    globalThis.gameManager.getFnContext().E.emit('LOG', {
+      message: '' + system.id,
+      params: [
+        system.lastMove?.message ?? 'none',
+        system.lastMove?.ships ?? 0,
+        system
+      ]
+    });
   }
 
   switch (event.button) {
