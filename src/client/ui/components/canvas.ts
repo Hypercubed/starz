@@ -17,7 +17,7 @@ export class GameCanvas extends LitElement {
   connectedCallback() {
     super.connectedCallback();
 
-    this.gameManager.on('GAME_START', () => {
+    this.gameManager.on('GAME_STARTED', () => {
       ui.drawMap(
         document.getElementById('app')!,
         this.gameManager.getFnContext()

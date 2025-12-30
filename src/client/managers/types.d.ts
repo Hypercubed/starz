@@ -1,7 +1,7 @@
 import type { GameConfig, GameState } from '../game/types';
 import type { Player } from '../types';
 
-export type GameStatus = 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
+export type GameStatus = 'INIT' | 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
 export interface GameContext {
   tick: number;

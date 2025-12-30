@@ -25,7 +25,6 @@ const createManagerEvents = () => {
   return {
     PLAYER_JOINED: createEvent<{ player: Player }>(),
     PLAYER_REMOVED: createEvent<{ playerId: string }>(),
-    // MESSAGES_UPDATED: createEvent<{ messages: Messages[] }>(),
     ADD_MESSAGE: createEvent<string>(),
     CLEAR_MESSAGES: createEvent<void>(),
     TRACK: createEvent<{ eventName: string; meta?: any }>()
@@ -65,12 +64,14 @@ export class LocalGameManager extends GameManager {
   // Connect to the game (setup player, etc)
   async connect() {
     this.gameStop();
-    this.status = 'WAITING';
+    this.status = 'INIT';
 
     // Create and add this player to make it available during setup
     const player = await this.initializePlayer();
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
+
+    console.log('Local Game Manager connected.', this.thisPlayer);
 
     this.events.GAME_INIT.dispatch();
 
@@ -79,6 +80,10 @@ export class LocalGameManager extends GameManager {
     } else {
       this.start();
     }
+  }
+
+  async waiting() {
+    this.status = 'WAITING';
   }
 
   async start() {
@@ -205,7 +210,7 @@ export class LocalGameManager extends GameManager {
     this.connect();
   }
 
-  protected onEliminatePlayer(loserId: string, winnerId: string | null) {
+  onEliminatePlayer(loserId: string, winnerId: string | null) {
     const loser = this.state.playerMap.get(loserId)!;
     const winner = this.state.playerMap.get(winnerId as any);
 
@@ -229,7 +234,7 @@ export class LocalGameManager extends GameManager {
     localStorage.setItem('starz_score', score.toString());
   }
 
-  addBot() {
+  async addBot() {
     if (this.state.playerMap.size >= MAX_PLAYERS) return;
 
     const players = Array.from(this.state.playerMap.values());
@@ -238,7 +243,7 @@ export class LocalGameManager extends GameManager {
 
     const id = createId();
     const name = getUniqueName(players.map((p) => p.name));
-    const bot = new Bot({ id, name }); // Why does BOT need it's name?
+    const bot = new Bot({ id }); // Why does BOT need it's name?
     return this.onPlayerJoin({ id, name, bot })!;
   }
 
@@ -247,14 +252,19 @@ export class LocalGameManager extends GameManager {
     if (player?.bot) this.onPlayerLeave(id);
   }
 
-  protected onPlayerJoin(player: Partial<Player> = {}) {
+  onPlayerJoin(player: Partial<Player>): Player {
+    if (player.id && this.state.playerMap.has(player.id)) {
+      return this.state.playerMap.get(player.id)!;
+    }
+
     const players = Array.from(this.state.playerMap.values());
 
     const id = player.id ?? createPlayerId();
     const name = player.name ?? getUniqueName(players.map((p) => p.name));
     const color = player.color ?? getUniqueColor(players.map((p) => p.color));
+    const bot = player.bot ? new Bot({ id }) : undefined;
 
-    const newPlayer = super.addPlayer({ id, name, color, ...player });
+    const newPlayer = super.addPlayer({ id, ...player, bot, name, color });
 
     document.documentElement.style.setProperty(
       `--player-${newPlayer.id}`,
@@ -265,7 +275,7 @@ export class LocalGameManager extends GameManager {
     return newPlayer;
   }
 
-  protected onPlayerLeave(playerId: string) {
+  onPlayerLeave(playerId: string) {
     this.state.playerMap.delete(playerId);
     this.events.PLAYER_REMOVED.dispatch({ playerId });
   }
@@ -291,13 +301,13 @@ export class LocalGameManager extends GameManager {
     if (!player) return;
 
     player.name = newName;
-    this.events.PLAYER_UPDATED.dispatch({ player });
+    this.events.PLAYER_UPDATED.dispatch({ playerId: player.id });
 
     localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {
-    this.events.PLAYER_WIN.add(({ playerId, message }) => {
+    this.events.PLAYER_WON.add(({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 

@@ -1,41 +1,32 @@
-import type { GameConfig, GameState, Move, Order } from './types';
-import type { GameStatus } from '../managers/types';
-import type { Player } from '../types';
+import type { Move, Order } from './types';
 import { createEvent, type EventMap } from '../classes/event-bus';
 
 export const createGameEvents = () => {
   return {
     GAME_INIT: createEvent<void>(),
-    GAME_START: createEvent<void>(),
-    GAME_STOP: createEvent<void>(),
+    GAME_STARTED: createEvent<void>(),
+    GAME_STOPPED: createEvent<void>(),
     GAME_TICK: createEvent<{ tick: number }>(),
 
-    STATE_UPDATED: createEvent<{
-      state: GameState;
-      status: GameStatus;
-    }>(),
-    CONFIG_UPDATED: createEvent<{
-      config: GameConfig;
-    }>(),
+    STATE_UPDATED: createEvent<void>(),
+    CONFIG_UPDATED: createEvent<void>(),
 
-    PLAYER_UPDATED: createEvent<{
-      player: Player;
-    }>(),
+    PLAYER_UPDATED: createEvent<{ playerId: string }>(),
     PLAYER_ELIMINATED: createEvent<{
       loserId: string;
       winnerId: string | null;
     }>(),
-    PLAYER_WIN: createEvent<{
+    PLAYER_WON: createEvent<{
       playerId: string;
       message: string;
     }>(),
-    PLAYER_LOSE: createEvent<{
+    PLAYER_LOST: createEvent<{
       playerId: string;
       winnerId: string | null;
     }>(),
 
-    TAKE_ORDER: createEvent<Order>(),
-    MAKE_MOVE: createEvent<Move>(),
+    PROCESS_ORDER: createEvent<Order>(),
+    MOVE_COMPLETED: createEvent<Move>(),
 
     LOG: createEvent<{ message: string; params?: any[] }>()
   } as const satisfies EventMap;

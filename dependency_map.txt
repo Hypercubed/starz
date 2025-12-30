@@ -122,7 +122,7 @@ This map shows the runtime import relationships between modules in the `src` dir
   - ./leader-board.ts
   - ./lobby-leader-board.ts
   - ./message-box.ts
-  - ./start-dialog-content.ts
+  - ./start-screen.ts
   - ./tick-box.ts
 - src/client/ui/components/leader-board.ts
   - ./app-context.ts
@@ -131,7 +131,7 @@ This map shows the runtime import relationships between modules in the `src` dir
   - ../../managers/partykit.ts
 - src/client/ui/components/message-box.ts
   - ./app-context.ts
-- src/client/ui/components/start-dialog-content.ts
+- src/client/ui/components/start-screen.ts
   - ../../../package.json
   - ../../managers/local.ts
   - ../../managers/partykit.ts

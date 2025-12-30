@@ -70,11 +70,11 @@ export function checkVictory({ S, C, E, P }: FnContext) {
       const winnerId = players.find((player) => player.stats.homeworld > 0)!.id;
       const winner = S.playerMap.get(winnerId)!;
 
-      E.emit('PLAYER_WIN', {
+      E.emit('PLAYER_WON', {
         playerId: winnerId,
         message: `${winner.name} has conquered The Bubble!`
       });
-      E.emit('GAME_STOP', undefined);
+      E.emit('GAME_STOPPED', undefined);
     }
   } else {
     // Check for domination victory
@@ -84,11 +84,11 @@ export function checkVictory({ S, C, E, P }: FnContext) {
     );
 
     if (systems.length === 0) {
-      E.emit('PLAYER_WIN', {
+      E.emit('PLAYER_WON', {
         playerId: C.playerId,
         message: `${P.name} has conquered The Bubble!`
       });
-      E.emit('GAME_STOP', undefined);
+      E.emit('GAME_STOPPED', undefined);
     }
   }
 }

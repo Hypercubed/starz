@@ -58,46 +58,44 @@ export type BotPersonalities = keyof typeof PERSONALITIES | 'idle';
 
 export function botQueue({ S }: FnContext) {
   for (const p of S.playerMap.values()) {
-    p.bot?.makeMoves();
+    if (p.bot) {
+      p.bot.makeMoves();
+    }
   }
 }
 
 export interface BotOptions {
   id: string;
-  playerIndex: number;
   personality: BotPersonalities;
-  name: string;
 }
 
 let botId = 0;
 
 export class Bot implements BotInterface {
   id: string;
-  name: string;
-  personality: BotPersonality;
-  queuedMoves = 0;
+  name: BotPersonalities;
 
-  botSystems!: System[];
-  threatLevels = new Map<string, number>();
-  frontline = new Set<string>();
-  backline = new Set<string>();
+  private personality: BotPersonality;
+  private queuedMoves = 0;
+
+  private botSystems!: System[];
+  private threatLevels = new Map<string, number>();
+  private frontline = new Set<string>();
+  private backline = new Set<string>();
 
   constructor(botParams: Partial<BotOptions> = {}) {
-    const index = botParams.playerIndex ?? botId++;
+    const index = botId++;
     this.id = botParams.id ?? `${index}`;
 
-    let personality = botParams.personality as BotPersonalities | undefined;
+    this.name = botParams.personality as BotPersonalities;
 
-    if (!personality) {
+    if (!this.name && this.name !== 'idle') {
       const keys = Object.keys(PERSONALITIES);
-      personality = keys[index % keys.length] as BotPersonalities;
+      this.name = keys[index % keys.length] as BotPersonalities;
     }
 
-    this.name = botParams.name ?? personality;
     this.personality =
-      personality === 'idle'
-        ? PERSONALITIES.balanced
-        : PERSONALITIES[personality];
+      this.name === 'idle' ? PERSONALITIES.balanced : PERSONALITIES[this.name];
   }
 
   makeMoves() {

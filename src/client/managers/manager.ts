@@ -25,7 +25,6 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   private runningInterval: number | null = null;
 
   abstract connect(): Promise<void>;
-  abstract start(): Promise<void>;
   abstract quit(): Promise<void>;
 
   constructor() {
@@ -43,7 +42,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
 
   async setConfig(partialConfig: Partial<GameConfig>) {
     this.config = { ...this.config, ...partialConfig };
-    this.events.CONFIG_UPDATED.dispatch({ config: this.config });
+    this.events.CONFIG_UPDATED.dispatch();
   }
 
   getPlayer(): Player | null {
@@ -102,7 +101,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this.events.GAME_START.dispatch(undefined);
+    this.events.GAME_STARTED.dispatch();
 
     this.#runGameLoop();
   }
@@ -118,10 +117,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.game.gameTick(this.getFnContext());
 
     this.game.checkVictory(this.getFnContext());
-    this.events.STATE_UPDATED.dispatch({
-      state: this.state,
-      status: this.status
-    });
+    this.events.STATE_UPDATED.dispatch();
   }
 
   #runGameLoop() {
@@ -153,17 +149,13 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   }
 
   #registerEventListeners() {
-    this.events.GAME_STOP.add(() => {
+    this.events.GAME_STOPPED.add(() => {
       this.gameStop();
     });
 
-    this.events.TAKE_ORDER.add((order: Order) => {
+    this.events.PROCESS_ORDER.add((order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
-
-      this.events.STATE_UPDATED.dispatch({
-        state: this.state,
-        status: this.status
-      });
+      this.events.STATE_UPDATED.dispatch();
     });
 
     if (DEBUG_LOGGING_ENABLED) {

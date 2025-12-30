@@ -23,6 +23,7 @@ import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
 import { githubIcon } from './icons.ts';
 import type { LocalGameManager } from '../../managers/local.ts';
+import { isPlayroomGameManager } from '../../managers/shared.ts';
 
 @customElement('app-root')
 export class AppRootElement extends LitElement {
@@ -52,6 +53,9 @@ export class AppRootElement extends LitElement {
   @query('#startDialog')
   private startDialog!: HTMLDialogElement;
 
+  @query('#matchLobby')
+  private matchLobby!: HTMLDialogElement;
+
   @query('#endDialog')
   private endDialog!: HTMLDialogElement;
 
@@ -70,9 +74,14 @@ export class AppRootElement extends LitElement {
     // Replace this once everything is a component
     return html`
       <dialog id="startDialog" closedby="none">
-        <start-dialog-content
-          @startClicked=${this.onStart}
-        ></start-dialog-content>
+        <start-screen
+          @newGameClicked=${this.onNewGame}
+          @joinRoomClicked=${(e: CustomEvent) =>
+            this.onJoinRoom(e.detail.roomCode)}
+        ></start-screen>
+      </dialog>
+      <dialog id="matchLobby" closedby="none">
+        <match-lobby @startClicked=${this.onStart}></match-lobby>
       </dialog>
       <dialog id="endDialog">
         <p id="endMessage"></p>
@@ -168,28 +177,23 @@ export class AppRootElement extends LitElement {
   }
 
   #setupListeners() {
-    this.config = this.gameManager.getConfig();
-    this.state = this.gameManager.getState();
-    this.player = this.gameManager.getPlayer();
-    this.context = this.gameManager.getContext();
-
-    this.gameManager.on('GAME_INIT', () => {
+    const update = () => {
       this.config = this.gameManager.getConfig();
       this.state = this.gameManager.getState();
       this.player = this.gameManager.getPlayer();
       this.context = this.gameManager.getContext();
-    });
+    };
 
-    this.gameManager.on('CONFIG_UPDATED', ({ config }) => {
-      this.config = config;
-      this.player = this.gameManager.getPlayer();
-      this.context = this.gameManager.getContext();
-    });
+    update();
 
-    this.gameManager.on('STATE_UPDATED', ({ state }) => (this.state = state));
+    this.gameManager.on('GAME_INIT', update);
+    this.gameManager.on('CONFIG_UPDATED', update);
+    this.gameManager.on('STATE_UPDATED', update);
+    this.gameManager.on('GAME_TICK', update);
 
-    this.gameManager.on('GAME_TICK', () => {
-      this.context = this.gameManager.getContext();
+    this.gameManager.on('GAME_STARTED', () => {
+      this.startDialog.close();
+      this.matchLobby.close();
     });
   }
 
@@ -198,9 +202,33 @@ export class AppRootElement extends LitElement {
   }
 
   private onStart() {
-    this.startDialog.close();
+    this.matchLobby.close();
     this.gameManager.start();
   }
+
+  private async onNewGame() {
+    this.startDialog.close();
+    this.matchLobby.showModal();
+    this.gameManager.waiting();
+  }
+
+  private onJoinRoom(roomCode: string) {
+    this.startDialog.close();
+    if (!roomCode) return;
+
+    if (isPlayroomGameManager(this.gameManager)) {
+      this.gameManager.waiting(roomCode);
+    } else {
+      this.gameManager.waiting();
+    }
+    this.matchLobby.showModal();
+  }
+
+  // private setRoomCodeInURL(roomCode: string) {
+  //   const url = new URL(window.location.href);
+  //   url.searchParams.set('r', 'R' + roomCode);
+  //   window.history.replaceState({}, '', url.toString());
+  // }
 
   private async onKeyup(event: KeyboardEvent) {
     const tagName = (event.target as HTMLElement)?.tagName;

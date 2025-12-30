@@ -1,40 +1,52 @@
-import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 
 import type { GameStatus } from './types';
 import type { Move, Order } from '../game/types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { LocalGameManager } from './local.ts';
-import { isHost, myPlayer, type PlayerState } from 'playroomkit';
+import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
+import { isHost, myPlayer } from 'playroomkit';
 import { PlayroomService } from './services/playroom.ts';
+import {
+  createEvent,
+  type EventBusEmit,
+  type EventBusOn
+} from '../classes/event-bus.ts';
+
+const createEvents = () => {
+  return {
+    ROOM_CREATED: createEvent<{ roomId: string; isHost: boolean }>()
+  };
+};
+
+type PlayroomGameManagerEvents = LocalGameManagerEvents &
+  ReturnType<typeof createEvents>;
 
 export class PlayroomGameManager extends LocalGameManager {
   readonly name: string = 'PlayroomGameManager';
 
-  private playerStates = new Map<string, PlayerState>();
-  protected appRoot!: AppRootElement;
+  declare protected events: PlayroomGameManagerEvents;
+  declare on: EventBusOn<PlayroomGameManagerEvents>;
+  declare emit: EventBusEmit<PlayroomGameManagerEvents>;
 
   private playroomService = new PlayroomService(this);
+
+  constructor() {
+    super();
+    this.addEvents(createEvents());
+  }
 
   mount(appRoot: AppRootElement) {
     super.mount(appRoot);
     this.#registerEvents();
   }
 
-  async connect() {
-    this.gameStop();
+  isHost() {
+    return isHost() ?? true;
+  }
+
+  async waiting(roomCode?: string) {
     this.status = 'WAITING';
-
-    // Create and add this player to make it available during setup
-    const player = await this.initializePlayer();
-    this.thisPlayer = this.onPlayerJoin(player);
-    this.playerId = this.thisPlayer.id;
-
-    this.events.GAME_INIT.dispatch();
-
-    await this.playroomService.connect();
-    this.playerId = myPlayer().id;
-    this.start();
+    await this.playroomService.connect(roomCode ?? undefined);
   }
 
   protected async gameSetup() {
@@ -44,13 +56,11 @@ export class PlayroomGameManager extends LocalGameManager {
     console.log('Player ID:', myPlayer().id);
     console.log('Is Host:', isHost());
 
-    this.playerId = myPlayer().id;
-
     this.events.CLEAR_MESSAGES.dispatch();
 
     if (isHost()) {
       super.gameSetup();
-      this.playroomService.setSetupState();
+      this.playroomService.sendSetupState();
     } else {
       const { world, players, status } =
         await this.playroomService.getSetupState();
@@ -76,31 +86,7 @@ export class PlayroomGameManager extends LocalGameManager {
     this.playroomService.getStateFromPlayroom();
 
     this.game.checkVictory(this.getFnContext());
-    this.events.STATE_UPDATED.dispatch({
-      state: this.state,
-      status: this.status
-    });
-  }
-
-  async playerJoin(playerState: PlayerState) {
-    console.log('Player joined:', playerState.id);
-
-    if (this.status !== 'WAITING') return;
-
-    this.playerStates.set(playerState.id, playerState);
-
-    playerState.onQuit(() => {
-      this.playerStates.delete(playerState.id);
-    });
-
-    if (this.state.playerMap.has(playerState.id)) return;
-
-    const profile = playerState.getProfile();
-    const name = profile.name || playerState.id;
-    const id = playerState.id;
-    const bot: Bot = (playerState as any).bot?.gameBot ?? undefined;
-    const color = profile.color?.hexString ?? undefined;
-    this.onPlayerJoin({ name, id, bot, color });
+    this.events.STATE_UPDATED.dispatch();
   }
 
   protected restart() {
@@ -112,11 +98,12 @@ export class PlayroomGameManager extends LocalGameManager {
     window.location.reload();
   }
 
-  async quit() {
-    const ret = await this.showEndGame('Are you sure you want to quit?');
-    if (ret) {
-      this.game.eliminatePlayer(this.getFnContext(), this.playerId);
-    }
+  async addBot() {
+    const player = await super.addBot();
+    if (!player) return;
+
+    await this.playroomService.addBot(player);
+    return player;
   }
 
   setContext({ tick, status }: { tick: number; status: GameStatus }) {
@@ -125,16 +112,20 @@ export class PlayroomGameManager extends LocalGameManager {
   }
 
   #registerEvents() {
-    this.on('TAKE_ORDER', (order: Order) => {
-      this.playroomService.sendOrder(order);
+    this.on('GAME_STARTED', () => {
+      this.playroomService.onGameStarted();
     });
 
-    this.on('MAKE_MOVE', (move: Move) => {
-      this.playroomService.sendMove(move);
+    this.on('PROCESS_ORDER', (order: Order) => {
+      this.playroomService.onOrder(order);
+    });
+
+    this.on('MOVE_COMPLETED', (move: Move) => {
+      this.playroomService.onMove(move);
     });
 
     this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
-      this.playroomService.sendPlayerEliminated(loserId, winnerId);
+      this.playroomService.sendPlayerEliminated(loserId, winnerId ?? undefined);
     });
   }
 }

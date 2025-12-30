@@ -64,6 +64,11 @@ export function eliminatePlayer(
   loserId: string,
   winnerId: string | null = null
 ) {
+  const loser = S.playerMap.get(loserId)!;
+  if (!loser.isAlive) return; // Already eliminated
+
+  loser.isAlive = false;
+
   for (const s of S.world.systemMap.values()) {
     if (s.ownerId === loserId) {
       s.ownerId = winnerId;
@@ -77,9 +82,6 @@ export function eliminatePlayer(
       s.homeworld = null; // No longer a homeworld
     }
   }
-
-  const loser = S.playerMap.get(loserId)!;
-  loser.isAlive = false;
 
   E.emit('PLAYER_ELIMINATED', {
     loserId,
@@ -136,7 +138,7 @@ function makeMove(ctx: FnContext, move: Move) {
   moveShips(ctx, from, to, move.ships);
   from.lastMove = move;
 
-  ctx.E.emit('MAKE_MOVE', move);
+  ctx.E.emit('MOVE_COMPLETED', move);
 }
 
 export function takeOrder(ctx: FnContext, order: Order) {

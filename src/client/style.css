@@ -424,7 +424,8 @@ dialog {
   --pico-color: var(--pico-primary-inverse);
 }
 
-start-dialog-content {
+start-screen,
+match-lobby {
   outline: none !important;
 
   article {
@@ -452,10 +453,13 @@ start-dialog-content {
     color: #666;
   }
 
+  input {
+    text-align: center;
+  }
+
   #playerNameInput {
     margin-top: 10px;
     width: 300px;
-    text-align: center;
   }
 
   article {

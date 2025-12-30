@@ -2,7 +2,9 @@ import { version } from '../../package.json';
 import './ui/components/index.ts';
 
 import type { AppRootElement } from './ui/components/app-root.ts';
+// import { LocalGameManager } from './managers/local.ts';
 import { PartykitGameManager } from './managers/partykit.ts';
+// import { PlayroomGameManager } from './managers/playroom.ts';
 
 const appRoot = document.createElement('app-root') as AppRootElement;
 

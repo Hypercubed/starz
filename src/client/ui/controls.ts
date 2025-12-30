@@ -119,7 +119,7 @@ export function orderBalancedMove(fromId: string, toId: string) {
     playerId: C.playerId!
   } satisfies Order;
 
-  E.emit('TAKE_ORDER', order);
+  E.emit('PROCESS_ORDER', order);
 }
 
 export function orderMassMove(fromId: string, toId: string) {
@@ -134,5 +134,5 @@ export function orderMassMove(fromId: string, toId: string) {
     message: `Mass move from ${fromId} to ${toId}`
   } satisfies Order;
 
-  E.emit('TAKE_ORDER', order);
+  E.emit('PROCESS_ORDER', order);
 }

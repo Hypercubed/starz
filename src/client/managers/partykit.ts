@@ -95,7 +95,7 @@ export class PartykitGameManager extends LocalGameManager {
         rank: updatedEntry.rank
       };
     }
-    this.events.PLAYER_UPDATED.dispatch({ player: this.thisPlayer });
+    this.events.PLAYER_UPDATED.dispatch({ playerId: this.thisPlayer.id });
   }
 
   async setPlayerAuth(playerId: string, playerToken: string) {
