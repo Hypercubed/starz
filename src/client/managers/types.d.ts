@@ -10,7 +10,7 @@ export interface GameContext {
   playerId: string;
 }
 
-import type { GameManager } from './manager';
+import type { GameManager } from './classes/manager';
 
 export interface FnContext<T extends GameManager = GameManager> {
   S: GameState; // TODO: make readonly

@@ -7,7 +7,7 @@ import {
 import { Bot } from '../game/bots.ts';
 import * as ui from '../ui/index.ts';
 
-import { GameManager } from './manager.ts';
+import { GameManager } from './classes/manager.ts';
 
 import type { Player } from '../types';
 import type { AppRootElement } from '../ui/components/app-root.ts';
@@ -19,7 +19,7 @@ import {
   createEvent,
   type EventBusEmit,
   type EventBusOn
-} from '../classes/event-bus.ts';
+} from './classes/event-bus.ts';
 
 const createManagerEvents = () => {
   return {
@@ -54,6 +54,10 @@ export class LocalGameManager extends GameManager {
     return this.thisPlayer;
   }
 
+  isMultiplayer() {
+    return false;
+  }
+
   // Mount the manager to the UI
   mount(appRoot: AppRootElement) {
     this.appRoot = appRoot;
@@ -71,8 +75,6 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
-    console.log('Local Game Manager connected.', this.thisPlayer);
-
     this.events.GAME_INIT.dispatch();
 
     if (START_PAUSED) {
@@ -87,6 +89,8 @@ export class LocalGameManager extends GameManager {
   }
 
   async start() {
+    if (this.status !== 'INIT' && this.status !== 'WAITING') return;
+
     this.savePlayerData();
     await this.gameSetup();
     this.gameStart();
@@ -138,6 +142,8 @@ export class LocalGameManager extends GameManager {
   }
 
   protected gameStart() {
+    if (this.status !== 'INIT' && this.status !== 'WAITING') return;
+
     this.events.TRACK.dispatch({ eventName: 'starz_gamesStarted' });
     super.gameStart();
 
@@ -155,6 +161,8 @@ export class LocalGameManager extends GameManager {
   }
 
   protected pauseToggle() {
+    if (this.isMultiplayer()) return;
+
     if (this.status === 'PAUSED') {
       this.status = 'PLAYING';
       super.startGameLoop();
@@ -194,7 +202,7 @@ export class LocalGameManager extends GameManager {
         meta: { winnerId }
       });
       restart = await this.showEndGame(
-        `You have lost your homeworld! Click to return to lobby.  ESC to spectate.`
+        `You have lost your homeworld! Click to return to lobby.`
       );
     }
 

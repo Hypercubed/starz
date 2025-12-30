@@ -6,7 +6,7 @@ import * as ui from '../index.ts';
 
 import { gameManager } from './app-context.ts';
 
-import type { GameManager } from '../../managers/manager.ts';
+import type { GameManager } from '../../managers/classes/manager.ts';
 
 @customElement('game-canvas')
 export class GameCanvas extends LitElement {

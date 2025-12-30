@@ -1,5 +1,5 @@
 import type { Move, Order } from './types';
-import { createEvent, type EventMap } from '../classes/event-bus';
+import { createEvent, type EventMap } from '../managers/classes/event-bus.ts';
 
 export const createGameEvents = () => {
   return {

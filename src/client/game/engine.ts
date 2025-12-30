@@ -93,7 +93,7 @@ export function checkVictory({ S, C, E, P }: FnContext) {
   }
 }
 
-export function gameTick(ctx: FnContext, skipBots = false) {
+export function gameTick(ctx: FnContext) {
   const { S, C } = ctx;
 
   if (C.tick % TICKS_PER_TURN === 0) turnUpdate(S);
@@ -102,10 +102,7 @@ export function gameTick(ctx: FnContext, skipBots = false) {
   for (const s of S.world.systemMap.values()) s.movement = [0, 0];
   for (const l of S.world.laneMap.values()) l.movement = [0, 0];
 
-  if (!skipBots) {
-    botQueue(ctx);
-    doQueuedMoves(ctx);
-  }
-
+  botQueue(ctx);
+  doQueuedMoves(ctx);
   updateStats(S);
 }

@@ -2,14 +2,14 @@ import {
   DEBUG_LOGGING_ENABLED,
   DEV_MODE,
   TICK_DURATION_MS
-} from '../constants.ts';
-import * as game from '../game/index.ts';
+} from '../../constants.ts';
+import * as game from '../../game/index.ts';
 
-import type { FnContext, GameContext, GameStatus } from './types';
-import type { GameConfig, GameState, Order } from '../game/types';
-import type { Player } from '../types';
-import { createGameEvents, type GameEventsMap } from '../game/events.ts';
-import { EventBus } from '../classes/event-bus.ts';
+import type { FnContext, GameContext, GameStatus } from '../types';
+import type { GameConfig, GameState, Order } from '../../game/types';
+import type { Player } from '../../types';
+import { createGameEvents, type GameEventsMap } from '../../game/events.ts';
+import { EventBus } from './event-bus.ts';
 
 export abstract class GameManager extends EventBus<GameEventsMap> {
   readonly name: string = 'GameManager';

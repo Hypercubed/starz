@@ -5,7 +5,7 @@ import { customElement, state } from 'lit/decorators.js';
 
 import { gameManager } from './app-context.ts';
 
-import type { GameManager } from '../../managers/manager.ts';
+import type { GameManager } from '../../managers/classes/manager.ts';
 import type { Player } from '../../types';
 
 const formatSIInteger = d3.format('.3~s');

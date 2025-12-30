@@ -26,7 +26,8 @@ export default defineConfig([
           {
             "ignore": ["\\?raw$"]
           }
-        ]
+        ],
+        "import/extensions": ["error", "ignorePackages"]
       },
   },
   tseslint.configs.recommended,
@@ -35,7 +36,7 @@ export default defineConfig([
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }]
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
   },
 ]);

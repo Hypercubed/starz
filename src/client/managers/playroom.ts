@@ -1,16 +1,14 @@
 import * as ui from '../ui/index.ts';
 
-import type { GameStatus } from './types';
-import type { Move, Order } from '../game/types';
+import type { GameStatus } from './types.d.ts';
+import type { Order } from '../game/types.d.ts';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
-import { isHost, myPlayer } from 'playroomkit';
-import { PlayroomService } from './services/playroom.ts';
 import {
   createEvent,
   type EventBusEmit,
   type EventBusOn
-} from '../classes/event-bus.ts';
+} from './classes/event-bus.ts';
 
 const createEvents = () => {
   return {
@@ -20,6 +18,10 @@ const createEvents = () => {
 
 type PlayroomGameManagerEvents = LocalGameManagerEvents &
   ReturnType<typeof createEvents>;
+
+const PlayroomService = await import('./services/playroom.ts').then(
+  (m) => m.PlayroomService
+);
 
 export class PlayroomGameManager extends LocalGameManager {
   readonly name: string = 'PlayroomGameManager';
@@ -35,13 +37,17 @@ export class PlayroomGameManager extends LocalGameManager {
     this.addEvents(createEvents());
   }
 
+  isMultiplayer() {
+    return true;
+  }
+
   mount(appRoot: AppRootElement) {
     super.mount(appRoot);
     this.#registerEvents();
   }
 
   isHost() {
-    return isHost() ?? true;
+    return this.playroomService.isHost();
   }
 
   async waiting(roomCode?: string) {
@@ -50,42 +56,28 @@ export class PlayroomGameManager extends LocalGameManager {
   }
 
   protected async gameSetup() {
-    this.status = await this.playroomService.waitForStatus();
-
-    console.log('Connected to Playroom.');
-    console.log('Player ID:', myPlayer().id);
-    console.log('Is Host:', isHost());
-
     this.events.CLEAR_MESSAGES.dispatch();
 
-    if (isHost()) {
+    if (this.playroomService.isHost()) {
       super.gameSetup();
-      this.playroomService.sendSetupState();
+      this.playroomService.sendFullState(this.state);
     } else {
-      const { world, players, status } =
-        await this.playroomService.getSetupState();
-
-      this.status = status;
-      this.state.world = this.game.worldFromJson(world);
-
-      for (const player of players) {
-        this.addPlayer(player);
-      }
-
+      await this.playroomService.getFullState();
       this.thisPlayer = this.state.playerMap.get(this.playerId)!;
       this.setupThisPlayer(this.playerId);
     }
   }
 
-  public gameTick() {
-    this.tick++;
+  public async gameTick() {
+    if (this.playroomService.isHost()) {
+      this.tick++;
+      this.game.gameTick(this.getFnContext());
+      this.game.checkVictory(this.getFnContext());
+      this.playroomService.sendFastState();
+    } else {
+      this.playroomService.getFastState();
+    }
 
-    this.game.gameTick(this.getFnContext(), !isHost());
-
-    this.playroomService.sendStateToPlayroom();
-    this.playroomService.getStateFromPlayroom();
-
-    this.game.checkVictory(this.getFnContext());
     this.events.STATE_UPDATED.dispatch();
   }
 
@@ -106,9 +98,14 @@ export class PlayroomGameManager extends LocalGameManager {
     return player;
   }
 
-  setContext({ tick, status }: { tick: number; status: GameStatus }) {
-    this.tick = tick;
-    this.status = status;
+  removeBot(id: string) {
+    super.removeBot(id);
+    this.playroomService.removePlayer(id);
+  }
+
+  setContext({ tick, status }: { tick?: number; status?: GameStatus }) {
+    this.tick = tick ?? this.tick;
+    this.status = status ?? this.status;
   }
 
   #registerEvents() {
@@ -117,11 +114,11 @@ export class PlayroomGameManager extends LocalGameManager {
     });
 
     this.on('PROCESS_ORDER', (order: Order) => {
-      this.playroomService.onOrder(order);
+      this.playroomService.sendOrder(order);
     });
 
-    this.on('MOVE_COMPLETED', (move: Move) => {
-      this.playroomService.onMove(move);
+    this.on('MOVE_COMPLETED', () => {
+      this.playroomService.sendFastState();
     });
 
     this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {

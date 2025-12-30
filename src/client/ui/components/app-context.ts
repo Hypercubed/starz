@@ -1,6 +1,6 @@
 import { createContext } from '@lit/context';
 
-import { GameManager } from '../../managers/manager';
+import { GameManager } from '../../managers/classes/manager';
 
 import type { GameConfig, GameState } from '../../game/types';
 import type { GameContext } from '../../managers/types';

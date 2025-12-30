@@ -1,4 +1,4 @@
-import type { GameManager } from './managers/manager';
+import type { GameManager } from './managers/classes/manager';
 
 declare global {
   var gameManager: GameManager;

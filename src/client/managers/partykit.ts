@@ -5,7 +5,7 @@ import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
 import { PartyServerMessageTypes } from '../../server/shared.ts';
 import { PartykitGameLobby } from './services/partykit-lobby.ts';
 import type { LeaderboardEntry } from '../../server/types';
-import { type EventBusEmit, type EventBusOn } from '../classes/event-bus.ts';
+import { type EventBusEmit, type EventBusOn } from './classes/event-bus.ts';
 
 type PartykitGameManagerEvents = LocalGameManagerEvents & {
   readonly LEADERBOARD_UPDATED: MiniSignal<

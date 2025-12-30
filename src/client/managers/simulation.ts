@@ -1,4 +1,4 @@
-import { GameManager } from './manager.ts';
+import { GameManager } from './classes/manager.ts';
 
 import type { Player } from '../types';
 

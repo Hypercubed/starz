@@ -467,8 +467,7 @@ match-lobby {
   }
 
   .player-list {
-    margin: 10px auto 20px auto;
-    width: 80%;
+    margin: 0 10px 10px 10px;
     max-height: 350px;
     overflow-y: auto;
     padding: 0 10px;
@@ -478,7 +477,7 @@ match-lobby {
       text-align: center;
       color: var(--owner-color, var(--unoccupied));
 
-      &.bot {
+      &.clearable {
         cursor: pointer;
 
         &:hover {
@@ -491,6 +490,19 @@ match-lobby {
         margin-top: 5px;
         vertical-align: top;
       }
+    }
+  }
+
+  [type=button], [type=reset], [type=submit] {
+    margin-bottom: 0;
+  }
+
+  fieldset {
+    border: 2px groove threedface;
+
+    legend {
+      padding: 0 10px;
+      font-weight: bold;
     }
   }
 }

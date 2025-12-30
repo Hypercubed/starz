@@ -107,20 +107,28 @@ export class StartScreenElement extends LitElement {
             </div>
           </div>
 
-          <button type="button" @click="${this.onNewGame}">Name Game</button>
+          <button type="button" @click="${this.onNewGame}">
+            Create Name Game
+          </button>
 
-          <br />
-          <input
-            type="text"
-            id="roomCodeInput"
-            placeholder="Room Code"
-            .value=${this.roomCode}
-            @input=${(e: any) =>
-              (this.roomCode = (e.target as HTMLInputElement).value)}
-          />
-          <button type="button" @click="${this.onJoinRoom}">Join Room</button>
+          ${this.gameManager.isMultiplayer()
+            ? html`${this.renderJoinRoom()}`
+            : ''}
         </form>
       </article>`;
+  }
+
+  renderJoinRoom() {
+    return html`<hr />
+      <input
+        type="text"
+        id="roomCodeInput"
+        placeholder="Enter a Room Code"
+        .value=${this.roomCode}
+        @input=${(e: any) =>
+          (this.roomCode = (e.target as HTMLInputElement).value)}
+      />
+      <button type="button" @click="${this.onJoinRoom}">Join Room</button>`;
   }
 
   async onNewGame() {
@@ -177,7 +185,7 @@ export class StartScreenElement extends LitElement {
     }
   }
 
-  async copyText(token: string) {
+  private async copyText(token: string) {
     try {
       await navigator.clipboard.writeText(token);
       this.keyText = 'Copied to clipboard!';

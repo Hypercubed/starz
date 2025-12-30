@@ -6,7 +6,7 @@ import type {
 import { createPlayerToken } from '../../utils/ids';
 import { unpack } from 'msgpackr';
 import { PartyServerMessageTypes } from '../../../server/shared';
-import { EventBus } from '../../classes/event-bus';
+import { EventBus } from '../classes/event-bus';
 import { MiniSignal } from 'mini-signals';
 
 const PartyLobbyConfig = {

@@ -75,3 +75,28 @@ export function queueMove(
     message
   });
 }
+
+export function playersToJson(playerMap: Map<string, Player>) {
+  return Array.from(playerMap.values()).map(playerToJson);
+}
+
+export function playersFromJson(playersJson: any[]): Player[] {
+  return playersJson.map((p) => playerFromJson(p));
+}
+
+export function playerFromJson(json: any): Player {
+  return {
+    ...json,
+    visitedSystems: new Set<string>(json.visitedSystems),
+    revealedSystems: new Set<string>(json.revealedSystems)
+  } satisfies Player;
+}
+
+export function playerToJson(player: Player) {
+  return {
+    ...player,
+    bot: undefined, // TODO: Move bot data separately
+    visitedSystems: Array.from(player.visitedSystems),
+    revealedSystems: Array.from(player.revealedSystems)
+  };
+}

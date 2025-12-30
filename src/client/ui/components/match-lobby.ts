@@ -9,6 +9,8 @@ import type { Player } from '../../types';
 import { botIcon, cogIcon, playIcon, plusIcon } from './icons.ts';
 import type { LocalGameManager } from '../../managers/local.ts';
 import { isPlayroomGameManager } from '../../managers/shared.ts';
+import { classMap } from 'lit/directives/class-map.js';
+import { when } from 'lit/directives/when.js';
 
 @customElement('match-lobby')
 export class MatchLobbyElement extends LitElement {
@@ -37,31 +39,53 @@ export class MatchLobbyElement extends LitElement {
     this.#setupListeners();
   }
 
+  renderRoomCode() {
+    return html` <p>
+      Room Code:
+      <span @click="${this.onCopy}" data-tooltip="Click to copy"
+        >${this.roomCode}</span
+      >
+      <br /><small @click="${this.onShare}"
+        ><a href="#r=${this.roomCode}">(click to share)</a></small
+      >
+    </p>`;
+  }
+
   render() {
     return html`<article>
       <h4>Welcome, ${this.player?.name ?? ''}</h4>
-      ${this.roomCode ? html`<p>Room Code: ${this.roomCode}</p>` : ''}
-      <p>Players ${this.players.length}</p>
-      <ul class="player-list">
-        ${this.players.map(
-          (player) =>
-            html`<li
-              style="--owner-color: ${player.color || null}"
-              class="${player.bot ? 'bot' : 'human'}"
-              @click="${() => {
-                this.removeBot(player.id);
-              }}"
-            >
-              ${player.bot ? unsafeHTML(botIcon) : ''} ${player.name}<span
-                class="short-id"
-                >${generateShortId(player)}</span
+      ${when(this.roomCode, () => this.renderRoomCode())}
+      <fieldset>
+        <legend>Players ${this.players.length}</legend>
+
+        <ul class="player-list">
+          ${this.players.map(
+            (player) =>
+              html`<li
+                style="--owner-color: ${player.color || null}"
+                class="${classMap({
+                  bot: !!player.bot,
+                  human: !player.bot,
+                  clearable: this.isHost && !!player.bot
+                })}"
+                @click="${() => {
+                  this.removeBot(player.id);
+                }}"
               >
-            </li>`
-        )}
-      </ul>
-      ${this.isHost
-        ? html`<p>You are the host.</p>`
-        : html`<p>Waiting for host to start the game...</p>`}
+                ${player.bot ? unsafeHTML(botIcon) : ''} ${player.name}<span
+                  class="short-id"
+                  >${generateShortId(player)}</span
+                >
+              </li>`
+          )}
+        </ul>
+      </fieldset>
+
+      ${this.gameManager.isMultiplayer()
+        ? this.isHost
+          ? html`<p>You are the host.</p>`
+          : html`<p>Waiting for host to start the game...</p>`
+        : ''}
       ${this.isHost ? this.renderActions() : ''}
     </article>`;
   }
@@ -133,17 +157,12 @@ export class MatchLobbyElement extends LitElement {
 
       if (isPlayroomGameManager(this.gameManager)) {
         this.isHost = this.gameManager.isHost();
-        console.log('Lobby isHost:', this.isHost);
       }
     };
 
     update();
 
-    this.gameManager.on('PLAYER_REMOVED', () => {
-      console.log('PLAYER_REMOVED event in lobby');
-      update();
-    });
-
+    this.gameManager.on('PLAYER_REMOVED', () => update);
     this.gameManager.on('PLAYER_JOINED', update);
     this.gameManager.on('PLAYER_REMOVED', update);
     this.gameManager.on('PLAYER_UPDATED', update);
@@ -158,6 +177,33 @@ export class MatchLobbyElement extends LitElement {
           this.isHost = isHost;
         }
       );
+    }
+  }
+
+  // TODO: Make this a reusable directive?
+  private async onCopy(event: PointerEvent) {
+    event.preventDefault();
+
+    if (navigator.clipboard) {
+      const el = event.target as HTMLElement;
+      const tooltip = el.getAttribute('data-tooltip') || '';
+
+      await navigator.clipboard.writeText(this.roomCode);
+      el.setAttribute('data-tooltip', 'Copied to clipboard!');
+      setTimeout(() => {
+        el.setAttribute('data-tooltip', tooltip);
+      }, 2000);
+    }
+  }
+
+  private async onShare(event: PointerEvent) {
+    event.preventDefault(); // Prevent navigation
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'Starz.io Game Lobby',
+        url: window.location.href
+      });
     }
   }
 }
