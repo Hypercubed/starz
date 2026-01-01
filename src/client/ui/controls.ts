@@ -72,6 +72,7 @@ export function onClickSystem(event: PointerEvent, system: System) {
         system
       ]
     });
+    return;
   }
 
   switch (event.button) {
@@ -116,7 +117,8 @@ export function orderBalancedMove(fromId: string, toId: string) {
     message: `Balanced move from ${fromId} to ${toId}`,
     toId,
     fromId,
-    playerId: C.playerId!
+    playerId: C.playerId!,
+    timestamp: Date.now()
   } satisfies Order;
 
   E.emit('PROCESS_ORDER', order);
@@ -131,7 +133,8 @@ export function orderMassMove(fromId: string, toId: string) {
     toId,
     fromId,
     playerId: C.playerId!,
-    message: `Mass move from ${fromId} to ${toId}`
+    message: `Mass move from ${fromId} to ${toId}`,
+    timestamp: Date.now()
   } satisfies Order;
 
   E.emit('PROCESS_ORDER', order);

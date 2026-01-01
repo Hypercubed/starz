@@ -18,7 +18,13 @@ import type { PlayroomGameManager } from '../playroom';
 import { worldFromJson, worldToJson } from '../../game/world.ts';
 import type { GameStatus, WorldJSON } from '../types.ts';
 import type { Player } from '../../types.ts';
-import type { GameState, Lane, Order, System } from '../../game/types.ts';
+import type {
+  GameConfig,
+  GameState,
+  Lane,
+  Order,
+  System
+} from '../../game/types.ts';
 import { createRoomCode } from '../../utils/ids.ts';
 import { eliminatePlayer } from '../../game';
 import { MAX_PLAYERS } from '../../constants.ts';
@@ -47,7 +53,15 @@ const RPC_EVENTS = {
 
 type PlayerEliminatedEventData = {
   loserId: string;
-  winnerId: string;
+  winnerId?: string;
+  timestamp: number;
+};
+
+type FastChanges = {
+  tick?: number;
+  status?: GameStatus;
+  systems?: Partial<System>[];
+  lanes?: Partial<Lane>[];
 };
 
 export class PlayroomService {
@@ -71,9 +85,9 @@ export class PlayroomService {
       skipLobby: true,
       roomCode,
       gameId: 'etTt5RuPbZxwWPXQvYzF',
-      persistentMode: true,
+      persistentMode: false,
       enableBots: true,
-      reconnectGracePeriod: 30000,
+      reconnectGracePeriod: 0,
       botOptions: {
         botClass: Bot
       },
@@ -99,7 +113,7 @@ export class PlayroomService {
     return isHost() ?? true;
   }
 
-  sendFullState(state: GameState) {
+  setFullState(state: GameState) {
     const { tick } = this.manager.getContext();
 
     console.log('Sending full state to Playroom players.');
@@ -114,6 +128,8 @@ export class PlayroomService {
   }
 
   async getFullState() {
+    if (isHost()) return;
+
     console.log('Fetching full state from Playroom host...');
     await waitForState(STATES.READY);
 
@@ -137,11 +153,7 @@ export class PlayroomService {
     this.manager.setContext({ tick });
   }
 
-  sendFastState() {
-    const { tick, status } = this.manager.getContext();
-    setState(STATES.TICK, tick, false);
-    setState(STATES.GAME_STATUS, status, false);
-
+  private createFastState(): FastChanges {
     const state = this.manager.getState();
     const systemUpdates = Array.from(state.world.systemMap.values()).map(
       (system) => ({
@@ -153,7 +165,6 @@ export class PlayroomService {
         movement: system.movement
       })
     );
-    setState(STATES.WORLD_SYSTEM_UPDATE, systemUpdates, false);
 
     const laneUpdates = Array.from(state.world.laneMap.values()).map(
       (lane) => ({
@@ -161,9 +172,27 @@ export class PlayroomService {
         movement: lane.movement
       })
     );
-    setState(STATES.WORLD_LANE_UPDATE, laneUpdates, false);
+
+    const { tick, status } = this.manager.getContext();
+    return {
+      tick,
+      status,
+      systems: systemUpdates,
+      lanes: laneUpdates
+    } satisfies FastChanges;
+  }
+
+  setFastState() {
+    if (!isHost()) return;
+
+    const { systems, lanes, tick, status } = this.createFastState();
+    setState(STATES.TICK, tick, false);
+    setState(STATES.GAME_STATUS, status, false);
+    setState(STATES.WORLD_SYSTEM_UPDATE, systems, false);
+    setState(STATES.WORLD_LANE_UPDATE, lanes, false);
 
     // Get rid of this later
+    const state = this.manager.getState();
     this.playerStateByPlayerId.forEach((playerState, playerId) => {
       const player = state.playerMap.get(playerId);
       if (!player) return;
@@ -177,34 +206,48 @@ export class PlayroomService {
     });
   }
 
-  getFastState() {
-    // console.log('Fetching fast state from Playroom host...');
-
-    const tick = getState(STATES.TICK) as number;
-    const status = getState(STATES.GAME_STATUS) as GameStatus;
-    this.manager.setContext({ tick, status });
-
+  private readFastState(fastState: FastChanges) {
+    const { systems, lanes } = fastState;
     const state = this.manager.getState();
 
-    const systemChanges = getState(
-      STATES.WORLD_SYSTEM_UPDATE
-    ) as Partial<System>[];
-    systemChanges?.forEach((s) => {
+    systems?.forEach((s) => {
       const system = state.world.systemMap.get(s.id!);
       if (system) {
         Object.assign(system, s);
       }
     });
 
-    const laneChanges = getState(STATES.WORLD_LANE_UPDATE) as Partial<Lane>[];
-    laneChanges?.forEach((l) => {
+    lanes?.forEach((l) => {
       const lane = state.world.laneMap.get(l.id!);
       if (lane) {
         Object.assign(lane, l);
       }
     });
 
+    const context = this.manager.getContext();
+    const tick = fastState.tick ?? context.tick;
+    const status = fastState.status ?? context.status;
+
+    this.manager.setContext({ tick: tick, status });
+  }
+
+  getFastState() {
+    // console.log('Fetching fast state from Playroom host...');
+
+    const tick = getState(STATES.TICK) as number;
+    const status = getState(STATES.GAME_STATUS) as GameStatus;
+    const systems = getState(STATES.WORLD_SYSTEM_UPDATE) as Partial<System>[];
+    const lanes = getState(STATES.WORLD_LANE_UPDATE) as Partial<Lane>[];
+
+    this.readFastState({
+      tick,
+      status,
+      systems,
+      lanes
+    });
+
     // Get rid of this later
+    const state = this.manager.getState();
     this.playerStateByPlayerId.forEach((playerState, playerId) => {
       const player = state.playerMap.get(playerId);
       if (!player) return;
@@ -223,9 +266,15 @@ export class PlayroomService {
     return waitForState<GameStatus>(STATES.GAME_STATUS);
   }
 
-  sendOrder(order: Order) {
+  async sendOrder(order: Order) {
+    // saveMyTurnData(order);
     if (!isHost()) {
-      RPC.call(RPC_EVENTS.PROCESS_ORDER, order, RPC.Mode.HOST);
+      const changes = (await RPC.call(
+        RPC_EVENTS.PROCESS_ORDER,
+        order,
+        RPC.Mode.HOST
+      )) as FastChanges;
+      this.readFastState(changes);
     }
   }
 
@@ -235,8 +284,9 @@ export class PlayroomService {
         RPC_EVENTS.PLAYER_ELIMINATED,
         {
           loserId,
-          winnerId
-        },
+          winnerId,
+          timestamp: Date.now()
+        } satisfies PlayerEliminatedEventData,
         RPC.Mode.OTHERS
       );
 
@@ -253,7 +303,12 @@ export class PlayroomService {
 
   onGameStarted() {
     if (isHost()) {
-      RPC.call(RPC_EVENTS.GAME_STARTED, {}, RPC.Mode.OTHERS);
+      const config = this.manager.getConfig();
+      RPC.call(
+        RPC_EVENTS.GAME_STARTED,
+        { config, timestamp: Date.now() },
+        RPC.Mode.OTHERS
+      );
     }
   }
 
@@ -261,7 +316,11 @@ export class PlayroomService {
     const bot = await addBot();
     console.log('Playroom bot added:', bot);
     bot.setState(PLAYER_STATES.PLAYER, player);
-    RPC.call(RPC_EVENTS.PLAYER_JOINED, { player }, RPC.Mode.OTHERS);
+    RPC.call(
+      RPC_EVENTS.PLAYER_JOINED,
+      { player, timestamp: Date.now() },
+      RPC.Mode.OTHERS
+    );
   }
 
   removePlayer(id: string) {
@@ -309,33 +368,49 @@ export class PlayroomService {
       this.manager.onPlayerJoin(player);
       this.playerStateByPlayerId.set(player.id, playerState);
     }
-
-    // Add existing players
-    // const players = await waitForState<Player[]>(STATES.PLAYERS);
-    // players.forEach((p) => {
-    //   this.manager.onPlayerJoin(p),
-    //   this.playerStatesByGameId.set(p.id, playerState);
-    // });
   }
 
   #registerPlayroomEvents() {
     console.log('Registering Playroom events.');
 
-    RPC.register(RPC_EVENTS.GAME_STARTED, async () => {
-      console.log('Playroom GAME_STARTED received.');
-      this.manager.start();
-    });
+    const callsSeen = new Set<number>();
+
+    RPC.register(
+      RPC_EVENTS.GAME_STARTED,
+      async ({
+        config,
+        timestamp
+      }: {
+        config: GameConfig;
+        timestamp: number;
+      }) => {
+        if (callsSeen.has(timestamp)) return;
+        callsSeen.add(timestamp);
+
+        this.manager.start(config);
+      }
+    );
 
     RPC.register(RPC_EVENTS.PROCESS_ORDER, async (order: Order) => {
       if (!isHost()) return;
-      this.manager.emit('PROCESS_ORDER', order);
+      if (callsSeen.has(order.timestamp)) return;
+      callsSeen.add(order.timestamp);
+
+      // TODO: Optimize by only sending impacted systems/lanes
+      return this.createFastState();
     });
 
     RPC.register(
       RPC_EVENTS.PLAYER_ELIMINATED,
-      async ({ loserId, winnerId }: PlayerEliminatedEventData) => {
+      async ({ loserId, winnerId, timestamp }: PlayerEliminatedEventData) => {
+        if (callsSeen.has(timestamp)) return;
+        callsSeen.add(timestamp);
+
         const ctx = this.manager.getFnContext();
         eliminatePlayer(ctx, loserId, winnerId);
+
+        // TODO: Optimize by only sending impacted systems/lanes
+        return this.createFastState();
       }
     );
 

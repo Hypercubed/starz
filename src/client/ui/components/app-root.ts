@@ -14,14 +14,13 @@ import {
   playerContext,
   stateContext
 } from './app-context.ts';
-import rootHtml from './app-root.html?raw';
 
 const ROTATION_STEP = 5;
 
 import type { GameConfig, GameState } from '../../game/types';
 import type { GameContext } from '../../managers/types';
 import type { Player } from '../../types';
-import { githubIcon } from './icons.ts';
+import { discordIcon, githubIcon } from './icons.ts';
 import type { LocalGameManager } from '../../managers/local.ts';
 import { isPlayroomGameManager } from '../../managers/shared.ts';
 
@@ -90,13 +89,50 @@ export class AppRootElement extends LitElement {
         </form>
       </dialog>
       <dialog id="helpDialog">${this.renderHelp()}</dialog>
-      ${unsafeHTML(rootHtml)}
+      ${this.renderOptionsDialog()}
       <game-canvas id="app"></game-canvas>
       <tick-box tick="${this.context?.tick}"></tick-box>
       <leaderboard-element></leaderboard-element>
       <message-box></message-box>
       <button id="helpButton" @click=${this.showHelp}>?</button>
     `;
+  }
+
+  renderOptionsDialog() {
+    return html`<dialog id="optionsDialog">
+      <form id="optionsForm" method="dialog">
+        ${ENABLE_CHEATS
+          ? html`<label for="fowInput">
+              Fog of War
+              <input name="fow" type="checkbox" role="switch" checked />
+            </label>`
+          : ''}
+        <label for="numSystemsInput">
+          Bubble Size
+          <input
+            name="numSystems"
+            min="0"
+            max="4"
+            step="1"
+            type="range"
+            list="steplist"
+          />
+          <datalist id="steplist">
+            <option value="48">Tiny</option>
+            <option value="96"></option>
+            <option value="192">Med</option>
+            <option value="384"></option>
+            <option value="768">Large</option>
+          </datalist>
+        </label>
+
+        <p />
+        &nbsp;
+        <p />
+        <button id="optionsOkButton">OK</button>
+        <button id="optionsCancelButton" type="reset">Reset</button>
+      </form>
+    </dialog>`;
   }
 
   renderHelp() {
@@ -155,16 +191,21 @@ export class AppRootElement extends LitElement {
         entire Bubble.
       </p>
 
-      <p>
-        <a href="https://github.com/Hypercubed/starz">
-          ${unsafeHTML(githubIcon)}
-        </a>
-      </p>
+      ${this.renderLinks()}
 
       <form method="dialog">
         <button>Exit</button>
       </form>
     </article>`;
+  }
+
+  renderLinks() {
+    return html`<p>
+      <a href="https://github.com/Hypercubed/starz">
+        ${unsafeHTML(githubIcon)}
+      </a>
+      <a href="https://discord.gg/vnJxSCwfYY"> ${unsafeHTML(discordIcon)} </a>
+    </p>`;
   }
 
   #setupEvents() {

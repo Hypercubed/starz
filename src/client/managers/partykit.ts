@@ -6,6 +6,7 @@ import { PartyServerMessageTypes } from '../../server/shared.ts';
 import { PartykitGameLobby } from './services/partykit-lobby.ts';
 import type { LeaderboardEntry } from '../../server/types';
 import { type EventBusEmit, type EventBusOn } from './classes/event-bus.ts';
+import type { ManagerFeatures } from './types';
 
 type PartykitGameManagerEvents = LocalGameManagerEvents & {
   readonly LEADERBOARD_UPDATED: MiniSignal<
@@ -29,6 +30,11 @@ export class PartykitGameManager extends LocalGameManager {
   declare emit: EventBusEmit<PartykitGameManagerEvents>;
 
   private partykitLobby = new PartykitGameLobby();
+
+  readonly features: ManagerFeatures = {
+    multiplayer: false,
+    leaderboard: true
+  };
 
   constructor() {
     super();

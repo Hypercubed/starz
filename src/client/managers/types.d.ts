@@ -23,3 +23,8 @@ export interface WorldJSON {
   systems: Array<[string, System]>;
   lanes: Array<[string, Lane]>;
 }
+
+export interface ManagerFeatures {
+  multiplayer: boolean;
+  leaderboard: boolean;
+}

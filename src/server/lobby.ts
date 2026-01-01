@@ -15,7 +15,6 @@ export interface Env {
 const STORAGE_LEADERBOARD_KEY = 'starz-game-room-leaderboard';
 
 const HEADERS = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };

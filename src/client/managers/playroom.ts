@@ -1,6 +1,6 @@
 import * as ui from '../ui/index.ts';
 
-import type { GameStatus } from './types.d.ts';
+import type { GameStatus, ManagerFeatures } from './types.d.ts';
 import type { Order } from '../game/types.d.ts';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
@@ -32,13 +32,14 @@ export class PlayroomGameManager extends LocalGameManager {
 
   private playroomService = new PlayroomService(this);
 
+  readonly features: ManagerFeatures = {
+    multiplayer: true,
+    leaderboard: false
+  };
+
   constructor() {
     super();
     this.addEvents(createEvents());
-  }
-
-  isMultiplayer() {
-    return true;
   }
 
   mount(appRoot: AppRootElement) {
@@ -60,7 +61,7 @@ export class PlayroomGameManager extends LocalGameManager {
 
     if (this.playroomService.isHost()) {
       super.gameSetup();
-      this.playroomService.sendFullState(this.state);
+      this.playroomService.setFullState(this.state);
     } else {
       await this.playroomService.getFullState();
       this.thisPlayer = this.state.playerMap.get(this.playerId)!;
@@ -73,7 +74,7 @@ export class PlayroomGameManager extends LocalGameManager {
       this.tick++;
       this.game.gameTick(this.getFnContext());
       this.game.checkVictory(this.getFnContext());
-      this.playroomService.sendFastState();
+      this.playroomService.setFastState();
     } else {
       this.playroomService.getFastState();
     }
@@ -118,7 +119,7 @@ export class PlayroomGameManager extends LocalGameManager {
     });
 
     this.on('MOVE_COMPLETED', () => {
-      this.playroomService.sendFastState();
+      this.playroomService.setFastState();
     });
 
     this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {

@@ -3,8 +3,6 @@ import { LitElement, html } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
-import { version } from '../../../../package.json';
-
 import { gameManager } from './app-context.ts';
 import lore from './lore.html?raw';
 
@@ -12,6 +10,7 @@ import type { Player } from '../../types';
 import type { PartykitGameManager } from '../../managers/partykit.ts';
 import type { LocalGameManager } from '../../managers/local.ts';
 import { isPartykitGameManager } from '../../managers/shared.ts';
+import { discordIcon, githubIcon } from './icons.ts';
 
 @customElement('start-screen')
 export class StartScreenElement extends LitElement {
@@ -21,13 +20,6 @@ export class StartScreenElement extends LitElement {
 
   @state()
   private player!: Player | null;
-
-  createRenderRoot() {
-    return this;
-  }
-
-  @state()
-  protected version = version;
 
   @state()
   private playerToken: string = '';
@@ -41,8 +33,13 @@ export class StartScreenElement extends LitElement {
   private keyText =
     'Click to copy your save key. Use this key to restore your player data later.';
 
+  createRenderRoot() {
+    return this;
+  }
+
   connectedCallback() {
     super.connectedCallback();
+    this.classList.add('start-screen');
 
     const roomCode = this.getRoomCodeFromURL();
     if (roomCode) {
@@ -63,16 +60,21 @@ export class StartScreenElement extends LitElement {
   render() {
     const sId = generateShortId(this.player, this.playerToken);
     const token = generateToken(this.player?.id, this.playerToken);
+    const features = this.gameManager.features ?? {
+      multiplayer: false,
+      leaderboard: false
+    };
 
-    return html`<lobby-leaderboard-element></lobby-leaderboard-element>
+    return html` <lobby-leaderboard-element></lobby-leaderboard-element>
       <article>
         <h1>STARZ!</h1>
-        <small class="version">v${this.version}</small>
+        ${this.renderLinks()}
+        <small class="version">${__APP_VERSION__}</small>
 
         ${unsafeHTML(lore)}
 
         <form method="dialog">
-          <div class="grid">
+          <div class="start-screen__grid">
             <div>
               <input
                 name="playerName"
@@ -86,7 +88,6 @@ export class StartScreenElement extends LitElement {
                 maxlength="32"
                 required
               />
-              <small>(Name will be used in leaderboard)</small>
             </div>
             <div>
               <span>${this.player?.name ?? ''}</span
@@ -106,14 +107,22 @@ export class StartScreenElement extends LitElement {
               >
             </div>
           </div>
+          ${features.leaderboard
+            ? html`<p>
+                <small
+                  ><abbr
+                    data-tooltip="Username is public — don't use real names."
+                    >(Name will be used in leaderboard)</abbr
+                  ></small
+                >
+              </p>`
+            : ''}
 
           <button type="button" @click="${this.onNewGame}">
             Create Name Game
           </button>
 
-          ${this.gameManager.isMultiplayer()
-            ? html`${this.renderJoinRoom()}`
-            : ''}
+          ${features.multiplayer ? html`${this.renderJoinRoom()}` : ''}
         </form>
       </article>`;
   }
@@ -129,6 +138,15 @@ export class StartScreenElement extends LitElement {
           (this.roomCode = (e.target as HTMLInputElement).value)}
       />
       <button type="button" @click="${this.onJoinRoom}">Join Room</button>`;
+  }
+
+  renderLinks() {
+    return html`<p>
+      <a href="https://github.com/Hypercubed/starz">
+        ${unsafeHTML(githubIcon)}
+      </a>
+      <a href="https://discord.gg/vnJxSCwfYY"> ${unsafeHTML(discordIcon)} </a>
+    </p>`;
   }
 
   async onNewGame() {

@@ -1,4 +1,3 @@
-import { version } from '../../package.json';
 import './ui/components/index.ts';
 import type { LocalGameManager } from './managers/local.ts';
 
@@ -34,5 +33,5 @@ document.body.appendChild(appRoot);
 
 gameManager.mount(appRoot);
 
-console.log(`starz.io version ${version}`);
+console.log(`starz.io version ${__APP_VERSION__}`);
 gameManager.connect();

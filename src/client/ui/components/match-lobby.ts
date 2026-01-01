@@ -30,6 +30,8 @@ export class MatchLobbyElement extends LitElement {
   @state()
   private isHost: boolean = true;
 
+  private intervalId: number | undefined;
+
   createRenderRoot() {
     return this;
   }
@@ -37,6 +39,21 @@ export class MatchLobbyElement extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.#setupListeners();
+
+    if (isPlayroomGameManager(this.gameManager)) {
+      const manager = this.gameManager;
+      this.intervalId = setInterval(() => {
+        this.isHost = manager.isHost();
+      }, 500); // Update every 500ms
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = undefined;
+    }
   }
 
   renderRoomCode() {

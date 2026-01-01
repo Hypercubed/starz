@@ -43,6 +43,7 @@ export interface Order {
   fromId: string;
   toId: string;
   message?: string;
+  timestamp: number;
 }
 
 export interface Move {

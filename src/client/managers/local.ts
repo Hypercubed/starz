@@ -20,6 +20,8 @@ import {
   type EventBusEmit,
   type EventBusOn
 } from './classes/event-bus.ts';
+import type { GameConfig } from '../game/types';
+import type { ManagerFeatures } from './types';
 
 const createManagerEvents = () => {
   return {
@@ -49,6 +51,11 @@ export class LocalGameManager extends GameManager {
 
     this.addEvents(createManagerEvents());
   }
+
+  readonly features: ManagerFeatures = {
+    multiplayer: false,
+    leaderboard: false
+  };
 
   getPlayer(): Player | null {
     return this.thisPlayer;
@@ -88,8 +95,10 @@ export class LocalGameManager extends GameManager {
     this.status = 'WAITING';
   }
 
-  async start() {
+  async start(config?: Partial<GameConfig>) {
     if (this.status !== 'INIT' && this.status !== 'WAITING') return;
+
+    this.setConfig(config ?? {});
 
     this.savePlayerData();
     await this.gameSetup();

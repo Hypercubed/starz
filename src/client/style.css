@@ -424,7 +424,7 @@ dialog {
   --pico-color: var(--pico-primary-inverse);
 }
 
-start-screen,
+.start-screen,
 match-lobby {
   outline: none !important;
 
@@ -505,9 +505,39 @@ match-lobby {
       font-weight: bold;
     }
   }
+
+  .start-screen__grid {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    align-content: center;
+
+    > * {
+      flex: 0 1 100%;
+      height: 55px;
+      align-content: center;
+    }
+
+    input {
+      margin: 0 !important;
+    }
+  }
 }
 
 button svg {
   width: 16px;
   height: 35px;
+}
+
+a:has(>svg) {
+  text-decoration: none;
+}
+
+a > svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+  filter: drop-shadow(0 0 2px black);
+  margin: 0 5px;
+  vertical-align: middle;
 }
