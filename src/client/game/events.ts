@@ -1,35 +1,38 @@
 import type { Move, Order } from './types';
-import { createEvent, type EventMap } from '../managers/classes/event-bus.ts';
+import { MiniSignal } from 'mini-signals';
 
 export const createGameEvents = () => {
   return {
-    GAME_INIT: createEvent<void>(),
-    GAME_STARTED: createEvent<void>(),
-    GAME_STOPPED: createEvent<void>(),
-    GAME_TICK: createEvent<{ tick: number }>(),
+    GAME_INIT: new MiniSignal<[void]>(),
+    GAME_STARTED: new MiniSignal<[void]>(),
+    GAME_STOPPED: new MiniSignal<[void]>(),
+    GAME_TICK: new MiniSignal<[{ tick: number }]>(),
 
-    STATE_UPDATED: createEvent<void>(),
-    CONFIG_UPDATED: createEvent<void>(),
+    STATE_UPDATED: new MiniSignal<[void]>(),
+    CONFIG_UPDATED: new MiniSignal<[void]>(),
 
-    PLAYER_UPDATED: createEvent<{ playerId: string }>(),
-    PLAYER_ELIMINATED: createEvent<{
+    PLAYER_UPDATED: new MiniSignal<[{ playerId: string }]>(),
+    PLAYER_ELIMINATED: new MiniSignal<[{
       loserId: string;
       winnerId: string | null;
-    }>(),
-    PLAYER_WON: createEvent<{
+    }]>(),
+    PLAYER_WON: new MiniSignal<[{
       playerId: string;
       message: string;
-    }>(),
-    PLAYER_LOST: createEvent<{
+    }]>(),
+    PLAYER_LOST: new MiniSignal<[{
       playerId: string;
       winnerId: string | null;
-    }>(),
+    }]>(),
 
-    PROCESS_ORDER: createEvent<Order>(),
-    MOVE_COMPLETED: createEvent<Move>(),
+    PROCESS_ORDER: new MiniSignal<[Order]>(),
+    MOVE_COMPLETED: new MiniSignal<[Move]>(),
 
-    LOG: createEvent<{ message: string; params?: any[] }>()
-  } as const satisfies EventMap;
+    LOG: new MiniSignal<[{
+      message: string;
+      params?: any[];
+    }]>()
+  };
 };
 
 export type GameEventsMap = ReturnType<typeof createGameEvents>;

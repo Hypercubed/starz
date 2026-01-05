@@ -52,6 +52,7 @@
     "wrangler": "^4.56.0"
   },
   "dependencies": {
+    "@lit-labs/signals": "^0.2.0",
     "@lit/context": "^1.1.6",
     "@picocss/pico": "^2.1.1",
     "@shoelace-style/shoelace": "^2.20.1",
@@ -59,12 +60,13 @@
     "d3-geo-voronoi": "^2.1.0",
     "lit": "^3.3.1",
     "lucide-static": "^0.562.0",
-    "mini-signals": "^2.0.0",
+    "mini-signals": "^3.0.0-0",
     "msgpackr": "^1.11.8",
     "nanoid": "^5.1.6",
     "partyserver": "^0.1.0",
     "partysocket": "^1.1.10",
     "playroomkit": "^0.0.94",
+    "signal-utils": "^0.21.1",
     "versor": "^0.2.0"
   }
 }

@@ -1,33 +1,38 @@
-import { MiniSignal } from 'mini-signals';
+import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
 
-import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
+import { createLocalManagerEvents, LocalGameManager } from './local.ts';
 
 import { PartyServerMessageTypes } from '../../server/shared.ts';
 import { PartykitGameLobby } from './services/partykit-lobby.ts';
 import type { LeaderboardEntry } from '../../server/types';
-import { type EventBusEmit, type EventBusOn } from './classes/event-bus.ts';
-import type { ManagerFeatures } from './types';
+import type { GetEventMap, ManagerFeatures, Prettify } from './types';
 
-type PartykitGameManagerEvents = LocalGameManagerEvents & {
-  readonly LEADERBOARD_UPDATED: MiniSignal<
-    [{ leaderboard: LeaderboardEntry[] }]
-  >;
-  readonly PLAYER_AUTH_UPDATED: MiniSignal<
-    [
-      {
-        playerId: string;
-        playerToken: string;
-      }
-    ]
-  >;
+const createEvents = () => {
+  return {
+    ...createLocalManagerEvents(),
+    LEADERBOARD_UPDATED: new MiniSignal<
+      [{ leaderboard: LeaderboardEntry[] }]
+    >(),
+    PLAYER_AUTH_UPDATED: new MiniSignal<
+      [
+        {
+          playerId: string;
+          playerToken: string;
+        }
+      ]
+    >()
+  } as const;
 };
+
+type SignalMap = ReturnType<typeof createEvents>;
+type Events = Prettify<GetEventMap<SignalMap>>;
 
 export class PartykitGameManager extends LocalGameManager {
   readonly name: string = 'PartykitGameManager';
 
-  declare protected events: PartykitGameManagerEvents;
-  declare on: EventBusOn<PartykitGameManagerEvents>;
-  declare emit: EventBusEmit<PartykitGameManagerEvents>;
+  declare protected signals: SignalMap;
+  declare on: MiniSignalEmitter<Events>['on'];
+  declare emit: MiniSignalEmitter<Events>['emit'];
 
   private partykitLobby = new PartykitGameLobby();
 
@@ -37,20 +42,7 @@ export class PartykitGameManager extends LocalGameManager {
   };
 
   constructor() {
-    super();
-    this.addEvents({
-      LEADERBOARD_UPDATED: new MiniSignal<
-        [{ leaderboard: LeaderboardEntry[] }]
-      >(),
-      PLAYER_AUTH_UPDATED: new MiniSignal<
-        [
-          {
-            playerId: string;
-            playerToken: string;
-          }
-        ]
-      >()
-    });
+    super(createEvents());
   }
 
   get playerToken() {
@@ -101,7 +93,7 @@ export class PartykitGameManager extends LocalGameManager {
         rank: updatedEntry.rank
       };
     }
-    this.events.PLAYER_UPDATED.dispatch({ playerId: this.thisPlayer.id });
+    this.signals.PLAYER_UPDATED.dispatch({ playerId: this.thisPlayer.id });
   }
 
   async setPlayerAuth(playerId: string, playerToken: string) {
@@ -137,7 +129,7 @@ export class PartykitGameManager extends LocalGameManager {
     this.partykitLobby.on(
       PartyServerMessageTypes.LEADERBOARD_UPDATED,
       (data) => {
-        this.events.LEADERBOARD_UPDATED.dispatch(data);
+        this.signals.LEADERBOARD_UPDATED.dispatch(data);
       }
     );
   }

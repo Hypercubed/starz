@@ -14,42 +14,40 @@ import type { AppRootElement } from '../ui/components/app-root.ts';
 import { getUniqueName } from '../utils/names.ts';
 import { getUniqueColor } from '../utils/colors.ts';
 import { createId, createPlayerId } from '../utils/ids.ts';
-import type { GameEventsMap } from '../game/events.ts';
-import {
-  createEvent,
-  type EventBusEmit,
-  type EventBusOn
-} from './classes/event-bus.ts';
+import { createGameEvents } from '../game/events.ts';
 import type { GameConfig } from '../game/types';
-import type { ManagerFeatures } from './types';
+import type { GetEventMap, ManagerFeatures, Prettify } from './types';
+import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
 
-const createManagerEvents = () => {
+export const createLocalManagerEvents = () => {
   return {
-    PLAYER_JOINED: createEvent<{ player: Player }>(),
-    PLAYER_REMOVED: createEvent<{ playerId: string }>(),
-    ADD_MESSAGE: createEvent<string>(),
-    CLEAR_MESSAGES: createEvent<void>(),
-    TRACK: createEvent<{ eventName: string; meta?: any }>()
-  };
+    ...createGameEvents(),
+    PLAYER_JOINED: new MiniSignal<[{ player: Player }]>(),
+    PLAYER_REMOVED: new MiniSignal<[{ playerId: string }]>(),
+    ADD_MESSAGE: new MiniSignal<[string]>(),
+    CLEAR_MESSAGES: new MiniSignal<[void]>(),
+    TRACK: new MiniSignal<[{
+      eventName: string;
+      meta?: any;
+    }]>()
+  } as const;
 };
 
-export type LocalGameManagerEvents = GameEventsMap &
-  ReturnType<typeof createManagerEvents>;
+type LocalMiniSignalMap = ReturnType<typeof createLocalManagerEvents>;
+type LocalEvents = Prettify<GetEventMap<LocalMiniSignalMap>>;
 
-export class LocalGameManager extends GameManager {
+export class LocalGameManager extends GameManager implements MiniSignalEmitter<LocalEvents> {
   readonly name: string = 'LocalGameManager';
 
-  declare protected events: LocalGameManagerEvents;
-  declare on: EventBusOn<LocalGameManagerEvents>;
-  declare emit: EventBusEmit<LocalGameManagerEvents>;
+  declare protected signals: LocalMiniSignalMap;
+  declare readonly on: MiniSignalEmitter<LocalEvents>['on'];
+  declare readonly emit: MiniSignalEmitter<LocalEvents>['emit'];
 
   protected appRoot!: AppRootElement;
   protected thisPlayer!: Player;
 
-  constructor() {
-    super();
-
-    this.addEvents(createManagerEvents());
+  constructor(signals?: LocalMiniSignalMap) {
+    super(signals ?? createLocalManagerEvents());
   }
 
   readonly features: ManagerFeatures = {
@@ -59,10 +57,6 @@ export class LocalGameManager extends GameManager {
 
   getPlayer(): Player | null {
     return this.thisPlayer;
-  }
-
-  isMultiplayer() {
-    return false;
   }
 
   // Mount the manager to the UI
@@ -82,7 +76,7 @@ export class LocalGameManager extends GameManager {
     this.thisPlayer = this.onPlayerJoin(player);
     this.playerId = this.thisPlayer.id;
 
-    this.events.GAME_INIT.dispatch();
+    this.signals.GAME_INIT.dispatch();
 
     if (START_PAUSED) {
       this.appRoot.showStartDialog();
@@ -120,7 +114,7 @@ export class LocalGameManager extends GameManager {
     console.log('Setting up game with players:', players);
 
     this.state = this.game.setup(this.getFnContext());
-    this.events.CLEAR_MESSAGES.dispatch();
+    this.signals.CLEAR_MESSAGES.dispatch();
 
     // Ensure players are added, IDs may have changed
     this.state.playerMap.clear();
@@ -153,13 +147,13 @@ export class LocalGameManager extends GameManager {
   protected gameStart() {
     if (this.status !== 'INIT' && this.status !== 'WAITING') return;
 
-    this.events.TRACK.dispatch({ eventName: 'starz_gamesStarted' });
+    this.signals.TRACK.dispatch({ eventName: 'starz_gamesStarted' });
     super.gameStart();
 
-    this.events.ADD_MESSAGE.dispatch(`Game started.`);
+    this.signals.ADD_MESSAGE.dispatch(`Game started.`);
 
     const player = this.state.playerMap.get(this.playerId);
-    if (player) this.events.ADD_MESSAGE.dispatch(`You are ${player.name}.`);
+    if (player) this.signals.ADD_MESSAGE.dispatch(`You are ${player.name}.`);
   }
 
   protected gameStop() {
@@ -170,7 +164,7 @@ export class LocalGameManager extends GameManager {
   }
 
   protected pauseToggle() {
-    if (this.isMultiplayer()) return;
+    if (this.features.multiplayer) return;
 
     if (this.status === 'PAUSED') {
       this.status = 'PLAYING';
@@ -193,20 +187,20 @@ export class LocalGameManager extends GameManager {
   }
 
   protected async onPlayerWin(winnerId: string, message?: string) {
-    if (message) this.events.ADD_MESSAGE.dispatch(message);
+    if (message) this.signals.ADD_MESSAGE.dispatch(message);
 
     this.game.revealAllSystems(this.state);
     ui.clearSelection();
 
     let restart = false;
     if (winnerId === this.playerId) {
-      this.events.TRACK.dispatch({
+      this.signals.TRACK.dispatch({
         eventName: 'starz_gamesWon',
         meta: { winnerId }
       });
       restart = await this.showEndGame(`You have conquered The Bubble!`);
     } else {
-      this.events.TRACK.dispatch({
+      this.signals.TRACK.dispatch({
         eventName: 'starz_gamesLost',
         meta: { winnerId }
       });
@@ -236,7 +230,7 @@ export class LocalGameManager extends GameManager {
         ? `${loser.name} has been eliminated!`
         : `${winner!.name} has eliminated ${loser.name}!`;
 
-    this.events.ADD_MESSAGE.dispatch(message);
+    this.signals.ADD_MESSAGE.dispatch(message);
 
     if (loserId === this.playerId) {
       this.submitWinLoss(-1);
@@ -264,9 +258,12 @@ export class LocalGameManager extends GameManager {
     return this.onPlayerJoin({ id, name, bot })!;
   }
 
-  removeBot(id: string) {
+  removeBot(id: string): boolean {
     const player = this.state.playerMap.get(id);
-    if (player?.bot) this.onPlayerLeave(id);
+    if (!player) return false;
+    if (player.id === this.playerId) return false;
+    if (player.bot) this.onPlayerLeave(id);
+    return true;
   }
 
   onPlayerJoin(player: Partial<Player>): Player {
@@ -288,13 +285,13 @@ export class LocalGameManager extends GameManager {
       newPlayer.color
     );
 
-    this.events.PLAYER_JOINED.dispatch({ player: newPlayer });
+    this.signals.PLAYER_JOINED.dispatch({ player: newPlayer });
     return newPlayer;
   }
 
   onPlayerLeave(playerId: string) {
     this.state.playerMap.delete(playerId);
-    this.events.PLAYER_REMOVED.dispatch({ playerId });
+    this.signals.PLAYER_REMOVED.dispatch({ playerId });
   }
 
   protected setupThisPlayer(playerId: string) {
@@ -318,22 +315,22 @@ export class LocalGameManager extends GameManager {
     if (!player) return;
 
     player.name = newName;
-    this.events.PLAYER_UPDATED.dispatch({ playerId: player.id });
+    this.signals.PLAYER_UPDATED.dispatch({ playerId: player.id });
 
     localStorage.setItem('starz_playerName', player.name);
   }
 
   #registerEvents() {
-    this.events.PLAYER_WON.add(({ playerId, message }) => {
+    this.signals.PLAYER_WON.add(({ playerId, message }) => {
       this.onPlayerWin(playerId, message);
     });
 
-    this.on('PLAYER_ELIMINATED', ({ loserId, winnerId }) => {
+    this.signals.PLAYER_ELIMINATED.add(({ loserId, winnerId }) => {
       this.onEliminatePlayer(loserId, winnerId);
     });
 
     if (EVENT_TRACKING_ENABLED) {
-      this.on('TRACK', ({ eventName, meta }) => {
+      this.signals.TRACK.add(({ eventName, meta }) => {
         if (window && window.sa_event) {
           try {
             window.sa_event(eventName, {

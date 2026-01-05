@@ -1,5 +1,5 @@
 import { consume } from '@lit/context';
-import { LitElement, html } from 'lit';
+import { html } from 'lit';
 import { customElement, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
@@ -11,9 +11,10 @@ import type { PartykitGameManager } from '../../managers/partykit.ts';
 import type { LocalGameManager } from '../../managers/local.ts';
 import { isPartykitGameManager } from '../../managers/shared.ts';
 import { discordIcon, githubIcon } from './icons.ts';
+import { BaseElement } from './base-element.ts';
 
 @customElement('start-screen')
-export class StartScreenElement extends LitElement {
+export class StartScreenElement extends BaseElement {
   @consume({ context: gameManager })
   @state()
   gameManager!: LocalGameManager;
@@ -33,9 +34,9 @@ export class StartScreenElement extends LitElement {
   private keyText =
     'Click to copy your save key. Use this key to restore your player data later.';
 
-  createRenderRoot() {
-    return this;
-  }
+  // createRenderRoot() {
+  //   return this;
+  // }
 
   connectedCallback() {
     super.connectedCallback();

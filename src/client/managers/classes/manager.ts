@@ -5,13 +5,16 @@ import {
 } from '../../constants.ts';
 import * as game from '../../game/index.ts';
 
-import type { FnContext, GameContext, GameStatus } from '../types';
+import type { FnContext, GameContext, GameStatus, GetEventMap, Prettify } from '../types';
 import type { GameConfig, GameState, Order } from '../../game/types';
 import type { Player } from '../../types';
-import { createGameEvents, type GameEventsMap } from '../../game/events.ts';
-import { EventBus } from './event-bus.ts';
+import { createGameEvents } from '../../game/events.ts';
+import { MiniSignalEmitter } from 'mini-signals';
 
-export abstract class GameManager extends EventBus<GameEventsMap> {
+export type GameMiniSignalsMap = ReturnType<typeof createGameEvents>;
+export type GameManagerEvents = Prettify<GetEventMap<GameMiniSignalsMap>>;
+
+export abstract class GameManager extends MiniSignalEmitter<GameManagerEvents> {
   readonly name: string = 'GameManager';
 
   protected game = game;
@@ -27,8 +30,8 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   abstract connect(): Promise<void>;
   abstract quit(): Promise<void>;
 
-  constructor() {
-    super(createGameEvents());
+  constructor(signals?: GameMiniSignalsMap) {
+    super(signals ?? createGameEvents());
     this.#registerEventListeners();
   }
 
@@ -42,7 +45,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
 
   async setConfig(partialConfig: Partial<GameConfig>) {
     this.config = { ...this.config, ...partialConfig };
-    this.events.CONFIG_UPDATED.dispatch();
+    this.signals.CONFIG_UPDATED.dispatch();
   }
 
   getPlayer(): Player | null {
@@ -58,7 +61,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     };
   }
 
-  getFnContext(): FnContext<this> {
+  getFnContext(): FnContext<GameManager> {
     return {
       S: this.state, // TODO: make readonly
       E: this,
@@ -101,7 +104,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.status = 'PLAYING';
     this.tick = 0;
 
-    this.events.GAME_STARTED.dispatch();
+    this.signals.GAME_STARTED.dispatch();
 
     this.#runGameLoop();
   }
@@ -117,7 +120,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.game.gameTick(this.getFnContext());
 
     this.game.checkVictory(this.getFnContext());
-    this.events.STATE_UPDATED.dispatch();
+    this.signals.STATE_UPDATED.dispatch();
   }
 
   #runGameLoop() {
@@ -129,7 +132,7 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
     this.stopGameLoop();
     this.gameTick();
 
-    this.events.GAME_TICK.dispatch({ tick: this.tick });
+    this.signals.GAME_TICK.dispatch({ tick: this.tick });
 
     this.runningInterval = setTimeout(
       () => this.#runGameLoop(),
@@ -149,17 +152,17 @@ export abstract class GameManager extends EventBus<GameEventsMap> {
   }
 
   #registerEventListeners() {
-    this.events.GAME_STOPPED.add(() => {
+    this.signals.GAME_STOPPED.add(() => {
       this.gameStop();
     });
 
-    this.events.PROCESS_ORDER.add((order: Order) => {
+    this.signals.PROCESS_ORDER.add((order: Order) => {
       this.game.takeOrder(this.getFnContext(), order);
-      this.events.STATE_UPDATED.dispatch();
+      this.signals.STATE_UPDATED.dispatch();
     });
 
     if (DEBUG_LOGGING_ENABLED) {
-      this.events.LOG.add(({ message, params }) => {
+      this.signals.LOG.add(({ message, params }) => {
         console.log(`[DEBUG][Tick ${this.tick}] ${message}`, ...(params ?? []));
       });
     }

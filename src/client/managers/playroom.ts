@@ -1,36 +1,40 @@
 import * as ui from '../ui/index.ts';
 
-import type { GameStatus, ManagerFeatures } from './types.d.ts';
+import type { GameStatus, GetEventMap, ManagerFeatures, Prettify } from './types.d.ts';
 import type { Order } from '../game/types.d.ts';
 import type { AppRootElement } from '../ui/components/app-root.ts';
-import { LocalGameManager, type LocalGameManagerEvents } from './local.ts';
-import {
-  createEvent,
-  type EventBusEmit,
-  type EventBusOn
-} from './classes/event-bus.ts';
+import { createLocalManagerEvents, LocalGameManager } from './local.ts';
+import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
 
-const createEvents = () => {
+const createPlayroomManagerEvents = () => {
   return {
-    ROOM_CREATED: createEvent<{ roomId: string; isHost: boolean }>()
+    ...createLocalManagerEvents(),
+    TEST: new MiniSignal<[void]>(),
+    ROOM_CREATED: new MiniSignal<[{
+      roomId: string;
+      isHost: boolean;
+    }]>(),
   };
 };
-
-type PlayroomGameManagerEvents = LocalGameManagerEvents &
-  ReturnType<typeof createEvents>;
 
 const PlayroomService = await import('./services/playroom.ts').then(
   (m) => m.PlayroomService
 );
 
-export class PlayroomGameManager extends LocalGameManager {
+type SignalMap = ReturnType<typeof createPlayroomManagerEvents>;
+type Events = Prettify<GetEventMap<SignalMap>>;
+
+export class PlayroomGameManager extends LocalGameManager implements MiniSignalEmitter<Events> {
   readonly name: string = 'PlayroomGameManager';
 
-  declare protected events: PlayroomGameManagerEvents;
-  declare on: EventBusOn<PlayroomGameManagerEvents>;
-  declare emit: EventBusEmit<PlayroomGameManagerEvents>;
+  declare protected signals: SignalMap;
+  declare on: MiniSignalEmitter<Events>['on'];
+  declare emit: MiniSignalEmitter<Events>['emit'];
 
   private playroomService = new PlayroomService(this);
+
+  readonly isHost = () => this.playroomService.isHost.get();
+  readonly getRoomCode = () => this.playroomService.roomCode.get() ? 'R' + this.playroomService.roomCode.get() : null;
 
   readonly features: ManagerFeatures = {
     multiplayer: true,
@@ -38,17 +42,12 @@ export class PlayroomGameManager extends LocalGameManager {
   };
 
   constructor() {
-    super();
-    this.addEvents(createEvents());
+    super(createPlayroomManagerEvents());
   }
 
   mount(appRoot: AppRootElement) {
     super.mount(appRoot);
     this.#registerEvents();
-  }
-
-  isHost() {
-    return this.playroomService.isHost();
   }
 
   async waiting(roomCode?: string) {
@@ -57,9 +56,9 @@ export class PlayroomGameManager extends LocalGameManager {
   }
 
   protected async gameSetup() {
-    this.events.CLEAR_MESSAGES.dispatch();
+    this.signals.CLEAR_MESSAGES.dispatch();
 
-    if (this.playroomService.isHost()) {
+    if (this.playroomService.isHost.get()) {
       super.gameSetup();
       this.playroomService.setFullState(this.state);
     } else {
@@ -70,7 +69,7 @@ export class PlayroomGameManager extends LocalGameManager {
   }
 
   public async gameTick() {
-    if (this.playroomService.isHost()) {
+    if (this.playroomService.isHost.get()) {
       this.tick++;
       this.game.gameTick(this.getFnContext());
       this.game.checkVictory(this.getFnContext());
@@ -79,7 +78,7 @@ export class PlayroomGameManager extends LocalGameManager {
       this.playroomService.getFastState();
     }
 
-    this.events.STATE_UPDATED.dispatch();
+    this.signals.STATE_UPDATED.dispatch();
   }
 
   protected restart() {
@@ -99,9 +98,12 @@ export class PlayroomGameManager extends LocalGameManager {
     return player;
   }
 
-  removeBot(id: string) {
-    super.removeBot(id);
-    this.playroomService.removePlayer(id);
+  removeBot(id: string): boolean {
+    if (super.removeBot(id)) {
+      this.playroomService.removePlayer(id);
+      return true;
+    }
+    return false;
   }
 
   setContext({ tick, status }: { tick?: number; status?: GameStatus }) {

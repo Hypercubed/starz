@@ -1,5 +1,5 @@
 import { consume } from '@lit/context';
-import { LitElement, html } from 'lit';
+import { html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 
@@ -11,9 +11,11 @@ import type { LocalGameManager } from '../../managers/local.ts';
 import { isPlayroomGameManager } from '../../managers/shared.ts';
 import { classMap } from 'lit/directives/class-map.js';
 import { when } from 'lit/directives/when.js';
+import { computed, SignalWatcher } from '@lit-labs/signals';
+import { BaseElement } from './base-element.ts';
 
 @customElement('match-lobby')
-export class MatchLobbyElement extends LitElement {
+export class MatchLobbyElement extends SignalWatcher(BaseElement) {
   @consume({ context: gameManager })
   @state()
   gameManager!: LocalGameManager;
@@ -24,13 +26,10 @@ export class MatchLobbyElement extends LitElement {
   @state()
   private players: Player[] = [];
 
-  @state()
-  private roomCode: string = '';
+  private isHost = computed(() => isPlayroomGameManager(this.gameManager) ? this.gameManager.isHost() : true);
+  private roomCode = computed(() => isPlayroomGameManager(this.gameManager) ? this.gameManager.getRoomCode() : undefined);
 
-  @state()
-  private isHost: boolean = true;
-
-  private intervalId: number | undefined;
+  // private intervalId: number | undefined;
 
   createRenderRoot() {
     return this;
@@ -39,31 +38,16 @@ export class MatchLobbyElement extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.#setupListeners();
-
-    if (isPlayroomGameManager(this.gameManager)) {
-      const manager = this.gameManager;
-      this.intervalId = setInterval(() => {
-        this.isHost = manager.isHost();
-      }, 500); // Update every 500ms
-    }
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = undefined;
-    }
   }
 
   renderRoomCode() {
     return html` <p>
       Room Code:
       <span @click="${this.onCopy}" data-tooltip="Click to copy"
-        >${this.roomCode}</span
+        >${this.roomCode.get()}</span
       >
       <br /><small @click="${this.onShare}"
-        ><a href="#r=${this.roomCode}">(click to share)</a></small
+        ><a href="#r=${this.roomCode.get()}">(click to share)</a></small
       >
     </p>`;
   }
@@ -71,7 +55,7 @@ export class MatchLobbyElement extends LitElement {
   render() {
     return html`<article>
       <h4>Welcome, ${this.player?.name ?? ''}</h4>
-      ${when(this.roomCode, () => this.renderRoomCode())}
+      ${when(this.roomCode.get(), () => this.renderRoomCode())}
       <fieldset>
         <legend>Players ${this.players.length}</legend>
 
@@ -83,7 +67,7 @@ export class MatchLobbyElement extends LitElement {
                 class="${classMap({
                   bot: !!player.bot,
                   human: !player.bot,
-                  clearable: this.isHost && !!player.bot
+                  clearable: this.isHost.get() && !!player.bot
                 })}"
                 @click="${() => {
                   this.removeBot(player.id);
@@ -98,12 +82,12 @@ export class MatchLobbyElement extends LitElement {
         </ul>
       </fieldset>
 
-      ${this.gameManager.isMultiplayer()
-        ? this.isHost
+      ${this.gameManager.features.multiplayer
+        ? this.isHost.get()
           ? html`<p>You are the host.</p>`
           : html`<p>Waiting for host to start the game...</p>`
         : ''}
-      ${this.isHost ? this.renderActions() : ''}
+      ${this.isHost.get() ? this.renderActions() : ''}
     </article>`;
   }
 
@@ -121,7 +105,7 @@ export class MatchLobbyElement extends LitElement {
   }
 
   private removeBot(id: string) {
-    if (!this.isHost) return;
+    if (!this.isHost.get()) return;
     this.gameManager.removeBot(id);
   }
 
@@ -171,41 +155,29 @@ export class MatchLobbyElement extends LitElement {
     const update = () => {
       this.players = Array.from(this.gameManager.getState().playerMap.values());
       this.player = this.gameManager.getPlayer();
-
-      if (isPlayroomGameManager(this.gameManager)) {
-        this.isHost = this.gameManager.isHost();
-      }
     };
 
     update();
 
-    this.gameManager.on('PLAYER_REMOVED', () => update);
+    this.gameManager.on('PLAYER_REMOVED', update);
     this.gameManager.on('PLAYER_JOINED', update);
     this.gameManager.on('PLAYER_REMOVED', update);
     this.gameManager.on('PLAYER_UPDATED', update);
     this.gameManager.on('CONFIG_UPDATED', update);
     this.gameManager.on('GAME_INIT', update);
-
-    if (isPlayroomGameManager(this.gameManager)) {
-      this.gameManager.on(
-        'ROOM_CREATED',
-        ({ roomId, isHost }: { roomId: string; isHost: boolean }) => {
-          this.roomCode = roomId;
-          this.isHost = isHost;
-        }
-      );
-    }
   }
 
   // TODO: Make this a reusable directive?
   private async onCopy(event: PointerEvent) {
     event.preventDefault();
+    const roomCode = this.roomCode.get();
+    if (!roomCode) return;
 
     if (navigator.clipboard) {
       const el = event.target as HTMLElement;
       const tooltip = el.getAttribute('data-tooltip') || '';
 
-      await navigator.clipboard.writeText(this.roomCode);
+      await navigator.clipboard.writeText(roomCode);
       el.setAttribute('data-tooltip', 'Copied to clipboard!');
       setTimeout(() => {
         el.setAttribute('data-tooltip', tooltip);

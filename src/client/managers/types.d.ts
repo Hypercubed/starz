@@ -1,5 +1,6 @@
 import type { GameConfig, GameState } from '../game/types';
 import type { Player } from '../types';
+import type { MiniSignal } from 'mini-signals';
 
 export type GameStatus = 'INIT' | 'WAITING' | 'PLAYING' | 'FINISHED' | 'PAUSED';
 
@@ -28,3 +29,11 @@ export interface ManagerFeatures {
   multiplayer: boolean;
   leaderboard: boolean;
 }
+
+export type GetEventMap<T> = {
+  [K in keyof T]: T[K] extends MiniSignal<infer U> ? U : never;
+}
+
+export type Prettify<T> = {
+  [K in keyof T]: T[K];
+} & {};

@@ -11,8 +11,26 @@ import {
   setState,
   waitForState,
   type PlayerState,
-  waitForPlayerState
+  waitForPlayerState,
+  Multiplayer
 } from 'playroomkit';
+// import { effect } from 'signal-utils/subtle/microtask-effect';
+
+declare module 'playroomkit' {
+  var Multiplayer: MultiplayerConstructor;
+
+  interface MultiplayerConstructor {
+    (): MultiplayerInstance;
+  }
+
+  interface MultiplayerInstance {
+    on(event: 'state', listener: (state: { [key: string]: any }) => void): void;
+    on(
+      event: 'host_updated',
+      listener: (isHost: boolean) => void
+    ): void;
+  }
+}
 
 import type { PlayroomGameManager } from '../playroom';
 import { worldFromJson, worldToJson } from '../../game/world.ts';
@@ -28,6 +46,7 @@ import type {
 import { createRoomCode } from '../../utils/ids.ts';
 import { eliminatePlayer } from '../../game';
 import { MAX_PLAYERS } from '../../constants.ts';
+import { Signal } from "signal-polyfill";
 
 const STATES = {
   GAME_STATUS: 'GAME_STATUS',
@@ -65,21 +84,37 @@ type FastChanges = {
 };
 
 export class PlayroomService {
-  roomCode: string | null = null;
-
   private manager: PlayroomGameManager;
 
   private participantIds = new Set<string>();
   private playerStateByPlayerId = new Map<string, PlayerState>();
 
+  readonly isHost = new Signal.State(isHost() ?? true);
+  readonly roomCode = new Signal.State<string | null>(null);
+
   constructor(manager: PlayroomGameManager) {
     this.manager = manager;
+  }
+
+  stateSignal<T>(key: typeof STATES[keyof typeof STATES]) {
+    const signal = new Signal.State<T>(getState(STATES[key]));
+    Multiplayer().on('state', (state: { [key: string]: T }) => signal.set(state[key]));
+    return signal;
   }
 
   async connect(roomCode?: string) {
     this.#registerPlayroomEvents();
 
     roomCode ??= createRoomCode();
+
+    Multiplayer().on('host_updated', (isHost: boolean) => {
+      console.log('Playroom host updated:', isHost);
+      this.isHost.set(isHost);
+    });
+
+    // Multiplayer().on('state', function (...args: any[]) {
+    //   console.log('Playroom state update:', ...args);
+    // });
 
     await insertCoin({
       skipLobby: true,
@@ -101,16 +136,19 @@ export class PlayroomService {
     console.log('Player ID:', myPlayer().id);
     console.log('Is Host:', isHost());
 
-    roomCode = getRoomCode()!;
-    this.manager.emit('ROOM_CREATED', {
-      roomId: 'R' + roomCode,
-      isHost: isHost()
-    });
-    this.roomCode = roomCode;
-  }
+    this.roomCode.set(getRoomCode()!);
 
-  isHost() {
-    return isHost() ?? true;
+    // const worldSystemUpdates = this.stateSignal<Partial<System>[] | undefined>(STATES.WORLD_SYSTEM_UPDATE);
+
+    // const worldSystemUpdates = new Signal.State<Partial<System>[] | undefined>(getState(STATES.WORLD_SYSTEM_UPDATE));
+    // Multiplayer().on('state', function (state: { [key: string]: any }) {
+    //   worldSystemUpdates.set(state[STATES.WORLD_SYSTEM_UPDATE]);
+    // });
+
+    // const worldSystemUpdates = this.stateSignal<Partial<System>[] | undefined>(STATES.WORLD_SYSTEM_UPDATE);
+    // effect(() => {
+    //   console.log('UPDATE Playroom State', worldSystemUpdates.get());
+    // });
   }
 
   setFullState(state: GameState) {
@@ -269,6 +307,7 @@ export class PlayroomService {
   async sendOrder(order: Order) {
     // saveMyTurnData(order);
     if (!isHost()) {
+      console.log('Sending order to Playroom host:', order.timestamp, Date.now());
       const changes = (await RPC.call(
         RPC_EVENTS.PROCESS_ORDER,
         order,
@@ -373,6 +412,10 @@ export class PlayroomService {
   #registerPlayroomEvents() {
     console.log('Registering Playroom events.');
 
+    // setInterval(() => {
+    //   this.isHost.set(isHost());
+    // }, 160);
+
     const callsSeen = new Set<number>();
 
     RPC.register(
@@ -395,6 +438,8 @@ export class PlayroomService {
       if (!isHost()) return;
       if (callsSeen.has(order.timestamp)) return;
       callsSeen.add(order.timestamp);
+
+      this.manager.emit('PROCESS_ORDER', order);
 
       // TODO: Optimize by only sending impacted systems/lanes
       return this.createFastState();

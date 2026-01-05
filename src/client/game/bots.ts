@@ -4,6 +4,7 @@ import { getAdjacentSystems } from './world.ts';
 import type { FnContext } from '../managers/types';
 import type { BotInterface } from '../types';
 import type { System } from './types';
+import type { GameManager } from '../managers/classes/manager.ts';
 
 interface BotMove {
   message: string;
@@ -101,7 +102,7 @@ export class Bot implements BotInterface {
   makeMoves() {
     if (this.name === 'idle') return;
 
-    const state = gameManager.getState();
+    const state = (globalThis.gameManager as GameManager).getState();
 
     const systemIter = state.world.systemMap.values();
     this.botSystems = Array.from(systemIter).filter(

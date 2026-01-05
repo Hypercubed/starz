@@ -6,8 +6,8 @@ import type {
 import { createPlayerToken } from '../../utils/ids';
 import { unpack } from 'msgpackr';
 import { PartyServerMessageTypes } from '../../../server/shared';
-import { EventBus } from '../classes/event-bus';
-import { MiniSignal } from 'mini-signals';
+import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
+import type { GetEventMap, Prettify } from '../types';
 
 const PartyLobbyConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
@@ -15,19 +15,20 @@ const PartyLobbyConfig = {
   room: 'leaderboard'
 };
 
-type EventsMap = {
-  readonly LEADERBOARD_UPDATED: MiniSignal<
-    [{ leaderboard: LeaderboardEntry[] }]
-  >;
+const createEvents = () => {
+  return {
+    LEADERBOARD_UPDATED: new MiniSignal<
+      [{ leaderboard: LeaderboardEntry[] }]
+    >()
+  } as const;
 };
 
-export class PartykitGameLobby extends EventBus<EventsMap> {
+type SignalMap = ReturnType<typeof createEvents>;
+type Events = Prettify<GetEventMap<SignalMap>>;
+
+export class PartykitGameLobby extends MiniSignalEmitter<Events> {
   constructor() {
-    super({
-      LEADERBOARD_UPDATED: new MiniSignal<
-        [{ leaderboard: LeaderboardEntry[] }]
-      >()
-    });
+    super(createEvents());
   }
 
   lobbySocket?: PartySocket;
@@ -124,7 +125,7 @@ export class PartykitGameLobby extends EventBus<EventsMap> {
 
       switch (data.type) {
         case PartyServerMessageTypes.LEADERBOARD_UPDATED:
-          this.events.LEADERBOARD_UPDATED.dispatch({ leaderboard: data.data });
+          this.signals.LEADERBOARD_UPDATED.dispatch({ leaderboard: data.data });
           break;
         default:
           if ('message' in data) {
