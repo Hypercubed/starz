@@ -60,7 +60,7 @@
     "d3-geo-voronoi": "^2.1.0",
     "lit": "^3.3.1",
     "lucide-static": "^0.562.0",
-    "mini-signals": "^3.0.0-0",
+    "mini-signals": "^3.0.0-1",
     "msgpackr": "^1.11.8",
     "nanoid": "^5.1.6",
     "partyserver": "^0.1.0",

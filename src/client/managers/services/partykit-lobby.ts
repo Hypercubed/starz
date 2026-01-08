@@ -7,7 +7,6 @@ import { createPlayerToken } from '../../utils/ids';
 import { unpack } from 'msgpackr';
 import { PartyServerMessageTypes } from '../../../server/shared';
 import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
-import type { GetEventMap, Prettify } from '../types';
 
 const PartyLobbyConfig = {
   host: import.meta.env.VITE_PARTYKIT_HOST,
@@ -23,8 +22,7 @@ const createEvents = () => {
   } as const;
 };
 
-type SignalMap = ReturnType<typeof createEvents>;
-type Events = Prettify<GetEventMap<SignalMap>>;
+type Events = ReturnType<typeof createEvents>;
 
 export class PartykitGameLobby extends MiniSignalEmitter<Events> {
   constructor() {

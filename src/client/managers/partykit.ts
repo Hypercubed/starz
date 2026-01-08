@@ -5,7 +5,7 @@ import { createLocalManagerEvents, LocalGameManager } from './local.ts';
 import { PartyServerMessageTypes } from '../../server/shared.ts';
 import { PartykitGameLobby } from './services/partykit-lobby.ts';
 import type { LeaderboardEntry } from '../../server/types';
-import type { GetEventMap, ManagerFeatures, Prettify } from './types';
+import type { ManagerFeatures } from './types';
 
 const createEvents = () => {
   return {
@@ -24,13 +24,12 @@ const createEvents = () => {
   } as const;
 };
 
-type SignalMap = ReturnType<typeof createEvents>;
-type Events = Prettify<GetEventMap<SignalMap>>;
+type Events = ReturnType<typeof createEvents>;
 
 export class PartykitGameManager extends LocalGameManager {
   readonly name: string = 'PartykitGameManager';
 
-  declare protected signals: SignalMap;
+  declare protected signals: Events;
   declare on: MiniSignalEmitter<Events>['on'];
   declare emit: MiniSignalEmitter<Events>['emit'];
 

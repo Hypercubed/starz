@@ -1,6 +1,6 @@
 import * as ui from '../ui/index.ts';
 
-import type { GameStatus, GetEventMap, ManagerFeatures, Prettify } from './types.d.ts';
+import type { GameStatus, ManagerFeatures } from './types.d.ts';
 import type { Order } from '../game/types.d.ts';
 import type { AppRootElement } from '../ui/components/app-root.ts';
 import { createLocalManagerEvents, LocalGameManager } from './local.ts';
@@ -21,13 +21,12 @@ const PlayroomService = await import('./services/playroom.ts').then(
   (m) => m.PlayroomService
 );
 
-type SignalMap = ReturnType<typeof createPlayroomManagerEvents>;
-type Events = Prettify<GetEventMap<SignalMap>>;
+type Events = ReturnType<typeof createPlayroomManagerEvents>;
 
 export class PlayroomGameManager extends LocalGameManager implements MiniSignalEmitter<Events> {
   readonly name: string = 'PlayroomGameManager';
 
-  declare protected signals: SignalMap;
+  declare protected signals: Events;
   declare on: MiniSignalEmitter<Events>['on'];
   declare emit: MiniSignalEmitter<Events>['emit'];
 

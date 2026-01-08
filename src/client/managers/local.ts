@@ -16,7 +16,7 @@ import { getUniqueColor } from '../utils/colors.ts';
 import { createId, createPlayerId } from '../utils/ids.ts';
 import { createGameEvents } from '../game/events.ts';
 import type { GameConfig } from '../game/types';
-import type { GetEventMap, ManagerFeatures, Prettify } from './types';
+import type { ManagerFeatures } from './types';
 import { MiniSignal, MiniSignalEmitter } from 'mini-signals';
 
 export const createLocalManagerEvents = () => {
@@ -34,14 +34,13 @@ export const createLocalManagerEvents = () => {
 };
 
 type LocalMiniSignalMap = ReturnType<typeof createLocalManagerEvents>;
-type LocalEvents = Prettify<GetEventMap<LocalMiniSignalMap>>;
 
-export class LocalGameManager extends GameManager implements MiniSignalEmitter<LocalEvents> {
+export class LocalGameManager extends GameManager implements MiniSignalEmitter<LocalMiniSignalMap> {
   readonly name: string = 'LocalGameManager';
 
   declare protected signals: LocalMiniSignalMap;
-  declare readonly on: MiniSignalEmitter<LocalEvents>['on'];
-  declare readonly emit: MiniSignalEmitter<LocalEvents>['emit'];
+  declare readonly on: MiniSignalEmitter<LocalMiniSignalMap>['on'];
+  declare readonly emit: MiniSignalEmitter<LocalMiniSignalMap>['emit'];
 
   protected appRoot!: AppRootElement;
   protected thisPlayer!: Player;

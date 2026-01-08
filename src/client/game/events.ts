@@ -34,5 +34,3 @@ export const createGameEvents = () => {
     }]>()
   };
 };
-
-export type GameEventsMap = ReturnType<typeof createGameEvents>;

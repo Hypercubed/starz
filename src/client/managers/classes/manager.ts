@@ -5,16 +5,15 @@ import {
 } from '../../constants.ts';
 import * as game from '../../game/index.ts';
 
-import type { FnContext, GameContext, GameStatus, GetEventMap, Prettify } from '../types';
+import type { FnContext, GameContext, GameStatus } from '../types';
 import type { GameConfig, GameState, Order } from '../../game/types';
 import type { Player } from '../../types';
 import { createGameEvents } from '../../game/events.ts';
 import { MiniSignalEmitter } from 'mini-signals';
 
-export type GameMiniSignalsMap = ReturnType<typeof createGameEvents>;
-export type GameManagerEvents = Prettify<GetEventMap<GameMiniSignalsMap>>;
+type GameEventsMap = ReturnType<typeof createGameEvents>;
 
-export abstract class GameManager extends MiniSignalEmitter<GameManagerEvents> {
+export abstract class GameManager extends MiniSignalEmitter<GameEventsMap> {
   readonly name: string = 'GameManager';
 
   protected game = game;
@@ -30,7 +29,7 @@ export abstract class GameManager extends MiniSignalEmitter<GameManagerEvents> {
   abstract connect(): Promise<void>;
   abstract quit(): Promise<void>;
 
-  constructor(signals?: GameMiniSignalsMap) {
+  constructor(signals?: GameEventsMap) {
     super(signals ?? createGameEvents());
     this.#registerEventListeners();
   }
